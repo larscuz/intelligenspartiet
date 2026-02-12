@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Intelligenspartiet | Partiet for erstatningsangst</title>
+  <meta name="description" content="Intelligenspartiet overvåker nyheter om AI, arbeidsliv og erstatningsangst - og bygger politikk for trygg overgang." />
+  <meta property="og:title" content="Intelligenspartiet" />
+  <meta property="og:description" content="Daglig oversikt over AI-nyheter om jobbskifte, oppsigelser og omstilling." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Hopp til innhold</a>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <p class="topbar-note">LIVE FEED</p>
+      <p id="timestamp" class="timestamp" aria-live="polite"></p>
+      <p class="topbar-note">REPLACEMENT ANXIETY DESK</p>
+    </div>
+  </header>
+
+  <header class="masthead">
+    <div class="masthead-inner">
+      <p class="tagline">Partiet for erstatningsangst</p>
+      <a href="#" class="brand">INTELLIGENSPARTIET</a>
+      <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav">Seksjoner</button>
+    </div>
+  </header>
+
+  <nav id="main-nav" class="section-nav">
+    <a href="#hovedsak">Hovedsak</a>
+    <a href="#wire">AI-jobbwire</a>
+    <a href="#plattform">Politisk plattform</a>
+    <a href="#kontakt">Kontakt</a>
+  </nav>
+
+  <main id="main" class="page">
+    <section id="hovedsak" class="lead-grid">
+      <article class="lead-story">
+        <p class="kicker">FORSIDEN NÅ</p>
+        <h1>AI endrer arbeid raskere enn tryggheten bygges</h1>
+        <p>
+          Intelligenspartiet samler nyheter om oppsigelser, omskolering og nye AI-yrker.
+          Målet er én ting: politikk som møter erstatningsangst med konkret makt, ikke tomme løfter.
+        </p>
+        <a class="cta" href="#plattform">Les plattformen</a>
+      </article>
+
+      <aside class="lead-side">
+        <article class="headline-block">
+          <p class="mini-kicker">ANALYSE</p>
+          <h2>Hva skjer når AI kutter førstelinjejobber?</h2>
+          <p>Vi følger signalene i sanntid og bygger politikk på dokumenterte endringer.</p>
+        </article>
+        <article class="headline-block">
+          <p class="mini-kicker">STRATEGI</p>
+          <h2>Tre grep for trygg overgang i arbeidslivet</h2>
+          <p>Overgangsfond, opplæringsgaranti og demokratisk kontroll av AI-beslutninger.</p>
+        </article>
+      </aside>
+    </section>
+
+    <section id="wire" class="news-wire">
+      <div class="section-headline-row">
+        <h2>AI-jobbwire</h2>
+        <p id="news-meta" class="news-meta">Laster siste crawl ...</p>
+      </div>
+
+      <div class="filters" role="tablist" aria-label="Filtrer nyheter">
+        <button class="filter is-active" data-filter="all" role="tab" aria-selected="true">Alle</button>
+        <button class="filter" data-filter="replacement_anxiety" role="tab" aria-selected="false">Erstatningsangst</button>
+        <button class="filter" data-filter="reskilling" role="tab" aria-selected="false">Omskolering</button>
+        <button class="filter" data-filter="neutral" role="tab" aria-selected="false">Nøytral</button>
+      </div>
+
+      <div class="wire-layout">
+        <div id="news-list" class="news-list" aria-live="polite"></div>
+
+        <aside class="platform-panel">
+          <h3>Hvorfor denne desk-en finnes</h3>
+          <p>
+            Erstatningsangst er ikke fremtidsfrykt. Det er en nåtidsreaksjon på jobber som forsvinner, roller som krymper og beslutninger som flyttes til systemer ingen kan forklare.
+          </p>
+          <ul>
+            <li>Vi dokumenterer utviklingen daglig.</li>
+            <li>Vi kobler funn direkte til politiske forslag.</li>
+            <li>Vi prioriterer trygghet for folk, ikke kun tempo for teknologi.</li>
+          </ul>
+          <p class="panel-note">Crawler: Google News RSS-søk på AI + jobb/layoff/omstilling.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section id="plattform" class="platform-grid">
+      <article class="platform-card">
+        <p class="mini-kicker">1. ARBEID</p>
+        <h3>Overgangsfond for utsatte yrker</h3>
+        <p>Ved dokumentert AI-substitusjon skal ansatte ha rett til lønnssikret omskolering.</p>
+      </article>
+      <article class="platform-card">
+        <p class="mini-kicker">2. DEMOKRATI</p>
+        <h3>AI-tilsyn med innsynsplikt</h3>
+        <p>Systemer som påvirker arbeid og velferd må kunne etterprøves av offentligheten.</p>
+      </article>
+      <article class="platform-card">
+        <p class="mini-kicker">3. FORDELING</p>
+        <h3>Produktivitetsgevinst tilbake til folk</h3>
+        <p>Når automatisering øker verdiskapingen, skal en andel tilfalle fellesskapet.</p>
+      </article>
+    </section>
+  </main>
+
+  <footer id="kontakt" class="site-footer">
+    <p>Tips, funn eller samarbeid: <a href="mailto:hello@intelligenspartiet.no">hello@intelligenspartiet.no</a></p>
+    <p>© <span id="year"></span> Intelligenspartiet</p>
+  </footer>
+
+  <template id="news-item-template">
+    <article class="news-item">
+      <div class="news-top">
+        <span class="tone"></span>
+        <span class="source"></span>
+      </div>
+      <h3 class="title"></h3>
+      <p class="snippet"></p>
+      <div class="news-bottom">
+        <time class="published"></time>
+        <a class="read-more" target="_blank" rel="noopener noreferrer">Les sak</a>
+      </div>
+    </article>
+  </template>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
