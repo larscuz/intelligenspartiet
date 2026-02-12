@@ -42,6 +42,9 @@ const videoStoryPlayer = document.querySelector('#video-story-player');
 const videoStoryCaption = document.querySelector('#video-story-caption');
 const videoStoryScroll = document.querySelector('#video-story-scroll');
 const videoStoryStepTemplate = document.querySelector('#video-story-step-template');
+const videoStoryAudioToggle = document.querySelector('#video-story-audio-toggle');
+const videoStoryVolumeSlider = document.querySelector('#video-story-volume');
+const videoStoryAudioStatus = document.querySelector('#video-story-audio-status');
 
 const IMAGE_POOL = [
   'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
@@ -247,6 +250,8 @@ let videoStoryObserver = null;
 let videoStoryScenes = [];
 let videoStorySwapToken = 0;
 const videoStoryPreloaded = new Set();
+let videoStorySoundEnabled = false;
+let videoStoryVolume = 0.8;
 let scrollyActiveIndex = 0;
 let scrollySectionInView = true;
 let scrollySoundEnabled = false;
@@ -1023,6 +1028,99 @@ function preloadVideoStoryScene(index) {
   probe.load();
 }
 
+function setVideoStoryAudioStatus(message) {
+  if (!(videoStoryAudioStatus instanceof HTMLElement)) return;
+  videoStoryAudioStatus.textContent = message;
+}
+
+function updateVideoStoryAudioToggle() {
+  const volumePercent = Math.round(videoStoryVolume * 100);
+
+  if (videoStoryAudioToggle instanceof HTMLButtonElement) {
+    videoStoryAudioToggle.setAttribute('aria-pressed', String(videoStorySoundEnabled));
+    videoStoryAudioToggle.textContent = videoStorySoundEnabled ? 'Lyd: På' : 'Lyd: Av';
+  }
+
+  if (videoStoryVolumeSlider instanceof HTMLInputElement) {
+    videoStoryVolumeSlider.value = String(volumePercent);
+    videoStoryVolumeSlider.setAttribute('aria-valuetext', `${volumePercent} prosent`);
+  }
+}
+
+function updateVideoStoryAudioStatusFromPlayer() {
+  const volumePercent = Math.round(videoStoryVolume * 100);
+
+  if (!videoStorySoundEnabled) {
+    setVideoStoryAudioStatus('Lyd er av.');
+    return;
+  }
+
+  if (!(videoStoryPlayer instanceof HTMLVideoElement)) {
+    setVideoStoryAudioStatus(`Lyd klar (${volumePercent}%).`);
+    return;
+  }
+
+  if (document.hidden) {
+    setVideoStoryAudioStatus(`Lyd klar (${volumePercent}%).`);
+    return;
+  }
+
+  if (!videoLikelyHasAudio(videoStoryPlayer)) {
+    setVideoStoryAudioStatus('Lyd på, men aktiv video ser ut til å mangle lydspor.');
+    return;
+  }
+
+  setVideoStoryAudioStatus(`Lyd på (${volumePercent}%).`);
+}
+
+function syncVideoStoryAudioState() {
+  if (!(videoStoryPlayer instanceof HTMLVideoElement)) return;
+
+  const shouldMute = !videoStorySoundEnabled;
+  setVideoMutedState(videoStoryPlayer, shouldMute);
+  videoStoryPlayer.volume = shouldMute ? 0 : videoStoryVolume;
+  updateVideoStoryAudioStatusFromPlayer();
+}
+
+function attemptVideoStoryAudioStart({ userInitiated = false } = {}) {
+  if (!videoStorySoundEnabled) {
+    updateVideoStoryAudioStatusFromPlayer();
+    return;
+  }
+
+  if (!(videoStoryPlayer instanceof HTMLVideoElement)) {
+    updateVideoStoryAudioStatusFromPlayer();
+    return;
+  }
+
+  setVideoMutedState(videoStoryPlayer, false);
+  videoStoryPlayer.volume = videoStoryVolume;
+  if (videoStoryPlayer.readyState < 2) {
+    videoStoryPlayer.load();
+  }
+
+  const playback = videoStoryPlayer.play();
+  if (!playback) {
+    updateVideoStoryAudioStatusFromPlayer();
+    return;
+  }
+
+  playback
+    .then(() => {
+      updateVideoStoryAudioStatusFromPlayer();
+    })
+    .catch(() => {
+      if (userInitiated) {
+        videoStorySoundEnabled = false;
+        updateVideoStoryAudioToggle();
+        syncVideoStoryAudioState();
+        setVideoStoryAudioStatus('Nettleseren blokkerte lyd. Trykk Lyd: På igjen.');
+        return;
+      }
+      setVideoStoryAudioStatus('Lyd krever ny brukerklikk i denne scenen.');
+    });
+}
+
 function swapVideoStorySource(nextSource, shouldAutoplay = true) {
   if (!videoStoryPlayer) return;
 
@@ -1031,6 +1129,7 @@ function swapVideoStorySource(nextSource, shouldAutoplay = true) {
 
   const activeSource = String(videoStoryPlayer.dataset.activeSrc || '').trim();
   if (targetSource === activeSource) {
+    syncVideoStoryAudioState();
     if (shouldAutoplay) {
       videoStoryPlayer.play().catch(() => {});
     }
@@ -1051,8 +1150,15 @@ function swapVideoStorySource(nextSource, shouldAutoplay = true) {
     videoStoryPlayer.src = targetSource;
     videoStoryPlayer.dataset.activeSrc = targetSource;
     videoStoryPlayer.load();
+    syncVideoStoryAudioState();
     if (shouldAutoplay) {
-      videoStoryPlayer.play().catch(() => {});
+      videoStoryPlayer.play().catch(() => {
+        if (!videoStorySoundEnabled) return;
+        videoStorySoundEnabled = false;
+        updateVideoStoryAudioToggle();
+        syncVideoStoryAudioState();
+        setVideoStoryAudioStatus('Nettleseren blokkerte lyd. Trykk Lyd: På igjen.');
+      });
     }
   }, 120);
 
@@ -1225,6 +1331,8 @@ function openVideoStoryModal(story, openingVideo, triggerNode) {
   setVideoModalMode(true);
   videoStoryMode = true;
   videoStoryScenes = buildVideoStoryScenes(story, openingVideo);
+  updateVideoStoryAudioToggle();
+  updateVideoStoryAudioStatusFromPlayer();
 
   if (videoModalTitle) {
     videoModalTitle.textContent = story.title || 'Scrollytelling';
@@ -1289,6 +1397,59 @@ function initVideoModal() {
   if (!videoModal) return;
 
   markVideoTriggers(document);
+
+  if (videoStoryVolumeSlider instanceof HTMLInputElement) {
+    const initialVolume = Number(videoStoryVolumeSlider.value);
+    if (Number.isFinite(initialVolume)) {
+      videoStoryVolume = clamp(initialVolume, 0, 100) / 100;
+    }
+  }
+
+  updateVideoStoryAudioToggle();
+  updateVideoStoryAudioStatusFromPlayer();
+
+  if (videoStoryAudioToggle instanceof HTMLButtonElement) {
+    videoStoryAudioToggle.addEventListener('click', () => {
+      videoStorySoundEnabled = !videoStorySoundEnabled;
+      updateVideoStoryAudioToggle();
+      syncVideoStoryAudioState();
+      if (videoStorySoundEnabled) {
+        attemptVideoStoryAudioStart({ userInitiated: true });
+      } else {
+        updateVideoStoryAudioStatusFromPlayer();
+      }
+    });
+  }
+
+  if (videoStoryVolumeSlider instanceof HTMLInputElement) {
+    videoStoryVolumeSlider.addEventListener('input', () => {
+      const nextVolume = clamp(Number(videoStoryVolumeSlider.value), 0, 100) / 100;
+      videoStoryVolume = nextVolume;
+      videoStorySoundEnabled = nextVolume > 0;
+      updateVideoStoryAudioToggle();
+      syncVideoStoryAudioState();
+      if (videoStorySoundEnabled) {
+        attemptVideoStoryAudioStart({ userInitiated: true });
+      } else {
+        updateVideoStoryAudioStatusFromPlayer();
+      }
+    });
+  }
+
+  if (videoStoryPlayer instanceof HTMLVideoElement) {
+    videoStoryPlayer.addEventListener('loadedmetadata', () => {
+      syncVideoStoryAudioState();
+    });
+    videoStoryPlayer.addEventListener('canplay', () => {
+      syncVideoStoryAudioState();
+    });
+    videoStoryPlayer.addEventListener('playing', () => {
+      updateVideoStoryAudioStatusFromPlayer();
+    });
+    videoStoryPlayer.addEventListener('pause', () => {
+      updateVideoStoryAudioStatusFromPlayer();
+    });
+  }
 
   if (videoStoryScroll) {
     const activateFromStepNode = (stepNode, shouldScroll = false) => {
