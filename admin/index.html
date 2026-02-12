@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Intelligenspartiet Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/admin/admin.css" />
+</head>
+<body>
+  <main class="admin-shell">
+    <header class="admin-header">
+      <h1>Intelligenspartiet Admin</h1>
+      <p>Rediger prompts og nettsidefiler fra hvor som helst via GitHub API.</p>
+    </header>
+
+    <section class="card auth-card">
+      <h2>Autentisering</h2>
+      <label for="api-key">ADMIN API key</label>
+      <input id="api-key" type="password" autocomplete="off" placeholder="Lim inn ADMIN_API_KEY" />
+      <div class="actions">
+        <button id="save-key" type="button">Lagre nøkkel lokalt</button>
+        <button id="test-key" type="button">Test tilkobling</button>
+      </div>
+      <p id="auth-status" class="status"></p>
+    </section>
+
+    <section class="card editor-card">
+      <div class="editor-toolbar">
+        <label for="file-select">Fil</label>
+        <select id="file-select"></select>
+        <button id="load-file" type="button">Last fil</button>
+        <button id="format-json" type="button">Format JSON</button>
+      </div>
+
+      <label for="commit-message">Commit-melding</label>
+      <input id="commit-message" type="text" value="Admin update" />
+
+      <textarea id="file-editor" spellcheck="false" aria-label="File editor"></textarea>
+
+      <div class="actions">
+        <button id="save-file" type="button">Lagre til GitHub</button>
+      </div>
+
+      <div class="meta-row">
+        <p id="file-meta" class="status"></p>
+        <p id="save-status" class="status"></p>
+      </div>
+    </section>
+
+    <section class="card quick-card">
+      <h2>Hurtigfiler</h2>
+      <div class="quick-actions">
+        <button class="quick-open" data-path="assets/data/kling3-prompts.json" type="button">Kling prompts</button>
+        <button class="quick-open" data-path="index.html" type="button">Forside HTML</button>
+        <button class="quick-open" data-path="assets/css/style.css" type="button">Forside CSS</button>
+        <button class="quick-open" data-path="assets/js/main.js" type="button">Forside JS</button>
+      </div>
+      <p>Tips: `Cmd/Ctrl + S` lagrer aktiv fil.</p>
+    </section>
+  </main>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

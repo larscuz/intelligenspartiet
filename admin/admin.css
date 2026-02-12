@@ -1,0 +1,147 @@
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --line: #2b3140;
+  --ink: #eef1f8;
+  --muted: #aab4cc;
+  --accent: #ff4055;
+  --ok: #37c978;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top right, #1c2436 0%, #0f1115 45%);
+  color: var(--ink);
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.admin-shell {
+  width: min(1200px, calc(100% - 2rem));
+  margin: 1.4rem auto 2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+}
+
+.admin-header p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+}
+
+.card {
+  border: 1px solid var(--line);
+  background: rgba(23, 26, 33, 0.94);
+  border-radius: 12px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+label {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid var(--line);
+  background: #10131a;
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+}
+
+textarea {
+  min-height: 420px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.actions,
+.quick-actions,
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+button {
+  border: 1px solid var(--line);
+  background: #1f2533;
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button:hover,
+button:focus-visible {
+  border-color: #5e6f97;
+}
+
+#save-file {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+#save-file:hover,
+#save-file:focus-visible {
+  filter: brightness(1.08);
+}
+
+.status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.status.ok {
+  color: var(--ok);
+}
+
+.status.error {
+  color: #ff7d95;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .admin-shell {
+    width: calc(100% - 1rem);
+    margin-top: 0.5rem;
+  }
+
+  textarea {
+    min-height: 320px;
+  }
+}
