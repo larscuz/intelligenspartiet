@@ -51,6 +51,11 @@ body {
   font-size: 1.15rem;
 }
 
+.card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
 label {
   font-size: 0.9rem;
   color: var(--muted);
@@ -79,6 +84,15 @@ textarea {
   line-height: 1.45;
 }
 
+.auth-panel {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.hidden {
+  display: none;
+}
+
 .actions,
 .quick-actions,
 .editor-toolbar {
@@ -96,6 +110,12 @@ button {
   padding: 0.5rem 0.8rem;
   cursor: pointer;
   font-weight: 600;
+}
+
+button:disabled,
+textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 button:hover,

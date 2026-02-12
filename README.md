@@ -10,7 +10,8 @@ Tabloid-inspirert forside for Intelligenspartiet, med fokus pa erstatningsangst 
 - `/assets/data/kling3-prompts.json`: Kling 3.0 videoprompter for alle videoslots.
 - `/scripts/crawl_ai_jobs_news.py`: Crawler som henter AI + jobb-relaterte nyheter via RSS.
 - `/admin/*`: Browser-basert adminpanel.
-- `/api/repo-file.js`: API for lesing/skriving av repo-filer via GitHub Contents API.
+- `/api/admin-auth.js`: Login + første-gangs passordoppsett.
+- `/api/repo-file.js`: Beskyttet API for lesing/skriving av repo-filer via GitHub API.
 
 ## Kjor lokalt
 1. Oppdater nyhetsdata:
@@ -36,29 +37,46 @@ Adminpanelet lar deg redigere prompts og nettsidefiler fra hvor som helst.
 ### URL
 - `/admin/`
 
-### Hva kan redigeres
-- `index.html`
-- `assets/css/style.css`
-- `assets/js/main.js`
-- `assets/data/kling3-prompts.json`
-- `assets/data/ai-jobs-news.json`
-- flere filer i `assets/`, `admin/` og utvalgte root-filer (se `api/repo-file.js`).
+### Login-modell
+- `ADMIN_EMAIL` er fast admin-bruker (for deg: `lars@larscuzner.com`).
+- Første gang settes passord i admin-UI (setup-flow).
+- Setup krever `ADMIN_SETUP_KEY`.
+- Etter setup brukes e-post + passord.
+- Session lagres i sikker, HttpOnly cookie.
 
 ### Vercel environment variables (obligatorisk)
 Sett disse i Vercel -> Project Settings -> Environment Variables:
 
-- `ADMIN_API_KEY`: lang hemmelig verdi brukt av admin-UI (Bearer token).
-- `GITHUB_TOKEN`: GitHub token med `repo`/contents write-tilgang.
+- `ADMIN_EMAIL`: `lars@larscuzner.com`
+- `ADMIN_SETUP_KEY`: lang hemmelig engangsnokkel for første passordoppsett.
+- `ADMIN_PEPPER`: lang hemmelig streng brukt i passordhashing.
+- `ADMIN_SESSION_SECRET`: lang hemmelig streng for signering av session-cookie.
+- `GITHUB_TOKEN`: GitHub token med write-tilgang til repo contents.
 - `GITHUB_OWNER`: f.eks. `larscuz`.
 - `GITHUB_REPO`: f.eks. `intelligenspartiet`.
 - `GITHUB_BRANCH`: f.eks. `main`.
 
 Etter setting av variabler: redeploy prosjektet.
 
+### Første gangs passordoppsett
+1. Åpne `/admin/`.
+2. Fyll inn admin e-post (`lars@larscuzner.com`).
+3. Velg passord.
+4. Lim inn `ADMIN_SETUP_KEY`.
+5. Trykk `Sett passord`.
+
+### Hva kan redigeres i admin
+- `index.html`
+- `assets/css/style.css`
+- `assets/js/main.js`
+- `assets/data/kling3-prompts.json`
+- `assets/data/ai-jobs-news.json`
+- filer under `admin/` og utvalgte prosjektfiler.
+
 ### Sikkerhet
-- Ikke del `ADMIN_API_KEY`.
-- Roter `ADMIN_API_KEY` og `GITHUB_TOKEN` hvis du mistenker lekkasje.
-- Admin-endpoint returnerer `401` ved feil nøkkel.
+- Ikke del `ADMIN_SETUP_KEY`, `ADMIN_PEPPER`, `ADMIN_SESSION_SECRET` eller `GITHUB_TOKEN`.
+- Roter secrets hvis du mistenker lekkasje.
+- Endepunkt `/api/repo-file` krever gyldig session.
 
 ## Publisering
 1. Push endringer til repoet som er koblet til produksjon pa Vercel.

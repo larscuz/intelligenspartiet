@@ -1,5 +1,9 @@
+const { getSessionFromRequest } = require('./_auth');
+const { hasRepoEnv, githubGetFile, githubPutFile } = require('./_github');
+
 const EDITABLE_PREFIXES = ['assets/', 'admin/'];
 const EDITABLE_EXACT = new Set(['index.html', 'README.md', 'scripts/crawl_ai_jobs_news.py']);
+const BLOCKED_PATHS = new Set(['.admin/auth-config.json']);
 
 function sendJson(res, status, payload) {
   res.statusCode = status;
@@ -8,40 +12,11 @@ function sendJson(res, status, payload) {
   res.end(JSON.stringify(payload));
 }
 
-function getToken(req) {
-  const authHeader = req.headers.authorization || '';
-  if (authHeader.startsWith('Bearer ')) {
-    return authHeader.slice(7).trim();
-  }
-  const keyHeader = req.headers['x-admin-key'];
-  if (typeof keyHeader === 'string') {
-    return keyHeader.trim();
-  }
-  return '';
-}
-
-function hasRepoEnv() {
-  return (
-    Boolean(process.env.GITHUB_TOKEN) &&
-    Boolean(process.env.GITHUB_OWNER) &&
-    Boolean(process.env.GITHUB_REPO)
-  );
-}
-
-function getBranch() {
-  return process.env.GITHUB_BRANCH || 'main';
-}
-
-function encodeRepoPath(path) {
-  return path
-    .split('/')
-    .filter(Boolean)
-    .map((segment) => encodeURIComponent(segment))
-    .join('/');
-}
-
 function isEditablePath(path) {
   if (!path || path.includes('..') || path.startsWith('/')) {
+    return false;
+  }
+  if (BLOCKED_PATHS.has(path)) {
     return false;
   }
   if (EDITABLE_EXACT.has(path)) {
@@ -63,69 +38,16 @@ function getQueryParam(req, name) {
   }
 }
 
-async function githubGetFile(path) {
-  const owner = process.env.GITHUB_OWNER;
-  const repo = process.env.GITHUB_REPO;
-  const branch = getBranch();
-  const encodedPath = encodeRepoPath(path);
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`;
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'intelligenspartiet-admin',
-    },
-  });
-
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.message || `GitHub GET failed (${response.status})`);
+function parseBody(req) {
+  if (!req.body) return {};
+  if (typeof req.body === 'string') {
+    try {
+      return JSON.parse(req.body || '{}');
+    } catch {
+      return {};
+    }
   }
-
-  const content = Buffer.from(payload.content || '', 'base64').toString('utf8');
-
-  return {
-    sha: payload.sha,
-    content,
-    html_url: payload.html_url || null,
-    branch,
-  };
-}
-
-async function githubPutFile({ path, content, sha, message }) {
-  const owner = process.env.GITHUB_OWNER;
-  const repo = process.env.GITHUB_REPO;
-  const branch = getBranch();
-  const encodedPath = encodeRepoPath(path);
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
-
-  const response = await fetch(url, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'intelligenspartiet-admin',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message,
-      content: Buffer.from(content, 'utf8').toString('base64'),
-      sha,
-      branch,
-    }),
-  });
-
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.message || `GitHub PUT failed (${response.status})`);
-  }
-
-  return {
-    sha: payload.content?.sha || null,
-    commit_url: payload.commit?.html_url || null,
-    branch,
-  };
+  return req.body;
 }
 
 module.exports = async (req, res) => {
@@ -135,20 +57,14 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const expectedKey = process.env.ADMIN_API_KEY;
-  if (!expectedKey) {
-    sendJson(res, 500, { error: 'ADMIN_API_KEY mangler i environment variables.' });
-    return;
-  }
-
   if (!hasRepoEnv()) {
-    sendJson(res, 500, { error: 'GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO mangler i environment variables.' });
+    sendJson(res, 500, { error: 'GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO mangler.' });
     return;
   }
 
-  const provided = getToken(req);
-  if (provided !== expectedKey) {
-    sendJson(res, 401, { error: 'Ugyldig admin-nokkel.' });
+  const session = getSessionFromRequest(req);
+  if (!session.ok) {
+    sendJson(res, 401, { error: 'Ikke autentisert. Logg inn i adminpanelet.' });
     return;
   }
 
@@ -177,7 +93,7 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'PUT') {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+    const body = parseBody(req);
     const path = String(body.path || '');
     const content = typeof body.content === 'string' ? body.content : null;
     const sha = typeof body.sha === 'string' ? body.sha : null;

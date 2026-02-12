@@ -1,5 +1,3 @@
-const STORAGE_KEY = 'ip_admin_api_key';
-
 const FILE_OPTIONS = [
   'assets/data/kling3-prompts.json',
   'assets/data/ai-jobs-news.json',
@@ -14,15 +12,30 @@ const FILE_OPTIONS = [
 ];
 
 const state = {
-  token: '',
   currentPath: FILE_OPTIONS[0],
   sha: '',
+  authenticated: false,
+  configured: true,
+  adminEmail: '',
 };
 
-const apiKeyInput = document.querySelector('#api-key');
+const loginPanel = document.querySelector('#login-panel');
+const setupPanel = document.querySelector('#setup-panel');
+const authMode = document.querySelector('#auth-mode');
 const authStatus = document.querySelector('#auth-status');
-const saveKeyButton = document.querySelector('#save-key');
-const testKeyButton = document.querySelector('#test-key');
+
+const loginEmailInput = document.querySelector('#login-email');
+const loginPasswordInput = document.querySelector('#login-password');
+const loginButton = document.querySelector('#login-button');
+const logoutButton = document.querySelector('#logout-button');
+const refreshStatusButton = document.querySelector('#refresh-status');
+
+const setupEmailInput = document.querySelector('#setup-email');
+const setupPasswordInput = document.querySelector('#setup-password');
+const setupPasswordConfirmInput = document.querySelector('#setup-password-confirm');
+const setupKeyInput = document.querySelector('#setup-key');
+const setupButton = document.querySelector('#setup-button');
+
 const fileSelect = document.querySelector('#file-select');
 const loadFileButton = document.querySelector('#load-file');
 const formatJsonButton = document.querySelector('#format-json');
@@ -37,15 +50,53 @@ function setStatus(node, message, kind = '') {
   if (!node) return;
   node.textContent = message;
   node.classList.remove('ok', 'error');
-  if (kind) {
-    node.classList.add(kind);
-  }
+  if (kind) node.classList.add(kind);
 }
 
-function requireToken() {
-  if (state.token) return true;
-  setStatus(authStatus, 'Mangler API key. Lim inn og lagre først.', 'error');
-  return false;
+function parseError(error) {
+  return String(error && error.message ? error.message : error || 'Ukjent feil');
+}
+
+async function apiRequest(method, path, payload) {
+  const options = {
+    method,
+    credentials: 'same-origin',
+    headers: {},
+  };
+
+  if (payload) {
+    options.headers['Content-Type'] = 'application/json';
+    options.body = JSON.stringify(payload);
+  }
+
+  const response = await fetch(path, options);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || `HTTP ${response.status}`);
+  }
+
+  return data;
+}
+
+function setEditorEnabled(enabled) {
+  state.authenticated = enabled;
+
+  if (fileEditor) fileEditor.disabled = !enabled;
+  if (saveFileButton) saveFileButton.disabled = !enabled;
+  if (loadFileButton) loadFileButton.disabled = !enabled;
+  if (formatJsonButton) formatJsonButton.disabled = !enabled;
+  if (fileSelect) fileSelect.disabled = !enabled;
+  if (commitMessageInput) commitMessageInput.disabled = !enabled;
+
+  quickOpenButtons.forEach((button) => {
+    button.disabled = !enabled;
+  });
+
+  if (!enabled) {
+    setStatus(fileMeta, 'Logg inn for å laste/redigere filer.');
+    setStatus(saveStatus, '');
+  }
 }
 
 function populateFileSelect() {
@@ -62,33 +113,128 @@ function populateFileSelect() {
   fileSelect.value = state.currentPath;
 }
 
-async function apiRequest(method, path, payload) {
-  const headers = {
-    Authorization: `Bearer ${state.token}`,
-  };
+function syncAuthInputs() {
+  if (state.adminEmail) {
+    if (loginEmailInput && !loginEmailInput.value) loginEmailInput.value = state.adminEmail;
+    if (setupEmailInput) setupEmailInput.value = state.adminEmail;
+  }
+}
 
-  const options = {
-    method,
-    headers,
-  };
+function applyModeUI() {
+  const setupVisible = !state.configured;
 
-  if (payload) {
-    headers['Content-Type'] = 'application/json';
-    options.body = JSON.stringify(payload);
+  if (setupPanel) setupPanel.classList.toggle('hidden', !setupVisible);
+  if (loginPanel) loginPanel.classList.remove('hidden');
+
+  if (setupVisible) {
+    setStatus(authMode, 'Første gangs oppsett: sett passord med setup-nøkkel.');
+  } else if (state.authenticated) {
+    setStatus(authMode, `Innlogget som ${state.adminEmail}.`, 'ok');
+  } else {
+    setStatus(authMode, 'Passord satt. Logg inn for å redigere.');
+  }
+}
+
+async function refreshAuthStatus() {
+  try {
+    const data = await apiRequest('GET', '/api/admin-auth');
+    state.configured = Boolean(data.configured);
+    state.authenticated = Boolean(data.authenticated);
+    state.adminEmail = String(data.admin_email || '').trim();
+
+    syncAuthInputs();
+    applyModeUI();
+    setEditorEnabled(state.authenticated);
+
+    if (state.authenticated) {
+      setStatus(authStatus, 'Innlogging aktiv.', 'ok');
+      await loadFile(state.currentPath);
+    } else {
+      setStatus(authStatus, '');
+    }
+  } catch (error) {
+    setEditorEnabled(false);
+    setStatus(authStatus, `Auth-feil: ${parseError(error)}`, 'error');
+  }
+}
+
+async function login() {
+  const email = loginEmailInput ? loginEmailInput.value.trim() : '';
+  const password = loginPasswordInput ? loginPasswordInput.value : '';
+
+  if (!email || !password) {
+    setStatus(authStatus, 'E-post og passord er påkrevd.', 'error');
+    return;
   }
 
-  const response = await fetch(path, options);
-  const data = await response.json().catch(() => ({}));
+  setStatus(authStatus, 'Logger inn ...');
 
-  if (!response.ok) {
-    throw new Error(data.error || `HTTP ${response.status}`);
+  try {
+    await apiRequest('POST', '/api/admin-auth', {
+      action: 'login',
+      email,
+      password,
+    });
+
+    if (loginPasswordInput) loginPasswordInput.value = '';
+    setStatus(authStatus, 'Innlogging OK.', 'ok');
+    await refreshAuthStatus();
+  } catch (error) {
+    setStatus(authStatus, `Innlogging feilet: ${parseError(error)}`, 'error');
+  }
+}
+
+async function setupPassword() {
+  const email = setupEmailInput ? setupEmailInput.value.trim() : '';
+  const password = setupPasswordInput ? setupPasswordInput.value : '';
+  const confirm = setupPasswordConfirmInput ? setupPasswordConfirmInput.value : '';
+  const bootstrapKey = setupKeyInput ? setupKeyInput.value.trim() : '';
+
+  if (!email || !password || !confirm || !bootstrapKey) {
+    setStatus(authStatus, 'Alle setup-felter må fylles ut.', 'error');
+    return;
   }
 
-  return data;
+  if (password !== confirm) {
+    setStatus(authStatus, 'Passordene er ikke like.', 'error');
+    return;
+  }
+
+  setStatus(authStatus, 'Setter passord ...');
+
+  try {
+    await apiRequest('POST', '/api/admin-auth', {
+      action: 'setup',
+      email,
+      password,
+      bootstrap_key: bootstrapKey,
+    });
+
+    if (setupPasswordInput) setupPasswordInput.value = '';
+    if (setupPasswordConfirmInput) setupPasswordConfirmInput.value = '';
+    if (setupKeyInput) setupKeyInput.value = '';
+
+    setStatus(authStatus, 'Passord satt. Innlogget.', 'ok');
+    await refreshAuthStatus();
+  } catch (error) {
+    setStatus(authStatus, `Setup feilet: ${parseError(error)}`, 'error');
+  }
+}
+
+async function logout() {
+  setStatus(authStatus, 'Logger ut ...');
+
+  try {
+    await apiRequest('POST', '/api/admin-auth', { action: 'logout' });
+    setStatus(authStatus, 'Logget ut.', 'ok');
+    await refreshAuthStatus();
+  } catch (error) {
+    setStatus(authStatus, `Logout feilet: ${parseError(error)}`, 'error');
+  }
 }
 
 async function loadFile(path) {
-  if (!requireToken()) return;
+  if (!state.authenticated) return;
   setStatus(saveStatus, 'Laster fil ...');
 
   try {
@@ -102,21 +248,19 @@ async function loadFile(path) {
     setStatus(fileMeta, `Fil: ${data.path} | SHA: ${String(data.sha || '').slice(0, 10)} | Branch: ${data.branch || 'main'}`);
     setStatus(saveStatus, 'Fil lastet.', 'ok');
   } catch (error) {
-    setStatus(saveStatus, `Kunne ikke laste fil: ${String(error.message || error)}`, 'error');
+    setStatus(saveStatus, `Kunne ikke laste fil: ${parseError(error)}`, 'error');
   }
 }
 
 async function saveFile() {
-  if (!requireToken()) return;
-  if (!fileEditor) return;
-
-  const message = (commitMessageInput && commitMessageInput.value.trim()) || `Admin update: ${state.currentPath}`;
+  if (!state.authenticated || !fileEditor) return;
 
   if (!state.sha) {
-    setStatus(saveStatus, 'Mangler SHA. Last filen pa nytt før lagring.', 'error');
+    setStatus(saveStatus, 'Mangler SHA. Last filen på nytt før lagring.', 'error');
     return;
   }
 
+  const message = (commitMessageInput && commitMessageInput.value.trim()) || `Admin update: ${state.currentPath}`;
   setStatus(saveStatus, 'Lagrer til GitHub ...');
 
   try {
@@ -132,41 +276,15 @@ async function saveFile() {
     const commitNote = data.commit_url ? ` Commit: ${data.commit_url}` : '';
     setStatus(saveStatus, `Lagret.${commitNote}`, 'ok');
   } catch (error) {
-    setStatus(saveStatus, `Lagring feilet: ${String(error.message || error)}`, 'error');
-  }
-}
-
-function saveToken() {
-  const token = apiKeyInput ? apiKeyInput.value.trim() : '';
-  state.token = token;
-
-  if (!token) {
-    localStorage.removeItem(STORAGE_KEY);
-    setStatus(authStatus, 'Nøkkel fjernet.', 'error');
-    return;
-  }
-
-  localStorage.setItem(STORAGE_KEY, token);
-  setStatus(authStatus, 'Nøkkel lagret lokalt i nettleseren.', 'ok');
-}
-
-async function testConnection() {
-  if (!requireToken()) return;
-  setStatus(authStatus, 'Tester API ...');
-
-  try {
-    await apiRequest('GET', '/api/repo-file?path=README.md');
-    setStatus(authStatus, 'Tilkobling OK.', 'ok');
-  } catch (error) {
-    setStatus(authStatus, `Tilkobling feilet: ${String(error.message || error)}`, 'error');
+    setStatus(saveStatus, `Lagring feilet: ${parseError(error)}`, 'error');
   }
 }
 
 function formatIfJson() {
   if (!fileEditor) return;
-  const path = state.currentPath || '';
-  if (!path.endsWith('.json')) {
-    setStatus(saveStatus, 'Format JSON fungerer kun pa .json-filer.');
+
+  if (!state.currentPath.endsWith('.json')) {
+    setStatus(saveStatus, 'Format JSON gjelder kun .json-filer.');
     return;
   }
 
@@ -175,7 +293,7 @@ function formatIfJson() {
     fileEditor.value = JSON.stringify(parsed, null, 2);
     setStatus(saveStatus, 'JSON formatert.', 'ok');
   } catch (error) {
-    setStatus(saveStatus, `Ugyldig JSON: ${String(error.message || error)}`, 'error');
+    setStatus(saveStatus, `Ugyldig JSON: ${parseError(error)}`, 'error');
   }
 }
 
@@ -195,23 +313,20 @@ function initKeyboardShortcut() {
   window.addEventListener('keydown', (event) => {
     const isSaveCombo = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's';
     if (!isSaveCombo) return;
-
     event.preventDefault();
     saveFile();
   });
 }
 
 function init() {
-  const saved = localStorage.getItem(STORAGE_KEY) || '';
-  state.token = saved;
-  if (apiKeyInput) apiKeyInput.value = saved;
-
   populateFileSelect();
   initQuickButtons();
   initKeyboardShortcut();
 
-  if (saveKeyButton) saveKeyButton.addEventListener('click', saveToken);
-  if (testKeyButton) testKeyButton.addEventListener('click', testConnection);
+  if (loginButton) loginButton.addEventListener('click', login);
+  if (logoutButton) logoutButton.addEventListener('click', logout);
+  if (refreshStatusButton) refreshStatusButton.addEventListener('click', refreshAuthStatus);
+  if (setupButton) setupButton.addEventListener('click', setupPassword);
 
   if (fileSelect) {
     fileSelect.addEventListener('change', () => {
@@ -220,9 +335,7 @@ function init() {
   }
 
   if (loadFileButton) {
-    loadFileButton.addEventListener('click', () => {
-      loadFile(state.currentPath);
-    });
+    loadFileButton.addEventListener('click', () => loadFile(state.currentPath));
   }
 
   if (formatJsonButton) {
@@ -233,11 +346,8 @@ function init() {
     saveFileButton.addEventListener('click', saveFile);
   }
 
-  if (state.token) {
-    setStatus(authStatus, 'Nøkkel funnet i nettleseren.', 'ok');
-  }
-
-  setStatus(fileMeta, `Klar. Velg fil og trykk "Last fil".`);
+  setEditorEnabled(false);
+  refreshAuthStatus();
 }
 
 init();

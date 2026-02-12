@@ -13,17 +13,48 @@
   <main class="admin-shell">
     <header class="admin-header">
       <h1>Intelligenspartiet Admin</h1>
-      <p>Rediger prompts og nettsidefiler fra hvor som helst via GitHub API.</p>
+      <p>Kun for autorisert redigering av nettsted og video-prompter.</p>
     </header>
 
     <section class="card auth-card">
-      <h2>Autentisering</h2>
-      <label for="api-key">ADMIN API key</label>
-      <input id="api-key" type="password" autocomplete="off" placeholder="Lim inn ADMIN_API_KEY" />
-      <div class="actions">
-        <button id="save-key" type="button">Lagre nøkkel lokalt</button>
-        <button id="test-key" type="button">Test tilkobling</button>
+      <h2>Logg inn</h2>
+      <p id="auth-mode" class="status">Sjekker oppsett ...</p>
+
+      <div id="login-panel" class="auth-panel">
+        <label for="login-email">Admin e-post</label>
+        <input id="login-email" type="email" autocomplete="username" />
+
+        <label for="login-password">Passord</label>
+        <input id="login-password" type="password" autocomplete="current-password" />
+
+        <div class="actions">
+          <button id="login-button" type="button">Logg inn</button>
+          <button id="logout-button" type="button">Logg ut</button>
+          <button id="refresh-status" type="button">Oppdater status</button>
+        </div>
       </div>
+
+      <div id="setup-panel" class="auth-panel hidden">
+        <h3>Første gangs oppsett</h3>
+        <p>Sett passord første gang. Dette kan kun gjøres én gang.</p>
+
+        <label for="setup-email">Admin e-post</label>
+        <input id="setup-email" type="email" autocomplete="off" />
+
+        <label for="setup-password">Nytt passord</label>
+        <input id="setup-password" type="password" autocomplete="new-password" />
+
+        <label for="setup-password-confirm">Bekreft passord</label>
+        <input id="setup-password-confirm" type="password" autocomplete="new-password" />
+
+        <label for="setup-key">Setup nøkkel (ADMIN_SETUP_KEY)</label>
+        <input id="setup-key" type="password" autocomplete="off" />
+
+        <div class="actions">
+          <button id="setup-button" type="button">Sett passord</button>
+        </div>
+      </div>
+
       <p id="auth-status" class="status"></p>
     </section>
 
@@ -38,10 +69,10 @@
       <label for="commit-message">Commit-melding</label>
       <input id="commit-message" type="text" value="Admin update" />
 
-      <textarea id="file-editor" spellcheck="false" aria-label="File editor"></textarea>
+      <textarea id="file-editor" spellcheck="false" aria-label="File editor" disabled></textarea>
 
       <div class="actions">
-        <button id="save-file" type="button">Lagre til GitHub</button>
+        <button id="save-file" type="button" disabled>Lagre til GitHub</button>
       </div>
 
       <div class="meta-row">
@@ -53,10 +84,10 @@
     <section class="card quick-card">
       <h2>Hurtigfiler</h2>
       <div class="quick-actions">
-        <button class="quick-open" data-path="assets/data/kling3-prompts.json" type="button">Kling prompts</button>
-        <button class="quick-open" data-path="index.html" type="button">Forside HTML</button>
-        <button class="quick-open" data-path="assets/css/style.css" type="button">Forside CSS</button>
-        <button class="quick-open" data-path="assets/js/main.js" type="button">Forside JS</button>
+        <button class="quick-open" data-path="assets/data/kling3-prompts.json" type="button" disabled>Kling prompts</button>
+        <button class="quick-open" data-path="index.html" type="button" disabled>Forside HTML</button>
+        <button class="quick-open" data-path="assets/css/style.css" type="button" disabled>Forside CSS</button>
+        <button class="quick-open" data-path="assets/js/main.js" type="button" disabled>Forside JS</button>
       </div>
       <p>Tips: `Cmd/Ctrl + S` lagrer aktiv fil.</p>
     </section>
