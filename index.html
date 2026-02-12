@@ -43,6 +43,7 @@
     <a href="#scrollytelling">Scrollytelling</a>
     <a href="#video">Video</a>
     <a href="#prompts">Kling-prompter</a>
+    <a href="/fakta/index.html">Fakta</a>
     <a href="#plattform">Politisk plattform</a>
     <a href="#kontakt">Kontakt</a>
   </nav>
@@ -58,7 +59,7 @@
     </section>
 
     <section class="media-belt" aria-label="Toppsaker med video">
-      <article class="media-tile js-video-launch" role="button" tabindex="0" aria-label="Spill av video: Kontorjobber under AI-press" data-video-title="Kontorjobber under AI-press" data-video-src="https://larscuzner.com/static/Luddites.mp4">
+      <article class="media-tile js-video-launch" role="button" tabindex="0" aria-label="Spill av video: Kontorjobber under AI-press" data-video-title="Kontorjobber under AI-press" data-video-src="https://larscuzner.com/static/Luddites.mp4" data-story-id="kontorjobber-under-ai-press">
         <video autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=1200&q=80">
           <source src="https://larscuzner.com/static/Luddites.mp4" type="video/mp4" />
         </video>
@@ -67,7 +68,7 @@
           <h3>Kontorjobber under AI-press</h3>
         </div>
       </article>
-      <article class="media-tile">
+      <article class="media-tile js-video-launch" role="button" tabindex="0" aria-label="Spill av video: Omstilling i offentlig sektor" data-video-title="Omstilling i offentlig sektor" data-video-src="https://larscuzner.com/static/statsvitenskap.mp4" data-story-id="omstilling-i-offentlig-sektor">
         <video autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80">
           <source src="https://larscuzner.com/static/statsvitenskap.mp4" type="video/mp4" />
         </video>
@@ -76,7 +77,7 @@
           <h3>Omstilling i offentlig sektor</h3>
         </div>
       </article>
-      <article class="media-tile">
+      <article class="media-tile js-video-launch" role="button" tabindex="0" aria-label="Spill av video: Hvem bærer risikoen når AI skalerer?" data-video-title="Hvem bærer risikoen når AI skalerer?" data-video-src="https://larscuzner.com/static/KontorjobberPressureAI.mp4" data-story-id="hvem-baerer-risikoen-ai-skalerer">
         <video autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1200&q=80">
           <source src="https://larscuzner.com/static/KontorjobberPressureAI.mp4" type="video/mp4" />
         </video>
@@ -432,6 +433,19 @@
     <div class="video-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="video-modal-title">
       <button id="video-modal-close" class="video-modal-close" type="button" aria-label="Lukk video">×</button>
       <p id="video-modal-title" class="video-modal-title">Video</p>
+      <section id="video-modal-story" class="video-modal-story" hidden aria-label="Scrollytelling i popup">
+        <div class="video-story-topline">
+          <p id="video-story-kicker" class="video-story-kicker">Scrollytelling</p>
+          <p id="video-story-progress" class="video-story-progress">Scene 1 av 4</p>
+        </div>
+        <div class="video-story-layout">
+          <aside class="video-story-media" aria-live="polite">
+            <video id="video-story-player" controls playsinline preload="metadata"></video>
+            <p id="video-story-caption" class="video-story-caption"></p>
+          </aside>
+          <div id="video-story-scroll" class="video-story-scroll" aria-label="Scroll gjennom scener"></div>
+        </div>
+      </section>
       <video id="video-modal-player" controls playsinline preload="metadata"></video>
     </div>
   </div>
@@ -476,6 +490,17 @@
         <summary>Negative prompt</summary>
         <p class="prompt-negative"></p>
       </details>
+    </article>
+  </template>
+
+  <template id="video-story-step-template">
+    <article class="video-story-step" tabindex="0">
+      <div class="video-story-step-card">
+        <p class="video-story-step-kicker"></p>
+        <h3 class="video-story-step-title"></h3>
+        <p class="video-story-step-body"></p>
+        <div class="video-story-links"></div>
+      </div>
     </article>
   </template>
 

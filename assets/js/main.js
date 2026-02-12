@@ -34,6 +34,14 @@ const videoModalTitle = document.querySelector('#video-modal-title');
 const videoModalPlayer = document.querySelector('#video-modal-player');
 const videoModalClose = document.querySelector('#video-modal-close');
 const videoModalBackdrop = document.querySelector('[data-close-video-modal]');
+const videoModalDialog = document.querySelector('.video-modal-dialog');
+const videoModalStory = document.querySelector('#video-modal-story');
+const videoStoryKicker = document.querySelector('#video-story-kicker');
+const videoStoryProgress = document.querySelector('#video-story-progress');
+const videoStoryPlayer = document.querySelector('#video-story-player');
+const videoStoryCaption = document.querySelector('#video-story-caption');
+const videoStoryScroll = document.querySelector('#video-story-scroll');
+const videoStoryStepTemplate = document.querySelector('#video-story-step-template');
 
 const IMAGE_POOL = [
   'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
@@ -60,6 +68,169 @@ const VIDEO_POOL = [
   'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
 ];
 
+const VIDEO_STORIES = {
+  'kontorjobber-under-ai-press': {
+    id: 'kontorjobber-under-ai-press',
+    title: 'Kontorjobber under AI-press',
+    kicker: 'Scrollytelling',
+    scenes: [
+      {
+        kicker: 'Scene 1',
+        title: 'Kontorarbeid er i frontlinjen',
+        body: 'IMF anslår at rundt 60 prosent av jobbene i avanserte økonomier er eksponert for AI. Kontor- og analysearbeid ligger ofte høyest fordi oppgavene er tekst- og datadrevne.',
+        caption: 'Første tegn er ofte ikke masseoppsigelser, men færre nyansettelser og omfordeling av oppgaver.',
+        video: 'https://larscuzner.com/static/Luddites.mp4',
+        links: [
+          { href: '/fakta/kontorjobber-ai-press.html', label: 'Faktaside: Kontorjobber' },
+          { href: '#wire', label: 'Se AI-jobbwire' },
+        ],
+      },
+      {
+        kicker: 'Scene 2',
+        title: 'Mest transformasjon, ikke ren erstatning',
+        body: 'ILO og NASK viser at omtrent en fjerdedel av jobber globalt er eksponert for generativ AI, men hovedbildet er oppgaveendring. Yrker med rutinepreget administrasjon påvirkes først.',
+        caption: 'Mange roller blir ikke borte over natten, men innholdet i jobben blir annerledes.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        links: [
+          { href: '/fakta/kontorjobber-ai-press.html#ilo', label: 'Kildepunkt: ILO 2025' },
+          { href: '/fakta/index.html', label: 'Åpne faktabibliotek' },
+        ],
+      },
+      {
+        kicker: 'Scene 3',
+        title: 'Bedrifter planlegger både kutt og opplæring',
+        body: 'WEFs Future of Jobs 2025 finner at 41 prosent av arbeidsgivere forventer mindre bemanning i enkelte roller på grunn av AI, samtidig som 77 prosent satser på oppkvalifisering.',
+        caption: 'Dobbel bevegelse: noen funksjoner krymper, nye oppgaver vokser.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+        links: [
+          { href: '/fakta/kontorjobber-ai-press.html#wef', label: 'Kildepunkt: WEF 2025' },
+          { href: '#plattform', label: 'Politisk respons' },
+        ],
+      },
+      {
+        kicker: 'Scene 4',
+        title: 'Hva betyr dette for trygghet',
+        body: 'Hvis gevinsten tas ut raskere enn omskoleringen bygges, øker erstatningsangsten. Derfor trengs forutsigbare overgangsløp, etter- og videreutdanning og innsyn i AI-beslutninger.',
+        caption: 'Malen for video 4: vis overgangen fra usikkerhet til konkret handlingsrom.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+        links: [
+          { href: '#plattform', label: 'Les overgangsfondet' },
+          { href: '/fakta/kontorjobber-ai-press.html#kilder', label: 'Alle kilder' },
+        ],
+      },
+    ],
+  },
+  'omstilling-i-offentlig-sektor': {
+    id: 'omstilling-i-offentlig-sektor',
+    title: 'Omstilling i offentlig sektor',
+    kicker: 'Live-desk',
+    scenes: [
+      {
+        kicker: 'Scene 1',
+        title: 'Fra pilot til tjeneste',
+        body: 'Offentlig sektor tester AI i saksflyt, veiledning og analyse. Utfordringen er å flytte fra enkeltpiloter til trygg drift med sporbarhet og ansvar.',
+        caption: 'Startscenen etablerer tempoet: forventninger om bedre tjenester, men strenge krav til tillit.',
+        video: 'https://larscuzner.com/static/statsvitenskap.mp4',
+        links: [
+          { href: '/fakta/offentlig-sektor-omstilling.html', label: 'Faktaside: Offentlig sektor' },
+          { href: '#wire', label: 'Se siste saker' },
+        ],
+      },
+      {
+        kicker: 'Scene 2',
+        title: 'Bruk er fortsatt ujevn',
+        body: 'Digdir peker på at KI-bruk i offentlig sektor fortsatt er begrenset, men med tydelig utvikling. I kartleggingen sank andelen virksomheter med svært liten bruk fra 55,4 prosent i 2021 til 35,5 prosent i 2023.',
+        caption: 'Omstilling handler ofte om kapasitet, innkjøp og kompetanse - ikke bare teknologi.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+        links: [
+          { href: '/fakta/offentlig-sektor-omstilling.html#digdir', label: 'Kildepunkt: Digdir' },
+          { href: '/fakta/index.html', label: 'Åpne faktabibliotek' },
+        ],
+      },
+      {
+        kicker: 'Scene 3',
+        title: 'Nasjonale mål styrer retningen',
+        body: 'Regjeringen har varslet et mål om at 80 prosent av offentlige virksomheter skal ta i bruk AI innen 2025, og 100 prosent innen 2030. Tempo krever samtidig styring, standarder og kompetanse.',
+        caption: 'Hurtig utrulling uten governance gir høy risiko for feil i tjenestene.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+        links: [
+          { href: '/fakta/offentlig-sektor-omstilling.html#regjeringen', label: 'Kildepunkt: Regjeringen' },
+          { href: '#plattform', label: 'Politisk retning' },
+        ],
+      },
+      {
+        kicker: 'Scene 4',
+        title: 'Tillit som infrastruktur',
+        body: 'Datatilsynet fremhever at personvern, etterprøvbarhet og klar rollefordeling må på plass når AI brukes i offentlige beslutninger. Uten dette blir gevinstene skjøre.',
+        caption: 'Malen for video 4: vis hvordan kontrollmekanismer beskytter innbyggere i praksis.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+        links: [
+          { href: '/fakta/offentlig-sektor-omstilling.html#datatilsynet', label: 'Kildepunkt: Datatilsynet' },
+          { href: '/fakta/offentlig-sektor-omstilling.html#kilder', label: 'Alle kilder' },
+        ],
+      },
+    ],
+  },
+  'hvem-baerer-risikoen-ai-skalerer': {
+    id: 'hvem-baerer-risikoen-ai-skalerer',
+    title: 'Hvem bærer risikoen når AI skalerer?',
+    kicker: 'Analyse',
+    scenes: [
+      {
+        kicker: 'Scene 1',
+        title: 'Produktivitet og sårbarhet øker samtidig',
+        body: 'IMF peker på at AI kan løfte produktivitet og inntekt, men også forsterke ulikhet dersom gevinster og omstilling fordeles skjevt mellom grupper.',
+        caption: 'Spørsmålet er ikke bare hva AI kan gjøre, men hvem som får trygghet i overgangen.',
+        video: 'https://larscuzner.com/static/KontorjobberPressureAI.mp4',
+        links: [
+          { href: '/fakta/risiko-nar-ai-skalerer.html', label: 'Faktaside: Risiko og fordeling' },
+          { href: '#plattform', label: 'Se fordelingsgrep' },
+        ],
+      },
+      {
+        kicker: 'Scene 2',
+        title: 'Eksponering treffer ulikt',
+        body: 'ILO finner at eksponering for generativ AI varierer med kjønn, yrke og inntektsnivå. Særlig kontorintensive roller i høyinntektsland peker seg ut som utsatte for stor oppgaveendring.',
+        caption: 'Risikoen ligger ofte i oppgaver, ikke i hele yrkestitler.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+        links: [
+          { href: '/fakta/risiko-nar-ai-skalerer.html#ilo', label: 'Kildepunkt: ILO 2025' },
+          { href: '/fakta/index.html', label: 'Åpne faktabibliotek' },
+        ],
+      },
+      {
+        kicker: 'Scene 3',
+        title: 'Geografi betyr mer enn vi tror',
+        body: 'OECD advarer om at generativ AI kan forsterke regionale forskjeller. Deres analyser viser større eksponering i urbane regioner enn i rurale områder, noe som flytter risiko mellom steder.',
+        caption: 'Når AI skalerer, må distrikts- og bypolitikk sees i sammenheng med arbeidsmarkedspolitikk.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        links: [
+          { href: '/fakta/risiko-nar-ai-skalerer.html#oecd', label: 'Kildepunkt: OECD' },
+          { href: '#wire', label: 'Saker om jobbtap/omstilling' },
+        ],
+      },
+      {
+        kicker: 'Scene 4',
+        title: 'Rettferdig skalering kan bygges',
+        body: 'WEF rapporterer at virksomheter planlegger intern overgang av ansatte fra fallende til voksende roller. Politikken må sikre at overgangen faktisk blir tilgjengelig for vanlige arbeidstakere.',
+        caption: 'Malen for video 4: vis hvordan folk flyttes fra risikosone til ny rolle med trygg inntekt underveis.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+        links: [
+          { href: '/fakta/risiko-nar-ai-skalerer.html#wef', label: 'Kildepunkt: WEF 2025' },
+          { href: '/fakta/risiko-nar-ai-skalerer.html#kilder', label: 'Alle kilder' },
+        ],
+      },
+    ],
+  },
+};
+
+const VIDEO_STORY_TITLE_ALIASES = {
+  'kontorjobber under ai-press': 'kontorjobber-under-ai-press',
+  'omstilling i offentlig sektor': 'omstilling-i-offentlig-sektor',
+  'hvem baerer risikoen nar ai skalerer?': 'hvem-baerer-risikoen-ai-skalerer',
+  'hvem bærer risikoen når ai skalerer?': 'hvem-baerer-risikoen-ai-skalerer',
+};
+
 const state = {
   items: [],
   filter: 'all',
@@ -70,6 +241,11 @@ const state = {
 };
 
 let modalTriggerNode = null;
+let videoStoryActiveIndex = 0;
+let videoStoryMode = false;
+let videoStoryObserver = null;
+let videoStoryScenes = [];
+const videoStoryPreloaded = new Set();
 let scrollyActiveIndex = 0;
 let scrollySectionInView = true;
 let scrollySoundEnabled = false;
@@ -769,8 +945,273 @@ function initScrollytelling() {
   scrollySteps.forEach((step) => stepObserver.observe(step));
 }
 
+function normalizeStoryLookup(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function resolveVideoStory(triggerNode, title = '') {
+  if (!(triggerNode instanceof Element)) return null;
+
+  let storyId = String(triggerNode.getAttribute('data-story-id') || '').trim();
+  if (!storyId) {
+    const owner = triggerNode.closest('[data-story-id]');
+    storyId = String(owner && owner.getAttribute('data-story-id') || '').trim();
+  }
+
+  if (!storyId) {
+    const inferred = VIDEO_STORY_TITLE_ALIASES[normalizeStoryLookup(title)];
+    if (inferred) storyId = inferred;
+  }
+
+  if (!storyId) {
+    const derivedTitle = deriveVideoTitle(triggerNode, '');
+    const inferred = VIDEO_STORY_TITLE_ALIASES[normalizeStoryLookup(derivedTitle)];
+    if (inferred) storyId = inferred;
+  }
+
+  return VIDEO_STORIES[storyId] || null;
+}
+
+function buildVideoStoryScenes(story, openingVideo = '') {
+  if (!story || !Array.isArray(story.scenes)) return [];
+
+  const scenes = story.scenes.map((scene) => ({
+    kicker: scene.kicker || '',
+    title: scene.title || '',
+    body: scene.body || '',
+    caption: scene.caption || '',
+    video: scene.video || '',
+    links: Array.isArray(scene.links)
+      ? scene.links.map((link) => ({
+        href: String(link && link.href || '').trim(),
+        label: String(link && link.label || '').trim(),
+      })).filter((link) => link.href && link.label)
+      : [],
+  }));
+
+  if (scenes[0] && openingVideo) {
+    scenes[0].video = openingVideo;
+  }
+
+  return scenes;
+}
+
+function setVideoModalMode(storyModeEnabled) {
+  if (videoModalDialog) {
+    videoModalDialog.classList.toggle('is-story-mode', Boolean(storyModeEnabled));
+  }
+  if (videoModalPlayer) {
+    videoModalPlayer.hidden = Boolean(storyModeEnabled);
+  }
+  if (videoModalStory) {
+    videoModalStory.hidden = !storyModeEnabled;
+  }
+}
+
+function preloadVideoStoryScene(index) {
+  const scene = videoStoryScenes[index];
+  if (!scene) return;
+
+  const source = String(scene.video || '').trim();
+  if (!source || videoStoryPreloaded.has(source)) return;
+
+  videoStoryPreloaded.add(source);
+  const probe = document.createElement('video');
+  probe.preload = 'metadata';
+  probe.src = source;
+  probe.load();
+}
+
+function activateVideoStoryScene(index, options = {}) {
+  if (!videoStoryScenes.length) return;
+
+  const shouldAutoplay = options.autoplay !== false;
+  const safeIndex = clamp(index, 0, videoStoryScenes.length - 1);
+  videoStoryActiveIndex = safeIndex;
+  const scene = videoStoryScenes[safeIndex];
+  if (!scene) return;
+
+  if (videoStoryKicker) {
+    videoStoryKicker.textContent = scene.kicker || 'Scene';
+  }
+  if (videoStoryProgress) {
+    videoStoryProgress.textContent = `Scene ${safeIndex + 1} av ${videoStoryScenes.length}`;
+  }
+  if (videoStoryCaption) {
+    videoStoryCaption.textContent = scene.caption || '';
+  }
+
+  if (videoStoryPlayer) {
+    const nextSource = String(scene.video || '').trim();
+    const currentSource = String(videoStoryPlayer.getAttribute('src') || '').trim();
+    if (nextSource && nextSource !== currentSource) {
+      videoStoryPlayer.src = nextSource;
+      videoStoryPlayer.load();
+    }
+    if (nextSource && shouldAutoplay) {
+      videoStoryPlayer.play().catch(() => {});
+    }
+  }
+
+  if (videoStoryScroll) {
+    const stepNodes = Array.from(videoStoryScroll.querySelectorAll('.video-story-step'));
+    stepNodes.forEach((stepNode, stepIndex) => {
+      stepNode.classList.toggle('is-active', stepIndex === safeIndex);
+      stepNode.setAttribute('aria-current', stepIndex === safeIndex ? 'step' : 'false');
+    });
+  }
+
+  preloadVideoStoryScene(safeIndex);
+  preloadVideoStoryScene(safeIndex + 1);
+}
+
+function renderVideoStorySteps() {
+  if (!videoStoryScroll) return;
+  videoStoryScroll.innerHTML = '';
+  if (!videoStoryScenes.length || !videoStoryStepTemplate) return;
+
+  const fragment = document.createDocumentFragment();
+
+  videoStoryScenes.forEach((scene, index) => {
+    const clone = videoStoryStepTemplate.content.cloneNode(true);
+    const stepNode = clone.querySelector('.video-story-step');
+    const kickerNode = clone.querySelector('.video-story-step-kicker');
+    const titleNode = clone.querySelector('.video-story-step-title');
+    const bodyNode = clone.querySelector('.video-story-step-body');
+    const linksNode = clone.querySelector('.video-story-links');
+
+    if (stepNode) {
+      stepNode.dataset.sceneIndex = String(index);
+      stepNode.dataset.video = scene.video || '';
+      stepNode.classList.toggle('is-active', index === 0);
+      stepNode.setAttribute('aria-current', index === 0 ? 'step' : 'false');
+    }
+    if (kickerNode) kickerNode.textContent = scene.kicker || `Scene ${index + 1}`;
+    if (titleNode) titleNode.textContent = scene.title || 'Uten tittel';
+    if (bodyNode) bodyNode.textContent = scene.body || '';
+
+    if (linksNode) {
+      if (!scene.links || !scene.links.length) {
+        linksNode.remove();
+      } else {
+        scene.links.forEach((link) => {
+          const anchor = document.createElement('a');
+          anchor.href = link.href;
+          anchor.textContent = link.label;
+          if (anchor.hostname && anchor.hostname !== window.location.hostname) {
+            anchor.target = '_blank';
+            anchor.rel = 'noopener noreferrer';
+          }
+          linksNode.appendChild(anchor);
+        });
+      }
+    }
+
+    fragment.appendChild(clone);
+  });
+
+  videoStoryScroll.appendChild(fragment);
+}
+
+function initVideoStoryObserver() {
+  if (!videoStoryScroll) return;
+
+  const steps = Array.from(videoStoryScroll.querySelectorAll('.video-story-step'));
+  if (!steps.length) return;
+
+  if (videoStoryObserver) {
+    videoStoryObserver.disconnect();
+  }
+
+  videoStoryObserver = new IntersectionObserver(
+    (entries) => {
+      const visibleSteps = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+
+      if (!visibleSteps.length) return;
+      const rawIndex = Number(visibleSteps[0].target.dataset.sceneIndex);
+      if (!Number.isFinite(rawIndex)) return;
+      activateVideoStoryScene(rawIndex, { autoplay: true });
+    },
+    {
+      root: videoStoryScroll,
+      threshold: [0.35, 0.55, 0.75],
+      rootMargin: '-18% 0px -32% 0px',
+    }
+  );
+
+  steps.forEach((stepNode) => videoStoryObserver.observe(stepNode));
+}
+
+function teardownVideoStory(clearMarkup = true) {
+  if (videoStoryObserver) {
+    videoStoryObserver.disconnect();
+    videoStoryObserver = null;
+  }
+
+  if (videoStoryPlayer) {
+    videoStoryPlayer.pause();
+    videoStoryPlayer.removeAttribute('src');
+    videoStoryPlayer.load();
+  }
+
+  if (clearMarkup && videoStoryScroll) {
+    videoStoryScroll.innerHTML = '';
+  }
+
+  if (videoStoryCaption) videoStoryCaption.textContent = '';
+  if (videoStoryProgress) videoStoryProgress.textContent = '';
+
+  videoStoryScenes = [];
+  videoStoryActiveIndex = 0;
+  videoStoryPreloaded.clear();
+  videoStoryMode = false;
+  setVideoModalMode(false);
+}
+
+function openVideoStoryModal(story, openingVideo, triggerNode) {
+  if (!videoModal || !story || !videoStoryPlayer || !videoStoryScroll || !videoStoryStepTemplate) {
+    const fallbackSource = String(openingVideo || '').trim();
+    if (!fallbackSource) return;
+    openVideoModal(fallbackSource, story && story.title ? story.title : 'Video', triggerNode);
+    return;
+  }
+
+  teardownVideoStory(false);
+
+  modalTriggerNode = triggerNode || null;
+  videoModal.hidden = false;
+  videoModal.setAttribute('aria-hidden', 'false');
+  body.classList.add('modal-open');
+
+  setVideoModalMode(true);
+  videoStoryMode = true;
+  videoStoryScenes = buildVideoStoryScenes(story, openingVideo);
+
+  if (videoModalTitle) {
+    videoModalTitle.textContent = story.title || 'Scrollytelling';
+  }
+
+  if (!videoStoryScenes.length) {
+    const fallbackSource = String(openingVideo || '').trim();
+    if (!fallbackSource) return;
+    openVideoModal(fallbackSource, story.title || 'Video', triggerNode);
+    return;
+  }
+
+  renderVideoStorySteps();
+  activateVideoStoryScene(0, { autoplay: true });
+  if (videoStoryScroll) {
+    videoStoryScroll.scrollTop = 0;
+  }
+  initVideoStoryObserver();
+}
+
 function closeVideoModal() {
   if (!videoModal || videoModal.hidden) return;
+
+  teardownVideoStory(true);
 
   videoModal.hidden = true;
   videoModal.setAttribute('aria-hidden', 'true');
@@ -791,6 +1232,8 @@ function closeVideoModal() {
 function openVideoModal(source, title, triggerNode) {
   if (!videoModal || !videoModalPlayer || !source) return;
 
+  teardownVideoStory(true);
+
   modalTriggerNode = triggerNode || null;
   videoModal.hidden = false;
   videoModal.setAttribute('aria-hidden', 'false');
@@ -810,6 +1253,37 @@ function initVideoModal() {
 
   markVideoTriggers(document);
 
+  if (videoStoryScroll) {
+    const activateFromStepNode = (stepNode, shouldScroll = false) => {
+      if (!(stepNode instanceof HTMLElement)) return;
+      const rawIndex = Number(stepNode.dataset.sceneIndex);
+      if (!Number.isFinite(rawIndex)) return;
+      activateVideoStoryScene(rawIndex, { autoplay: true });
+      if (shouldScroll) {
+        stepNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
+
+    videoStoryScroll.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      if (target.closest('a')) return;
+      const stepNode = target.closest('.video-story-step');
+      if (!stepNode) return;
+      activateFromStepNode(stepNode, false);
+    });
+
+    videoStoryScroll.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      const stepNode = target.closest('.video-story-step');
+      if (!stepNode) return;
+      event.preventDefault();
+      activateFromStepNode(stepNode, true);
+    });
+  }
+
   const openFromTrigger = (triggerNode, event = null) => {
     if (!(triggerNode instanceof Element)) return;
 
@@ -828,6 +1302,12 @@ function initVideoModal() {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
+    }
+
+    const story = resolveVideoStory(triggerNode, title);
+    if (story) {
+      openVideoStoryModal(story, source, triggerNode);
+      return;
     }
 
     openVideoModal(source, title, triggerNode);
