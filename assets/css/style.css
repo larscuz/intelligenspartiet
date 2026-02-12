@@ -226,6 +226,19 @@ video {
   outline-offset: 2px;
 }
 
+.media-tile[data-video-popup="true"],
+.video-card[data-video-popup="true"],
+.news-media-link[data-video-popup="true"] {
+  cursor: pointer;
+}
+
+.media-tile[data-video-popup="true"]:focus-visible,
+.video-card[data-video-popup="true"]:focus-visible,
+.news-media-link[data-video-popup="true"]:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+}
+
 .video-popup-trigger {
   cursor: pointer;
 }

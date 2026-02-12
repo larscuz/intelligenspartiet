@@ -152,6 +152,30 @@ function deriveVideoTitle(node, fallback = 'Video') {
 function markVideoTriggers(rootNode = document) {
   if (!(rootNode instanceof Document || rootNode instanceof Element)) return;
 
+  const attachContainerTrigger = (containerNode, videoNode) => {
+    if (!(containerNode instanceof Element)) return;
+    if (!(videoNode instanceof HTMLVideoElement)) return;
+
+    const source = getSourceFromVideo(videoNode);
+    if (!source) return;
+
+    containerNode.setAttribute('data-video-popup', 'true');
+    if (!containerNode.getAttribute('data-video-src')) {
+      containerNode.setAttribute('data-video-src', source);
+    }
+    if (!containerNode.getAttribute('data-video-title')) {
+      const title = deriveVideoTitle(containerNode, deriveVideoTitle(videoNode.closest('article, section, aside, div') || videoNode));
+      containerNode.setAttribute('data-video-title', title);
+    }
+    if (!(containerNode instanceof HTMLAnchorElement)) {
+      if (!containerNode.hasAttribute('tabindex')) containerNode.setAttribute('tabindex', '0');
+      if (!containerNode.hasAttribute('role')) containerNode.setAttribute('role', 'button');
+    }
+    if (!containerNode.getAttribute('aria-label')) {
+      containerNode.setAttribute('aria-label', `Spill av video: ${deriveVideoTitle(containerNode)}`);
+    }
+  };
+
   rootNode.querySelectorAll('.js-video-launch').forEach((tile) => {
     if (!tile.hasAttribute('role')) tile.setAttribute('role', 'button');
     if (!tile.hasAttribute('tabindex')) tile.setAttribute('tabindex', '0');
@@ -174,6 +198,10 @@ function markVideoTriggers(rootNode = document) {
     if (!videoNode.getAttribute('aria-label')) {
       videoNode.setAttribute('aria-label', `Spill av video: ${deriveVideoTitle(videoNode.closest('article, section, aside, div') || videoNode)}`);
     }
+
+    attachContainerTrigger(videoNode.closest('.media-tile'), videoNode);
+    attachContainerTrigger(videoNode.closest('.video-card'), videoNode);
+    attachContainerTrigger(videoNode.closest('.news-media-link'), videoNode);
   });
 }
 
