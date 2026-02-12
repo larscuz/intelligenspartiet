@@ -18,6 +18,11 @@ const scrollyTitle = document.querySelector('#scrolly-title');
 const scrollyBody = document.querySelector('#scrolly-body');
 const scrollyImage = document.querySelector('#scrolly-image');
 const scrollyVideo = document.querySelector('#scrolly-video');
+const videoModal = document.querySelector('#video-modal');
+const videoModalTitle = document.querySelector('#video-modal-title');
+const videoModalPlayer = document.querySelector('#video-modal-player');
+const videoModalClose = document.querySelector('#video-modal-close');
+const videoModalBackdrop = document.querySelector('[data-close-video-modal]');
 
 const IMAGE_POOL = [
   'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
@@ -52,6 +57,59 @@ const state = {
   generatedAt: null,
   totalItems: 0,
 };
+
+let modalTriggerNode = null;
+
+function getSourceFromVideo(videoNode) {
+  if (!(videoNode instanceof HTMLVideoElement)) return '';
+  const sourceNode = videoNode.querySelector('source');
+  return (
+    String(videoNode.currentSrc || '').trim()
+    || String(videoNode.getAttribute('src') || '').trim()
+    || String(sourceNode && sourceNode.getAttribute('src') || '').trim()
+    || ''
+  );
+}
+
+function deriveVideoTitle(node, fallback = 'Video') {
+  if (!(node instanceof Element)) return fallback;
+  const explicit = String(node.getAttribute('data-video-title') || '').trim();
+  if (explicit) return explicit;
+
+  const heading = node.querySelector('h1, h2, h3')
+    || node.closest('article, section, aside, div')?.querySelector('h1, h2, h3');
+  const headingText = String(heading && heading.textContent || '').trim();
+  if (headingText) return headingText;
+
+  return fallback;
+}
+
+function markVideoTriggers(rootNode = document) {
+  if (!(rootNode instanceof Document || rootNode instanceof Element)) return;
+
+  rootNode.querySelectorAll('.js-video-launch').forEach((tile) => {
+    if (!tile.hasAttribute('role')) tile.setAttribute('role', 'button');
+    if (!tile.hasAttribute('tabindex')) tile.setAttribute('tabindex', '0');
+    if (!tile.hasAttribute('data-video-popup')) tile.setAttribute('data-video-popup', 'true');
+    if (!tile.getAttribute('aria-label')) {
+      tile.setAttribute('aria-label', `Spill av video: ${deriveVideoTitle(tile)}`);
+    }
+  });
+
+  rootNode.querySelectorAll('video').forEach((videoNode) => {
+    if (!(videoNode instanceof HTMLVideoElement)) return;
+    if (videoNode.id === 'video-modal-player') return;
+    if (!getSourceFromVideo(videoNode)) return;
+
+    videoNode.classList.add('video-popup-trigger');
+    videoNode.setAttribute('data-video-popup', 'true');
+    if (!videoNode.hasAttribute('tabindex')) videoNode.setAttribute('tabindex', '0');
+    if (!videoNode.hasAttribute('role')) videoNode.setAttribute('role', 'button');
+    if (!videoNode.getAttribute('aria-label')) {
+      videoNode.setAttribute('aria-label', `Spill av video: ${deriveVideoTitle(videoNode.closest('article, section, aside, div') || videoNode)}`);
+    }
+  });
+}
 
 function formatNow() {
   return new Intl.DateTimeFormat('nb-NO', {
@@ -236,6 +294,7 @@ function renderNews() {
   });
 
   listNode.appendChild(fragment);
+  markVideoTriggers(listNode);
 }
 
 function setFilter(name) {
@@ -317,6 +376,8 @@ function applyScrollyStep(step) {
   scrollySteps.forEach((entry) => {
     entry.classList.toggle('is-active', entry === step);
   });
+
+  markVideoTriggers(scrollyMedia || document);
 }
 
 function initScrollytelling() {
@@ -339,6 +400,104 @@ function initScrollytelling() {
   );
 
   scrollySteps.forEach((step) => observer.observe(step));
+}
+
+function closeVideoModal() {
+  if (!videoModal || videoModal.hidden) return;
+
+  videoModal.hidden = true;
+  videoModal.setAttribute('aria-hidden', 'true');
+  body.classList.remove('modal-open');
+
+  if (videoModalPlayer) {
+    videoModalPlayer.pause();
+    videoModalPlayer.removeAttribute('src');
+    videoModalPlayer.load();
+  }
+
+  if (modalTriggerNode) {
+    modalTriggerNode.focus();
+    modalTriggerNode = null;
+  }
+}
+
+function openVideoModal(source, title, triggerNode) {
+  if (!videoModal || !videoModalPlayer || !source) return;
+
+  modalTriggerNode = triggerNode || null;
+  videoModal.hidden = false;
+  videoModal.setAttribute('aria-hidden', 'false');
+  body.classList.add('modal-open');
+
+  if (videoModalTitle) {
+    videoModalTitle.textContent = title || 'Video';
+  }
+
+  videoModalPlayer.src = source;
+  videoModalPlayer.load();
+  videoModalPlayer.play().catch(() => {});
+}
+
+function initVideoModal() {
+  if (!videoModal) return;
+
+  markVideoTriggers(document);
+
+  const openFromTrigger = (triggerNode, event = null) => {
+    if (!(triggerNode instanceof Element)) return;
+
+    const videoNode = triggerNode instanceof HTMLVideoElement
+      ? triggerNode
+      : triggerNode.querySelector('video');
+
+    if (!(videoNode instanceof HTMLVideoElement)) return;
+
+    const source = String(triggerNode.getAttribute('data-video-src') || '').trim()
+      || getSourceFromVideo(videoNode);
+    const title = deriveVideoTitle(triggerNode, deriveVideoTitle(videoNode.closest('article, section, aside, div') || videoNode));
+
+    if (!source) return;
+
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    openVideoModal(source, title, triggerNode);
+  };
+
+  document.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+    if (videoModal.contains(target)) return;
+
+    const triggerNode = target.closest('[data-video-popup="true"]');
+    if (!triggerNode) return;
+    openFromTrigger(triggerNode, event);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && videoModal && !videoModal.hidden) {
+      closeVideoModal();
+      return;
+    }
+
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+
+    const triggerNode = target.closest('[data-video-popup="true"]');
+    if (!triggerNode) return;
+    openFromTrigger(triggerNode, event);
+  });
+
+  if (videoModalClose) {
+    videoModalClose.addEventListener('click', closeVideoModal);
+  }
+
+  if (videoModalBackdrop) {
+    videoModalBackdrop.addEventListener('click', closeVideoModal);
+  }
 }
 
 function renderPrompts(prompts, meta) {
@@ -496,5 +655,6 @@ if (yearNode) {
 setTopClock();
 window.setInterval(setTopClock, 30_000);
 initScrollytelling();
+initVideoModal();
 loadNews();
 loadPrompts();

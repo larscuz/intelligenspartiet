@@ -185,6 +185,24 @@ video {
   min-height: 220px;
 }
 
+.media-tile.js-video-launch {
+  cursor: pointer;
+}
+
+.media-tile.js-video-launch:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.video-popup-trigger {
+  cursor: pointer;
+}
+
+.video-popup-trigger:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+}
+
 .media-tile video {
   height: 100%;
   object-fit: cover;
@@ -899,6 +917,74 @@ video {
 .site-footer a {
   color: var(--red-dark);
   font-weight: 700;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+.video-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: grid;
+  place-items: center;
+  padding: 0.8rem;
+}
+
+.video-modal[hidden] {
+  display: none;
+}
+
+.video-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.video-modal-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(1100px, calc(100% - 1rem));
+  background: #080808;
+  border: 1px solid #2f2f2f;
+  box-shadow: 0 1.2rem 3.4rem rgba(0, 0, 0, 0.5);
+  padding: 0.75rem;
+}
+
+.video-modal-title {
+  margin: 0 2.8rem 0.5rem 0;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.video-modal-close {
+  position: absolute;
+  top: 0.42rem;
+  right: 0.42rem;
+  border: 1px solid #3a3a3a;
+  background: #141414;
+  color: #ffffff;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.video-modal-close:hover,
+.video-modal-close:focus-visible {
+  background: #232323;
+  border-color: #ffffff;
+}
+
+#video-modal-player {
+  width: 100%;
+  max-height: min(78vh, 760px);
+  display: block;
+  background: #000000;
 }
 
 .empty-state {

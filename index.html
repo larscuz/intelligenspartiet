@@ -49,9 +49,9 @@
 
   <main id="main" class="page">
     <section class="media-belt" aria-label="Toppsaker med video">
-      <article class="media-tile">
+      <article class="media-tile js-video-launch" role="button" tabindex="0" aria-label="Spill av video: Kontorjobber under AI-press" data-video-title="Kontorjobber under AI-press" data-video-src="https://larscuzner.com/static/KontorjobberPressureAI.mp4">
         <video autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=1200&q=80">
-          <source src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" type="video/mp4" />
+          <source src="https://larscuzner.com/static/KontorjobberPressureAI.mp4" type="video/mp4" />
         </video>
         <div class="media-tile-caption">
           <p class="mini-kicker">VIDEO</p>
@@ -278,6 +278,15 @@
     <p>Tips, funn eller samarbeid: <a href="mailto:hello@intelligenspartiet.no">hello@intelligenspartiet.no</a></p>
     <p>© <span id="year"></span> Intelligenspartiet</p>
   </footer>
+
+  <div id="video-modal" class="video-modal" hidden aria-hidden="true">
+    <div class="video-modal-backdrop" data-close-video-modal></div>
+    <div class="video-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="video-modal-title">
+      <button id="video-modal-close" class="video-modal-close" type="button" aria-label="Lukk video">×</button>
+      <p id="video-modal-title" class="video-modal-title">Video</p>
+      <video id="video-modal-player" controls playsinline preload="metadata"></video>
+    </div>
+  </div>
 
   <template id="news-item-template">
     <article class="news-item">
