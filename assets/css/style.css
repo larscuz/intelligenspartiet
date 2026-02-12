@@ -105,12 +105,17 @@ video {
 
 .brand {
   justify-self: center;
-  font-family: "Bebas Neue", sans-serif;
-  font-size: clamp(2rem, 6vw, 4rem);
-  letter-spacing: 0.03em;
-  color: #fff;
+  display: inline-flex;
+  align-items: center;
   text-decoration: none;
-  line-height: 0.95;
+  line-height: 1;
+}
+
+.brand-logo {
+  display: block;
+  width: min(52vw, 34rem);
+  height: auto;
+  max-height: clamp(2.6rem, 7vw, 5.4rem);
 }
 
 .menu-toggle {
@@ -885,6 +890,11 @@ video {
     order: -1;
     grid-column: 1 / -1;
     justify-self: start;
+  }
+
+  .brand-logo {
+    width: min(76vw, 24rem);
+    max-height: 4.4rem;
   }
 
   .menu-toggle {
