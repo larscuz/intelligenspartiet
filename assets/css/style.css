@@ -171,6 +171,38 @@ video {
   gap: 1.5rem;
 }
 
+.page > .series-top-cta {
+  order: 1;
+}
+
+.page > .media-belt {
+  order: 2;
+}
+
+.page > .lead-grid {
+  order: 3;
+}
+
+#scrollytelling {
+  order: 4;
+}
+
+#wire {
+  order: 5;
+}
+
+#video {
+  order: 6;
+}
+
+#prompts {
+  order: 7;
+}
+
+#plattform {
+  order: 8;
+}
+
 .media-belt {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -326,67 +358,22 @@ video {
   gap: 1rem;
 }
 
-.series-hero {
-  position: relative;
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  min-height: min(78vh, 680px);
-  border-top: 1px solid #111;
-  border-bottom: 1px solid #111;
-  overflow: hidden;
-}
-
-.series-hero-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.series-hero-overlay {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.14), transparent 32%),
-    linear-gradient(180deg, rgba(6, 9, 17, 0.2) 0%, rgba(6, 9, 17, 0.8) 62%, rgba(6, 9, 17, 0.9) 100%);
-}
-
-.series-hero-content {
-  position: relative;
-  z-index: 1;
-  width: min(var(--max), calc(100% - 2rem));
-  margin: 0 auto;
-  padding: clamp(1.3rem, 4vw, 2.5rem) 0;
-  color: #f4f4f4;
+.series-top-cta {
+  border: 1px solid #111;
+  background: linear-gradient(120deg, #05080f, #111827 52%, #2b0f12);
+  color: #fff;
+  padding: 0.75rem 0.85rem;
   display: grid;
-  gap: 0.6rem;
-  align-content: end;
-  min-height: min(78vh, 680px);
+  gap: 0.45rem;
 }
 
-.series-hero-kicker {
+.series-top-kicker {
   margin: 0;
-  font-size: 0.76rem;
+  color: #ffe5ab;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #ffe5ab;
-}
-
-.series-hero h2 {
-  margin: 0;
-  font-family: "Bebas Neue", sans-serif;
-  font-size: clamp(2.2rem, 7vw, 5.4rem);
-  line-height: 0.9;
-  letter-spacing: 0.02em;
-  max-width: 12ch;
-}
-
-.series-hero-sub {
-  margin: 0;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.92);
 }
 
 .series-hero-progress {
@@ -755,20 +742,20 @@ video {
 }
 
 .scrolly-layout {
-  --scrolly-frame-h: 100vh;
+  --scrolly-frame-h: min(82vh, 860px);
   margin-top: 1rem;
   position: relative;
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  min-height: calc(var(--scrolly-frame-h) + 100vh);
+  width: 100%;
+  margin-left: 0;
+  min-height: calc(var(--scrolly-frame-h) + 88vh);
 }
 
 .scrolly-media {
   position: sticky;
-  top: 0;
+  top: 1rem;
   z-index: 1;
   width: 100%;
-  border: 0;
+  border: 1px solid var(--line);
   background: #040404;
   color: #ffffff;
   height: var(--scrolly-frame-h);
@@ -1001,7 +988,7 @@ video {
 }
 
 .scrolly-step-card {
-  width: min(92vw, 760px);
+  width: min(92%, 760px);
   border: 1px solid rgba(0, 0, 0, 0.24);
   background: rgba(247, 241, 231, 0.94);
   box-shadow: 0 1.4rem 3rem rgba(0, 0, 0, 0.36);
@@ -1381,8 +1368,8 @@ body.modal-open {
     align-items: flex-start;
   }
 
-  .series-hero-content {
-    min-height: min(70vh, 620px);
+  .series-top-cta {
+    padding: 0.68rem 0.72rem;
   }
 
   .source {
