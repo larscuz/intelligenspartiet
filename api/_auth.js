@@ -3,6 +3,22 @@ const crypto = require('crypto');
 const SESSION_COOKIE = 'ip_admin_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
+function pickEnv(candidates) {
+  for (const candidate of candidates) {
+    const value = String(candidate.value || '').trim();
+    if (value) {
+      return {
+        value,
+        source: candidate.name,
+      };
+    }
+  }
+  return {
+    value: '',
+    source: '',
+  };
+}
+
 function parseCookies(req) {
   const header = req.headers.cookie || '';
   const output = {};
@@ -27,8 +43,36 @@ function base64UrlDecode(input) {
   return Buffer.from(input, 'base64url').toString('utf8');
 }
 
+function resolveSessionSecret() {
+  const resolved = pickEnv([
+    { name: 'ADMIN_SESSION_SECRET', value: process.env.ADMIN_SESSION_SECRET },
+    { name: 'SESSION_SECRET', value: process.env.SESSION_SECRET },
+    // Last-resort fallback to avoid hard lockout when only ADMIN_PEPPER exists.
+    { name: 'ADMIN_PEPPER(fallback)', value: process.env.ADMIN_PEPPER },
+  ]);
+
+  return {
+    secret: String(resolved.value || ''),
+    source: resolved.source || null,
+    flags: {
+      ADMIN_SESSION_SECRET: Boolean(String(process.env.ADMIN_SESSION_SECRET || '').trim()),
+      SESSION_SECRET: Boolean(String(process.env.SESSION_SECRET || '').trim()),
+      ADMIN_PEPPER_FALLBACK: Boolean(String(process.env.ADMIN_PEPPER || '').trim()),
+    },
+  };
+}
+
 function getSessionSecret() {
-  return process.env.ADMIN_SESSION_SECRET || '';
+  return resolveSessionSecret().secret;
+}
+
+function getSessionSecretStatus() {
+  const resolved = resolveSessionSecret();
+  return {
+    ok: Boolean(resolved.secret),
+    source: resolved.source,
+    flags: resolved.flags,
+  };
 }
 
 function signPayload(payload) {
@@ -138,4 +182,5 @@ module.exports = {
   getSessionFromRequest,
   createSessionCookie,
   clearSessionCookie,
+  getSessionSecretStatus,
 };

@@ -4,6 +4,7 @@ const {
   getSessionFromRequest,
   createSessionCookie,
   clearSessionCookie,
+  getSessionSecretStatus,
 } = require('./_auth');
 const { getRepoEnvStatus, githubGetFile, githubPutFile } = require('./_github');
 
@@ -167,6 +168,7 @@ module.exports = async (req, res) => {
   const pepper = process.env.ADMIN_PEPPER || '';
   const setupKeyInfo = resolveSetupKeyEnv();
   const setupKey = setupKeyInfo.key;
+  const sessionSecretStatus = getSessionSecretStatus();
 
   if (!pepper) {
     sendJson(res, 500, { error: 'ADMIN_PEPPER mangler i environment variables.' });
@@ -194,6 +196,8 @@ module.exports = async (req, res) => {
       admin_email_env: adminEmailInfo.flags,
       setup_key_source: setupKeyInfo.source,
       setup_key_env: setupKeyInfo.flags,
+      session_secret_source: sessionSecretStatus.source,
+      session_secret_env: sessionSecretStatus.flags,
       authenticated: session.ok,
       session_email: session.ok ? session.email : '',
     });
@@ -202,6 +206,16 @@ module.exports = async (req, res) => {
 
   if (req.method !== 'POST') {
     sendJson(res, 405, { error: 'Method not allowed. Use GET or POST.' });
+    return;
+  }
+
+  if (!sessionSecretStatus.ok) {
+    sendJson(res, 500, {
+      error: 'ADMIN_SESSION_SECRET mangler. Kan ikke opprette login-session.',
+      missing: ['ADMIN_SESSION_SECRET'],
+      session_secret_source: sessionSecretStatus.source,
+      session_secret_env: sessionSecretStatus.flags,
+    });
     return;
   }
 
