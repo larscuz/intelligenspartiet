@@ -35,7 +35,9 @@
   <nav id="main-nav" class="section-nav">
     <a href="#hovedsak">Hovedsak</a>
     <a href="#wire">AI-jobbwire</a>
+    <a href="#scrollytelling">Scrollytelling</a>
     <a href="#video">Video</a>
+    <a href="#prompts">Kling-prompter</a>
     <a href="#plattform">Politisk plattform</a>
     <a href="#kontakt">Kontakt</a>
   </nav>
@@ -94,6 +96,7 @@
             <p class="mini-kicker">ANALYSE</p>
             <h2>Hva skjer når AI kutter førstelinjejobber?</h2>
             <p>Vi følger signalene i sanntid og bygger politikk på dokumenterte endringer.</p>
+            <a class="inline-link" href="#scrollytelling">Se scrollytelling</a>
           </div>
         </article>
         <article class="headline-block">
@@ -141,6 +144,54 @@
       </div>
     </section>
 
+    <section id="scrollytelling" class="scrolly-story">
+      <div class="section-headline-row">
+        <h2>Scrollytelling: Hva skjer når AI kutter førstelinjejobber?</h2>
+        <p class="news-meta">Scroll for stegvis utvikling</p>
+      </div>
+
+      <div class="scrolly-layout">
+        <aside class="scrolly-media" aria-live="polite">
+          <p id="scrolly-kicker" class="kicker">Steg 1</p>
+          <h3 id="scrolly-title">Kutt starter i repetitive frontlinjeoppgaver</h3>
+          <p id="scrolly-body">
+            Selskaper automatiserer først kundeservice, backoffice og enklere vurderinger for å redusere kostnader raskt.
+          </p>
+          <div class="scrolly-frame">
+            <img id="scrolly-image" src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=80" alt="Team i workshop" loading="lazy" />
+            <video id="scrolly-video" muted loop playsinline preload="none"></video>
+          </div>
+        </aside>
+
+        <div class="scrolly-steps">
+          <article class="scrolly-step is-active" data-kicker="Steg 1" data-title="Kutt starter i repetitive frontlinjeoppgaver" data-body="Selskaper automatiserer først kundeservice, backoffice og enklere vurderinger for å redusere kostnader raskt." data-image="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=80" data-video="">
+            <h3>Steg 1: Kostnadsjakt</h3>
+            <p>Førstelinjen blir testarena for AI fordi oppgavene er standardiserte og lette å måle.</p>
+          </article>
+
+          <article class="scrolly-step" data-kicker="Steg 2" data-title="Bemanning reduseres før nye roller er klare" data-body="Når AI tar volum, kuttes stillinger raskt. Men opplæringsplaner og nye roller kommer ofte for sent." data-image="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1600&q=80" data-video="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4">
+            <h3>Steg 2: Ubalanse</h3>
+            <p>Organisasjonen høster gevinster nå, mens ansatte må bære risikoen i overgangsperioden.</p>
+          </article>
+
+          <article class="scrolly-step" data-kicker="Steg 3" data-title="Kvalitetsproblemer skaper dobbeltarbeid" data-body="Uten kontroll på modellkvalitet og ansvar må mennesker rydde opp i feil, ofte under høyere tidspress." data-image="https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1600&q=80" data-video="https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4">
+            <h3>Steg 3: Friksjon</h3>
+            <p>Nye systemer uten innsyn gjør arbeidsdagen mindre forutsigbar og mer stressende.</p>
+          </article>
+
+          <article class="scrolly-step" data-kicker="Steg 4" data-title="Lokal uro blir politisk sak" data-body="Når mange mister fotfeste samtidig, blir det et samfunnssporsmal: hvem finansierer trygg overgang?" data-image="https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1600&q=80" data-video="">
+            <h3>Steg 4: Politisk press</h3>
+            <p>Fagmiljøer, kommuner og arbeidstakere krever overgangsfond, omskolering og rett til innsyn.</p>
+          </article>
+
+          <article class="scrolly-step" data-kicker="Steg 5" data-title="Ny kontrakt mellom teknologi og trygghet" data-body="Målet er ikke å stoppe AI, men å fordele risiko og gevinst rettferdig når arbeid endres." data-image="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=80" data-video="https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4">
+            <h3>Steg 5: Løsning</h3>
+            <p>Scrollytellingen ender i konkret politikk: overgangsfond, opplæringsgaranti og AI-tilsyn.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
     <section id="video" class="video-report">
       <div class="section-headline-row">
         <h2>Video-desk</h2>
@@ -172,6 +223,17 @@
           <h3>Fagbevegelsen krever AI-innsyn i HR-systemer</h3>
         </article>
       </div>
+    </section>
+
+    <section id="prompts" class="prompt-bank">
+      <div class="section-headline-row">
+        <h2>Kling 3.0 promptbank</h2>
+        <p id="prompt-meta" class="news-meta">Laster prompts ...</p>
+      </div>
+      <p class="prompt-intro">
+        Ferdige produksjonsprompter for alle videoer på siden. Hver prompt inkluderer scene, kamera, stemning og negative constraints.
+      </p>
+      <div id="prompt-list" class="prompt-list" aria-live="polite"></div>
     </section>
 
     <section id="plattform" class="platform-grid">
@@ -226,6 +288,26 @@
           <a class="read-more" target="_blank" rel="noopener noreferrer">Les sak</a>
         </div>
       </div>
+    </article>
+  </template>
+
+  <template id="prompt-item-template">
+    <article class="prompt-card">
+      <div class="prompt-head">
+        <p class="prompt-slot"></p>
+        <h3 class="prompt-title"></h3>
+        <button class="copy-prompt" type="button">Kopier prompt</button>
+      </div>
+      <ul class="prompt-specs">
+        <li class="prompt-model"></li>
+        <li class="prompt-duration"></li>
+        <li class="prompt-ratio"></li>
+      </ul>
+      <p class="prompt-text"></p>
+      <details class="prompt-negative-wrap">
+        <summary>Negative prompt</summary>
+        <p class="prompt-negative"></p>
+      </details>
     </article>
   </template>
 

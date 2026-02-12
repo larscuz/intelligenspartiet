@@ -1,0 +1,156 @@
+{
+  "updated_at": "2026-02-12T08:20:00+01:00",
+  "model": "Kling 3.0",
+  "prompts": [
+    {
+      "id": "belt-01",
+      "placement": "Toppsak video 1",
+      "title": "Kontorjobber under AI-press",
+      "model": "Kling 3.0",
+      "duration_sec": 8,
+      "aspect_ratio": "16:9",
+      "prompt": "Cinematic newsroom documentary shot inside an open-plan office in Oslo, early morning cold light through glass walls, employees watching dashboards that show AI automation metrics rising while human staffing indicators decline, subtle anxious body language, one continuous dolly move from left to right, realistic skin tones, crisp details, high dynamic range, no text overlays.",
+      "negative_prompt": "cartoon style, fantasy lighting, low resolution, blurry faces, subtitles, logo watermark, distorted hands, jitter camera"
+    },
+    {
+      "id": "belt-02",
+      "placement": "Toppsak video 2",
+      "title": "Omstilling i offentlig sektor",
+      "model": "Kling 3.0",
+      "duration_sec": 8,
+      "aspect_ratio": "16:9",
+      "prompt": "Documentary style interior of a municipal service office, public workers reviewing AI decision support screens and paper case files, calm but tense atmosphere, natural fluorescent lighting, slow push-in camera movement, realistic Nordic setting, people in contemporary business casual clothing, highly detailed environment.",
+      "negative_prompt": "sci-fi holograms, futuristic city, anime, surreal artifacts, text graphics, heavy motion blur"
+    },
+    {
+      "id": "belt-03",
+      "placement": "Toppsak video 3",
+      "title": "Hvem baerer risikoen naar AI skalerer",
+      "model": "Kling 3.0",
+      "duration_sec": 8,
+      "aspect_ratio": "16:9",
+      "prompt": "Close and medium shots from a strategy meeting about AI rollout, executives and union reps around a table, charts projected on wall, serious conversation and restrained gestures, camera pans across faces, natural office audio implied, realistic documentary grading, high fidelity textures.",
+      "negative_prompt": "dramatic explosions, satire style, low-poly look, plastic skin, visible rendering artifacts"
+    },
+    {
+      "id": "panel-01",
+      "placement": "Sidepanel video",
+      "title": "Hvorfor desk-en finnes",
+      "model": "Kling 3.0",
+      "duration_sec": 10,
+      "aspect_ratio": "16:9",
+      "prompt": "Editorial explainer visual: sequence of scenes showing customer service desks, warehouse scanners, and administrative workflows gradually assisted by AI systems, ending with workers in retraining workshop, grounded European realism, smooth transitions, neutral color grade, no on-screen text.",
+      "negative_prompt": "cyberpunk style, neon overload, comic book look, jump cuts, captions, glitch effects"
+    },
+    {
+      "id": "video-01",
+      "placement": "Video-desk kort 1",
+      "title": "Nyansettelser fryses",
+      "model": "Kling 3.0",
+      "duration_sec": 9,
+      "aspect_ratio": "16:9",
+      "prompt": "Corporate HR department in a modern Scandinavian office, hiring board with paused recruitment statuses, recruiters discussing budgets and AI productivity tools, subtle concern in expressions, handheld documentary camera with gentle stabilization, realistic lighting and textures.",
+      "negative_prompt": "cheerful ad vibe, exaggerated emotions, cartoon people, low-detail background"
+    },
+    {
+      "id": "video-02",
+      "placement": "Video-desk kort 2",
+      "title": "Kommuner tester AI-vedtak",
+      "model": "Kling 3.0",
+      "duration_sec": 9,
+      "aspect_ratio": "16:9",
+      "prompt": "Municipal caseworkers evaluating AI-generated recommendations for welfare and citizen services, close-up on hands switching between digital interface and legal documents, neutral office soundscape mood, realistic Nordic municipality setting, slow lateral camera move.",
+      "negative_prompt": "futuristic robots, fantasy UI, chaotic camera shake, overexposed highlights, text overlays"
+    },
+    {
+      "id": "video-03",
+      "placement": "Video-desk kort 3",
+      "title": "Omskoleringsboelge",
+      "model": "Kling 3.0",
+      "duration_sec": 9,
+      "aspect_ratio": "16:9",
+      "prompt": "Adult education classroom with former office workers learning AI supervision and data quality tasks, laptops open, instructor guiding practical exercises, hopeful but serious mood, realistic documentary framing, soft daylight, clean cinematic focus shifts.",
+      "negative_prompt": "children classroom, cartoon typography, over-saturated colors, unrealistic lens flares"
+    },
+    {
+      "id": "video-04",
+      "placement": "Video-desk kort 4",
+      "title": "AI-innsyn i HR",
+      "model": "Kling 3.0",
+      "duration_sec": 9,
+      "aspect_ratio": "16:9",
+      "prompt": "Union and employer representatives in negotiation room reviewing AI HR audit reports, pages highlighted, tablet screens with fairness metrics, measured body language, documentary realism, controlled camera push, natural shadows and skin tones.",
+      "negative_prompt": "aggressive action scene, cinematic war look, fake subtitles, logo marks, jitter"
+    },
+    {
+      "id": "wire-01",
+      "placement": "Wire video pool 1",
+      "title": "Wire klipp A",
+      "model": "Kling 3.0",
+      "duration_sec": 7,
+      "aspect_ratio": "16:9",
+      "prompt": "Short looping newsroom b-roll of analysts tracking AI layoff headlines on multiple monitors, focused atmosphere, realistic office environment, steady camera, neutral color grade.",
+      "negative_prompt": "abstract graphics, anime, blurry footage, over-sharpened image"
+    },
+    {
+      "id": "wire-02",
+      "placement": "Wire video pool 2",
+      "title": "Wire klipp B",
+      "model": "Kling 3.0",
+      "duration_sec": 7,
+      "aspect_ratio": "16:9",
+      "prompt": "Looping clip of customer service floor where AI assistant handles first contact and fewer human agents remain, realistic motion and pacing, natural indoor light, documentary style.",
+      "negative_prompt": "futuristic robots, comic style, extreme lens distortion, flickering artifacts"
+    },
+    {
+      "id": "wire-03",
+      "placement": "Wire video pool 3",
+      "title": "Wire klipp C",
+      "model": "Kling 3.0",
+      "duration_sec": 7,
+      "aspect_ratio": "16:9",
+      "prompt": "Looping office scene where team compares AI output with manual decisions and flags discrepancies, close-up and medium shots, calm documentary camera language.",
+      "negative_prompt": "horror tone, unstable focus, excessive grain, text overlays"
+    },
+    {
+      "id": "wire-04",
+      "placement": "Wire video pool 4",
+      "title": "Wire klipp D",
+      "model": "Kling 3.0",
+      "duration_sec": 7,
+      "aspect_ratio": "16:9",
+      "prompt": "Looping training center sequence with adults reskilling for AI operations, collaborative atmosphere, realistic laptop and whiteboard actions, balanced color palette.",
+      "negative_prompt": "school children, toy-like visuals, low detail, overexposed faces"
+    },
+    {
+      "id": "wire-05",
+      "placement": "Wire video pool 5",
+      "title": "Wire klipp E",
+      "model": "Kling 3.0",
+      "duration_sec": 7,
+      "aspect_ratio": "16:9",
+      "prompt": "Looping interview-style visual with worker discussing changing role after AI rollout, office corridor background, subtle emotional tension, high realism, stable framing.",
+      "negative_prompt": "news ticker text, watermark, stylized cartoon outlines, frame tearing"
+    },
+    {
+      "id": "wire-06",
+      "placement": "Wire video pool 6",
+      "title": "Wire klipp F",
+      "model": "Kling 3.0",
+      "duration_sec": 7,
+      "aspect_ratio": "16:9",
+      "prompt": "Looping control-room b-roll of public administration staff monitoring AI triage queues, practical workflow mood, medium contrast, smooth cinematic motion.",
+      "negative_prompt": "sci-fi spaceship, holographic fantasy UI, jump cuts, low frame rate"
+    },
+    {
+      "id": "wire-07",
+      "placement": "Wire video pool 7",
+      "title": "Wire klipp G",
+      "model": "Kling 3.0",
+      "duration_sec": 7,
+      "aspect_ratio": "16:9",
+      "prompt": "Looping sequence of policy workshop on fair AI transition, sticky notes, laptops, mixed group discussing job security, realistic documentary lighting and movement.",
+      "negative_prompt": "overly cinematic blockbuster style, dramatic explosions, heavy CGI, visible artifacts"
+    }
+  ]
+}

@@ -7,6 +7,16 @@ const listNode = document.querySelector('#news-list');
 const templateNode = document.querySelector('#news-item-template');
 const metaNode = document.querySelector('#news-meta');
 const filterButtons = Array.from(document.querySelectorAll('.filter'));
+const promptListNode = document.querySelector('#prompt-list');
+const promptTemplateNode = document.querySelector('#prompt-item-template');
+const promptMetaNode = document.querySelector('#prompt-meta');
+const scrollySteps = Array.from(document.querySelectorAll('.scrolly-step'));
+const scrollyMedia = document.querySelector('.scrolly-media');
+const scrollyKicker = document.querySelector('#scrolly-kicker');
+const scrollyTitle = document.querySelector('#scrolly-title');
+const scrollyBody = document.querySelector('#scrolly-body');
+const scrollyImage = document.querySelector('#scrolly-image');
+const scrollyVideo = document.querySelector('#scrolly-video');
 
 const IMAGE_POOL = [
   'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
@@ -188,6 +198,125 @@ function updateMeta(data) {
   metaNode.textContent = `Sist oppdatert: ${generated}. Totalt ${count} saker.`;
 }
 
+function applyScrollyStep(step) {
+  if (!step || !scrollyMedia) return;
+
+  const kicker = step.dataset.kicker || '';
+  const title = step.dataset.title || '';
+  const bodyText = step.dataset.body || '';
+  const image = step.dataset.image || '';
+  const video = step.dataset.video || '';
+
+  if (scrollyKicker) scrollyKicker.textContent = kicker;
+  if (scrollyTitle) scrollyTitle.textContent = title;
+  if (scrollyBody) scrollyBody.textContent = bodyText;
+  if (scrollyImage && image) scrollyImage.src = image;
+
+  if (scrollyVideo) {
+    if (video) {
+      scrollyVideo.src = video;
+      scrollyVideo.load();
+      scrollyVideo.play().catch(() => {});
+      scrollyMedia.classList.add('has-video');
+    } else {
+      scrollyVideo.removeAttribute('src');
+      scrollyVideo.load();
+      scrollyMedia.classList.remove('has-video');
+    }
+  }
+
+  scrollySteps.forEach((entry) => {
+    entry.classList.toggle('is-active', entry === step);
+  });
+}
+
+function initScrollytelling() {
+  if (!scrollySteps.length) return;
+
+  applyScrollyStep(scrollySteps[0]);
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          applyScrollyStep(entry.target);
+        }
+      });
+    },
+    {
+      threshold: 0.6,
+      rootMargin: '-12% 0px -25% 0px',
+    }
+  );
+
+  scrollySteps.forEach((step) => observer.observe(step));
+}
+
+function renderPrompts(prompts, meta) {
+  if (!promptListNode || !promptTemplateNode) return;
+  promptListNode.innerHTML = '';
+
+  if (!Array.isArray(prompts) || !prompts.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = 'Ingen Kling-prompter tilgjengelig.';
+    promptListNode.appendChild(empty);
+    if (promptMetaNode) promptMetaNode.textContent = 'Ingen prompts funnet';
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  prompts.forEach((item) => {
+    const clone = promptTemplateNode.content.cloneNode(true);
+    const slot = clone.querySelector('.prompt-slot');
+    const title = clone.querySelector('.prompt-title');
+    const button = clone.querySelector('.copy-prompt');
+    const model = clone.querySelector('.prompt-model');
+    const duration = clone.querySelector('.prompt-duration');
+    const ratio = clone.querySelector('.prompt-ratio');
+    const text = clone.querySelector('.prompt-text');
+    const negative = clone.querySelector('.prompt-negative');
+
+    if (slot) slot.textContent = item.placement || 'Ukjent plassering';
+    if (title) title.textContent = item.title || 'Uten tittel';
+    if (model) model.textContent = item.model || 'Kling 3.0';
+    if (duration) duration.textContent = `${item.duration_sec || '?'} sek`; 
+    if (ratio) ratio.textContent = item.aspect_ratio || '16:9';
+    if (text) text.textContent = item.prompt || '';
+    if (negative) negative.textContent = item.negative_prompt || 'Ingen';
+
+    if (button) {
+      button.dataset.prompt = item.prompt || '';
+      button.dataset.defaultLabel = 'Kopier prompt';
+      button.addEventListener('click', async () => {
+        const payload = button.dataset.prompt || '';
+        if (!payload) return;
+        try {
+          await navigator.clipboard.writeText(payload);
+          button.textContent = 'Kopiert';
+          button.classList.add('copied');
+          window.setTimeout(() => {
+            button.textContent = button.dataset.defaultLabel || 'Kopier prompt';
+            button.classList.remove('copied');
+          }, 1200);
+        } catch {
+          button.textContent = 'Kunne ikke kopiere';
+        }
+      });
+    }
+
+    fragment.appendChild(clone);
+  });
+
+  promptListNode.appendChild(fragment);
+
+  if (promptMetaNode) {
+    const updated = meta && meta.updated_at ? formatPublished(meta.updated_at) : 'ukjent';
+    promptMetaNode.textContent = `${prompts.length} prompter. Oppdatert: ${updated}`;
+  }
+}
+
 async function loadNews() {
   const fallback = {
     generated_at: null,
@@ -220,6 +349,20 @@ async function loadNews() {
   }
 }
 
+async function loadPrompts() {
+  try {
+    const response = await fetch('assets/data/kling3-prompts.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    renderPrompts(data.prompts || [], data);
+  } catch (error) {
+    renderPrompts([], {});
+    if (promptMetaNode) {
+      promptMetaNode.textContent = `Kunne ikke laste prompts (${String(error)})`;
+    }
+  }
+}
+
 if (menuToggle && navNode) {
   menuToggle.addEventListener('click', () => {
     const expanded = menuToggle.getAttribute('aria-expanded') === 'true';
@@ -247,4 +390,6 @@ if (yearNode) {
 
 setTopClock();
 window.setInterval(setTopClock, 30_000);
+initScrollytelling();
 loadNews();
+loadPrompts();

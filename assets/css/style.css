@@ -276,6 +276,17 @@ video {
   background: var(--red-dark);
 }
 
+.inline-link {
+  color: var(--red-dark);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.inline-link:hover,
+.inline-link:focus-visible {
+  text-decoration: underline;
+}
+
 .lead-side {
   display: grid;
   gap: 1rem;
@@ -313,7 +324,9 @@ video {
 }
 
 .news-wire,
+.scrolly-story,
 .video-report,
+.prompt-bank,
 .platform-grid {
   background: var(--soft);
   border: 1px solid var(--line);
@@ -553,6 +566,92 @@ video {
   font-size: 0.85rem;
 }
 
+.scrolly-layout {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.scrolly-media {
+  position: sticky;
+  top: 1rem;
+  align-self: start;
+  border: 1px solid var(--line);
+  background: #f9f9f9;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.scrolly-media h3 {
+  margin: 0;
+  line-height: 1.02;
+  font-size: clamp(1.6rem, 3.8vw, 2.5rem);
+}
+
+.scrolly-media p {
+  margin: 0;
+  color: #2f2f2f;
+}
+
+.scrolly-frame {
+  border: 1px solid var(--line);
+  background: #000;
+  position: relative;
+  min-height: 340px;
+  overflow: hidden;
+}
+
+#scrolly-image,
+#scrolly-video {
+  height: 100%;
+  object-fit: cover;
+}
+
+#scrolly-video {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.scrolly-media.has-video #scrolly-video {
+  opacity: 1;
+}
+
+.scrolly-steps {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.scrolly-step {
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 1rem;
+  min-height: 180px;
+  opacity: 0.45;
+  transform: scale(0.98);
+  transition: opacity 220ms ease, transform 220ms ease, border-color 220ms ease;
+}
+
+.scrolly-step.is-active {
+  opacity: 1;
+  transform: scale(1);
+  border-color: #1f1f1f;
+}
+
+.scrolly-step h3 {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.04;
+}
+
+.scrolly-step p {
+  margin: 0.45rem 0 0;
+  color: #2e2e2e;
+}
+
 .video-grid {
   margin-top: 1rem;
   display: grid;
@@ -575,6 +674,107 @@ video {
   padding: 0.75rem;
   font-size: 1.1rem;
   line-height: 1.1;
+}
+
+.prompt-intro {
+  margin: 0.9rem 0 0;
+  color: #2f2f2f;
+  font-size: 1rem;
+}
+
+.prompt-list {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.prompt-card {
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.prompt-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem 0.8rem;
+  align-items: start;
+}
+
+.prompt-slot {
+  margin: 0;
+  font-size: 0.73rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--red-dark);
+  font-weight: 800;
+  grid-column: 1 / 2;
+}
+
+.prompt-title {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.05;
+  grid-column: 1 / 2;
+}
+
+.copy-prompt {
+  grid-column: 2 / 3;
+  grid-row: 1 / span 2;
+  border: 1px solid var(--line);
+  background: #fff;
+  font: inherit;
+  font-weight: 700;
+  border-radius: 2px;
+  padding: 0.45rem 0.62rem;
+  cursor: pointer;
+}
+
+.copy-prompt:hover,
+.copy-prompt:focus-visible {
+  border-color: var(--ink);
+}
+
+.copy-prompt.copied {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.prompt-specs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.prompt-specs li {
+  border: 1px solid var(--line);
+  padding: 0.2rem 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #f7f7f7;
+}
+
+.prompt-text {
+  margin: 0;
+  font-size: 0.97rem;
+  line-height: 1.4;
+}
+
+.prompt-negative-wrap summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.prompt-negative {
+  margin: 0.45rem 0 0;
+  color: #2f2f2f;
 }
 
 .platform-grid {
@@ -648,6 +848,8 @@ video {
   .media-belt,
   .lead-grid,
   .wire-layout,
+  .scrolly-layout,
+  .prompt-list,
   .platform-grid {
     grid-template-columns: 1fr;
   }
@@ -667,6 +869,11 @@ video {
 
   .news-media-link {
     min-height: 200px;
+  }
+
+  .scrolly-media {
+    position: relative;
+    top: auto;
   }
 
   .masthead-inner {
@@ -719,6 +926,12 @@ video {
 
   .video-grid {
     grid-template-columns: 1fr;
+  }
+
+  .copy-prompt {
+    grid-column: 1 / 2;
+    grid-row: auto;
+    width: fit-content;
   }
 }
 
