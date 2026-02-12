@@ -29,21 +29,6 @@ const scrollySceneVideos = scrollyVideoLayers
 const seriesHeroProgress = document.querySelector('#series-hero-progress');
 const seriesStartLink = document.querySelector('#series-start-link');
 const seriesResumeButton = document.querySelector('#series-resume-button');
-const seriesFullscreenOpenButton = document.querySelector('#series-fullscreen-open');
-const scrollyFullscreenOpenButton = document.querySelector('#scrolly-open-fullscreen');
-const scrollyFullscreenModal = document.querySelector('#scrolly-fullscreen-modal');
-const scrollyFullscreenBackdrop = document.querySelector('[data-close-scrolly-fullscreen]');
-const scrollyFullscreenClose = document.querySelector('#scrolly-fullscreen-close');
-const scrollyFullscreenVideo = document.querySelector('#scrolly-fullscreen-video');
-const scrollyFullscreenKicker = document.querySelector('#scrolly-fullscreen-kicker');
-const scrollyFullscreenTitle = document.querySelector('#scrolly-fullscreen-title');
-const scrollyFullscreenBody = document.querySelector('#scrolly-fullscreen-body');
-const scrollyFullscreenCaption = document.querySelector('#scrolly-fullscreen-caption');
-const scrollyFullscreenCounter = document.querySelector('#scrolly-fullscreen-counter');
-const scrollyFullscreenPrev = document.querySelector('#scrolly-fullscreen-prev');
-const scrollyFullscreenNext = document.querySelector('#scrolly-fullscreen-next');
-const scrollyFullscreenAudioToggle = document.querySelector('#scrolly-fullscreen-audio-toggle');
-const scrollyFullscreenVolume = document.querySelector('#scrolly-fullscreen-volume');
 const videoModal = document.querySelector('#video-modal');
 const videoModalTitle = document.querySelector('#video-modal-title');
 const videoModalPlayer = document.querySelector('#video-modal-player');
@@ -89,10 +74,6 @@ let scrollyActiveIndex = 0;
 let scrollySectionInView = true;
 let scrollySoundEnabled = false;
 let scrollyVolume = 0.8;
-let scrollyForcePause = false;
-let scrollyFullscreenSoundEnabled = false;
-let scrollyFullscreenVolumeLevel = 0.8;
-let scrollyFullscreenReturnY = 0;
 
 const SCROLLY_PROGRESS_KEY = 'ip_scrolly_last_scene';
 
@@ -183,7 +164,6 @@ function markVideoTriggers(rootNode = document) {
   rootNode.querySelectorAll('video').forEach((videoNode) => {
     if (!(videoNode instanceof HTMLVideoElement)) return;
     if (videoNode.id === 'video-modal-player') return;
-    if (videoNode.id === 'scrolly-fullscreen-video') return;
     if (videoNode.dataset.popupDisabled === 'true') return;
     if (!getSourceFromVideo(videoNode)) return;
 
@@ -433,7 +413,7 @@ function updateMeta() {
 }
 
 function scrollyAutoplayAllowed() {
-  return scrollySectionInView && !document.hidden && !scrollyForcePause;
+  return scrollySectionInView && !document.hidden;
 }
 
 function getActiveScrollyVideo() {
@@ -624,117 +604,6 @@ function attemptScrollyAudioStart({ userInitiated = false } = {}) {
     });
 }
 
-function isScrollyFullscreenOpen() {
-  return Boolean(scrollyFullscreenModal && !scrollyFullscreenModal.hidden);
-}
-
-function updateScrollyFullscreenAudioToggle() {
-  if (scrollyFullscreenAudioToggle instanceof HTMLButtonElement) {
-    scrollyFullscreenAudioToggle.setAttribute('aria-pressed', String(scrollyFullscreenSoundEnabled));
-    scrollyFullscreenAudioToggle.textContent = scrollyFullscreenSoundEnabled ? 'Lyd: På' : 'Lyd: Av';
-  }
-
-  if (scrollyFullscreenVolume instanceof HTMLInputElement) {
-    const volumePercent = Math.round(scrollyFullscreenVolumeLevel * 100);
-    scrollyFullscreenVolume.value = String(volumePercent);
-    scrollyFullscreenVolume.setAttribute('aria-valuetext', `${volumePercent} prosent`);
-  }
-}
-
-function syncScrollyFullscreenModal() {
-  if (!isScrollyFullscreenOpen() || !(scrollyFullscreenVideo instanceof HTMLVideoElement)) return;
-
-  const activeStep = scrollySteps[scrollyActiveIndex];
-  if (!(activeStep instanceof HTMLElement)) return;
-
-  const kicker = activeStep.dataset.kicker || '';
-  const title = activeStep.dataset.title || '';
-  const bodyText = activeStep.dataset.body || '';
-  const caption = activeStep.dataset.caption || '';
-  const source = activeStep.dataset.video || getSourceFromVideo(scrollySceneVideos[scrollyActiveIndex]);
-  const poster = scrollySceneVideos[scrollyActiveIndex] instanceof HTMLVideoElement
-    ? (scrollySceneVideos[scrollyActiveIndex].getAttribute('poster') || '')
-    : '';
-
-  if (scrollyFullscreenKicker) scrollyFullscreenKicker.textContent = kicker;
-  if (scrollyFullscreenTitle) scrollyFullscreenTitle.textContent = title;
-  if (scrollyFullscreenBody) scrollyFullscreenBody.textContent = bodyText;
-  if (scrollyFullscreenCaption) scrollyFullscreenCaption.textContent = caption;
-  if (scrollyFullscreenCounter) {
-    scrollyFullscreenCounter.textContent = `Scene ${scrollyActiveIndex + 1} / ${scrollySteps.length}`;
-  }
-
-  if (scrollyFullscreenPrev instanceof HTMLButtonElement) {
-    scrollyFullscreenPrev.disabled = scrollyActiveIndex <= 0;
-  }
-  if (scrollyFullscreenNext instanceof HTMLButtonElement) {
-    scrollyFullscreenNext.disabled = scrollyActiveIndex >= scrollySteps.length - 1;
-  }
-
-  const currentSource = getSourceFromVideo(scrollyFullscreenVideo);
-  if (source && source !== currentSource) {
-    scrollyFullscreenVideo.src = source;
-    if (poster) scrollyFullscreenVideo.poster = poster;
-    scrollyFullscreenVideo.load();
-  }
-
-  const shouldMute = !scrollyFullscreenSoundEnabled;
-  setVideoMutedState(scrollyFullscreenVideo, shouldMute);
-  scrollyFullscreenVideo.volume = shouldMute ? 0 : scrollyFullscreenVolumeLevel;
-  scrollyFullscreenVideo.playsInline = true;
-
-  const playback = scrollyFullscreenVideo.play();
-  if (playback) {
-    playback.catch(() => {
-      if (scrollyFullscreenSoundEnabled) {
-        scrollyFullscreenSoundEnabled = false;
-        updateScrollyFullscreenAudioToggle();
-        syncScrollyFullscreenModal();
-      }
-    });
-  }
-}
-
-function closeScrollyFullscreen() {
-  if (!scrollyFullscreenModal || scrollyFullscreenModal.hidden) return;
-
-  scrollyFullscreenModal.hidden = true;
-  scrollyFullscreenModal.setAttribute('aria-hidden', 'true');
-  body.classList.remove('scrolly-fullscreen-open');
-
-  if (scrollyFullscreenVideo instanceof HTMLVideoElement) {
-    scrollyFullscreenVideo.pause();
-    scrollyFullscreenVideo.removeAttribute('src');
-    scrollyFullscreenVideo.load();
-  }
-
-  scrollyForcePause = false;
-  syncScrollyPlayback();
-  window.scrollTo({ top: scrollyFullscreenReturnY, behavior: 'auto' });
-}
-
-function openScrollyFullscreen() {
-  if (!scrollyFullscreenModal || !(scrollyFullscreenVideo instanceof HTMLVideoElement)) return;
-
-  scrollyFullscreenReturnY = window.scrollY;
-  scrollyFullscreenModal.hidden = false;
-  scrollyFullscreenModal.setAttribute('aria-hidden', 'false');
-  body.classList.add('scrolly-fullscreen-open');
-
-  scrollyForcePause = true;
-  syncScrollyPlayback();
-
-  scrollyFullscreenSoundEnabled = false;
-  if (scrollyFullscreenVolume instanceof HTMLInputElement) {
-    const initialVolume = Number(scrollyFullscreenVolume.value);
-    if (Number.isFinite(initialVolume)) {
-      scrollyFullscreenVolumeLevel = clamp(initialVolume, 0, 100) / 100;
-    }
-  }
-  updateScrollyFullscreenAudioToggle();
-  syncScrollyFullscreenModal();
-}
-
 function initScrollySeriesActions() {
   if (seriesStartLink instanceof HTMLAnchorElement) {
     seriesStartLink.addEventListener('click', (event) => {
@@ -748,60 +617,6 @@ function initScrollySeriesActions() {
       jumpToScrollyScene(getStoredScrollyIndex());
     });
   }
-
-  if (seriesFullscreenOpenButton instanceof HTMLButtonElement) {
-    seriesFullscreenOpenButton.addEventListener('click', openScrollyFullscreen);
-  }
-
-  if (scrollyFullscreenOpenButton instanceof HTMLButtonElement) {
-    scrollyFullscreenOpenButton.addEventListener('click', openScrollyFullscreen);
-  }
-
-  if (scrollyFullscreenClose instanceof HTMLButtonElement) {
-    scrollyFullscreenClose.addEventListener('click', closeScrollyFullscreen);
-  }
-
-  if (scrollyFullscreenBackdrop instanceof HTMLElement) {
-    scrollyFullscreenBackdrop.addEventListener('click', closeScrollyFullscreen);
-  }
-
-  if (scrollyFullscreenPrev instanceof HTMLButtonElement) {
-    scrollyFullscreenPrev.addEventListener('click', () => {
-      jumpToScrollyScene(scrollyActiveIndex - 1);
-      syncScrollyFullscreenModal();
-    });
-  }
-
-  if (scrollyFullscreenNext instanceof HTMLButtonElement) {
-    scrollyFullscreenNext.addEventListener('click', () => {
-      jumpToScrollyScene(scrollyActiveIndex + 1);
-      syncScrollyFullscreenModal();
-    });
-  }
-
-  if (scrollyFullscreenAudioToggle instanceof HTMLButtonElement) {
-    scrollyFullscreenAudioToggle.addEventListener('click', () => {
-      scrollyFullscreenSoundEnabled = !scrollyFullscreenSoundEnabled;
-      updateScrollyFullscreenAudioToggle();
-      syncScrollyFullscreenModal();
-    });
-  }
-
-  if (scrollyFullscreenVolume instanceof HTMLInputElement) {
-    scrollyFullscreenVolume.addEventListener('input', () => {
-      const nextVolume = clamp(Number(scrollyFullscreenVolume.value), 0, 100) / 100;
-      scrollyFullscreenVolumeLevel = nextVolume;
-      scrollyFullscreenSoundEnabled = nextVolume > 0;
-      updateScrollyFullscreenAudioToggle();
-      syncScrollyFullscreenModal();
-    });
-  }
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && isScrollyFullscreenOpen()) {
-      closeScrollyFullscreen();
-    }
-  });
 }
 
 function applyScrollyStep(step) {
@@ -830,7 +645,6 @@ function applyScrollyStep(step) {
   storeScrollyIndex(scrollyActiveIndex);
   updateSeriesHeroProgress();
   syncScrollyPlayback();
-  syncScrollyFullscreenModal();
 }
 
 function initScrollytelling() {

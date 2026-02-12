@@ -136,7 +136,6 @@
         <p id="series-hero-progress" class="series-hero-progress">Scene 1 av 4</p>
         <div class="series-hero-actions">
           <a id="series-start-link" class="cta" href="#scrollytelling">Start serien</a>
-          <button id="series-fullscreen-open" class="series-hero-button" type="button">Åpne i fullskjerm</button>
           <button id="series-resume-button" class="series-hero-button is-resume" type="button" hidden>Fortsett der du slapp</button>
         </div>
       </div>
@@ -184,10 +183,7 @@
     <section id="scrollytelling" class="scrolly-story">
       <div class="section-headline-row">
         <h2>Scrollytelling: Christiania Theater i 1830-årene</h2>
-        <div class="scrolly-headline-actions">
-          <p class="news-meta">Fra teaterbråk til norsk partihistorie</p>
-          <button id="scrolly-open-fullscreen" class="scrolly-fullscreen-button" type="button">Åpne i fullskjerm</button>
-        </div>
+        <p class="news-meta">Fra teaterbråk til norsk partihistorie</p>
       </div>
 
       <div class="scrolly-layout">
@@ -454,41 +450,6 @@
       <button id="video-modal-close" class="video-modal-close" type="button" aria-label="Lukk video">×</button>
       <p id="video-modal-title" class="video-modal-title">Video</p>
       <video id="video-modal-player" controls playsinline preload="metadata"></video>
-    </div>
-  </div>
-
-  <div id="scrolly-fullscreen-modal" class="scrolly-fullscreen-modal" hidden aria-hidden="true">
-    <div class="scrolly-fullscreen-backdrop" data-close-scrolly-fullscreen></div>
-    <div class="scrolly-fullscreen-dialog" role="dialog" aria-modal="true" aria-labelledby="scrolly-fullscreen-title">
-      <button id="scrolly-fullscreen-close" class="scrolly-fullscreen-close" type="button" aria-label="Lukk fullskjerm">×</button>
-      <div class="scrolly-fullscreen-head">
-        <p id="scrolly-fullscreen-counter" class="scrolly-fullscreen-counter">Scene 1 / 4</p>
-        <div class="scrolly-fullscreen-audio">
-          <button id="scrolly-fullscreen-audio-toggle" class="scrolly-fullscreen-audio-toggle" type="button" aria-pressed="false">Lyd: Av</button>
-          <label class="scrolly-fullscreen-volume-label" for="scrolly-fullscreen-volume">Volum</label>
-          <input
-            id="scrolly-fullscreen-volume"
-            class="scrolly-fullscreen-volume"
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            value="80"
-            aria-label="Volum i fullskjerm"
-          />
-        </div>
-      </div>
-      <video id="scrolly-fullscreen-video" class="scrolly-fullscreen-video" controls playsinline preload="auto"></video>
-      <div class="scrolly-fullscreen-copy">
-        <p id="scrolly-fullscreen-kicker" class="scrolly-fullscreen-kicker">Scene 1</p>
-        <h3 id="scrolly-fullscreen-title">Et teater i kok</h3>
-        <p id="scrolly-fullscreen-body">Christiania Theater åpnet i 1827, og i 1830-årene var salen kjent for pipekonserter, jubel og høylytte protester.</p>
-        <p id="scrolly-fullscreen-caption" class="scrolly-fullscreen-caption">Publikumet i 1830-årenes Christiania var alt annet enn stille.</p>
-      </div>
-      <div class="scrolly-fullscreen-nav">
-        <button id="scrolly-fullscreen-prev" class="scrolly-fullscreen-nav-button" type="button">Forrige</button>
-        <button id="scrolly-fullscreen-next" class="scrolly-fullscreen-nav-button" type="button">Neste</button>
-      </div>
     </div>
   </div>
 
