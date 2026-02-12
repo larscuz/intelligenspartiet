@@ -1392,6 +1392,14 @@ body.modal-open {
   border-radius: 999px;
 }
 
+.video-story-audio-panel.scrolly-audio-panel {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  z-index: 8;
+  width: min(15rem, calc(100% - 1.7rem));
+}
+
 .video-story-step {
   min-height: var(--video-story-stage-h);
   display: flex;
@@ -1657,6 +1665,12 @@ body.modal-open {
     right: 0.55rem;
     bottom: 0.55rem;
     max-width: calc(100% - 1.1rem);
+  }
+
+  .video-story-audio-panel.scrolly-audio-panel {
+    top: 0.62rem;
+    right: 0.62rem;
+    width: min(13.6rem, calc(100% - 1.2rem));
   }
 }
 

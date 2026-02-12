@@ -441,31 +441,31 @@
         <div class="video-story-layout">
           <aside class="video-story-media" aria-live="polite">
             <video id="video-story-player" muted loop playsinline preload="metadata"></video>
-            <div class="scrolly-audio-panel" role="group" aria-label="Lydkontroller">
-              <button
-                id="video-story-audio-toggle"
-                class="scrolly-audio-toggle"
-                type="button"
-                aria-pressed="false"
-              >
-                Lyd: Av
-              </button>
-              <label class="scrolly-volume-label" for="video-story-volume">Volum</label>
-              <input
-                id="video-story-volume"
-                class="scrolly-volume-slider"
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value="80"
-                aria-label="Volum for aktiv scene"
-              />
-              <p id="video-story-audio-status" class="scrolly-audio-status" aria-live="polite">Lyd er av.</p>
-            </div>
             <p id="video-story-caption" class="video-story-caption"></p>
           </aside>
           <div id="video-story-scroll" class="video-story-scroll" aria-label="Scroll gjennom scener"></div>
+          <div class="video-story-audio-panel scrolly-audio-panel" role="group" aria-label="Lydkontroller">
+            <button
+              id="video-story-audio-toggle"
+              class="scrolly-audio-toggle"
+              type="button"
+              aria-pressed="false"
+            >
+              Lyd: Av
+            </button>
+            <label class="scrolly-volume-label" for="video-story-volume">Volum</label>
+            <input
+              id="video-story-volume"
+              class="scrolly-volume-slider"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="80"
+              aria-label="Volum for aktiv scene"
+            />
+            <p id="video-story-audio-status" class="scrolly-audio-status" aria-live="polite">Lyd er av.</p>
+          </div>
         </div>
       </section>
       <video id="video-modal-player" controls playsinline preload="metadata"></video>
