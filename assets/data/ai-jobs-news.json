@@ -14,10 +14,10 @@
   },
   "items": [
     {
-      "title": "Fra teori til praksis - ny ekspertgruppe skal fa fart pa kunstig intelligens i arbeidslivet",
+      "title": "Fra teori til praksis - ny ekspertgruppe skal få fart på kunstig intelligens i arbeidslivet",
       "source": "Regjeringen",
       "url": "https://www.regjeringen.no/no/aktuelt/fra-teori-til-praksis-ny-ekspertgruppe-skal-fa-fart-pa-kunstig-intelligens-i-arbeidslivet/id3092239/",
-      "snippet": "Regjeringen etablerer ekspertgruppe for a akselerere bruk av KI i arbeidslivet.",
+      "snippet": "Regjeringen etablerer ekspertgruppe for å akselerere bruk av KI i arbeidslivet.",
       "published_at": "2025-03-17T12:00:00+01:00",
       "tone": "neutral",
       "category": "Norsk arbeidsmarked",
@@ -25,7 +25,7 @@
       "query": "Manuell kuratering"
     },
     {
-      "title": "Okt bruk av KI i staten",
+      "title": "Økt bruk av KI i staten",
       "source": "Regjeringen",
       "url": "https://www.regjeringen.no/no/aktuelt/okt-bruk-av-ki-i-staten/id3097740/",
       "snippet": "Statusoppdatering om raskere innfasing av KI i offentlig sektor.",
@@ -36,7 +36,7 @@
       "query": "Manuell kuratering"
     },
     {
-      "title": "Dobling av KI-bruk i staten pa halvannet ar",
+      "title": "Dobling av KI-bruk i staten på halvannet år",
       "source": "Digi",
       "url": "https://www.digi.no/nyhetsstudio/dobling-av-ki-bruk-i-staten-paa-halvannet-aar/76472",
       "snippet": "Nyhet om sterk vekst i KI-bruk i statlige virksomheter.",
@@ -61,7 +61,7 @@
       "title": "Skal kartlegge kunnskap om KI og arbeidsliv",
       "source": "Vestlandsforsking",
       "url": "https://www.vestforsk.no/nn/2025/skal-kartlegge-kunnskap-om-ki-og-arbeidsliv",
-      "snippet": "Forskningsmiljo kartlegger status for KI-kompetanse i arbeidslivet.",
+      "snippet": "Forskningsmiljø kartlegger status for KI-kompetanse i arbeidslivet.",
       "published_at": "2025-05-02T12:00:00+01:00",
       "tone": "neutral",
       "category": "Norsk arbeidsmarked",
@@ -72,7 +72,7 @@
       "title": "Kunstig intelligens: Norsk arbeidsliv i rask endring",
       "source": "SD Worx",
       "url": "https://www.sdworx.no/nb-no/om-oss/nyheter-presse/2025-05-08-kunstig-intelligens-norsk-arbeidsliv-i-rask-endring",
-      "snippet": "Rapport peker pa raske endringer i arbeidsprosesser og kompetansebehov.",
+      "snippet": "Rapport peker på raske endringer i arbeidsprosesser og kompetansebehov.",
       "published_at": "2025-05-08T12:00:00+01:00",
       "tone": "neutral",
       "category": "Norsk arbeidsmarked",
@@ -91,10 +91,10 @@
       "query": "Manuell kuratering"
     },
     {
-      "title": "Ny rapport: Stadig flere hoyt utdannede bruker KI pa jobb",
+      "title": "Ny rapport: Stadig flere høyt utdannede bruker KI på jobb",
       "source": "Akademikerne",
       "url": "https://www.akademikerne.no/se-ki-rapportlansering-her",
-      "snippet": "Rapport om okende KI-bruk blant hoyt utdannede i norsk arbeidsliv.",
+      "snippet": "Rapport om økende KI-bruk blant høyt utdannede i norsk arbeidsliv.",
       "published_at": "2025-06-11T12:00:00+01:00",
       "tone": "reskilling",
       "category": "Norsk arbeidsmarked",
@@ -102,10 +102,10 @@
       "query": "Manuell kuratering"
     },
     {
-      "title": "Slik blir du AI-stjerne pa jobben",
+      "title": "Slik blir du AI-stjerne på jobben",
       "source": "E24",
       "url": "https://e24.no/karriere-og-ledelse/i/KMg71E/slik-blir-du-ai-stjerne-paa-jobben",
-      "snippet": "Praktiske rad om AI-kompetanse og arbeidsmetoder.",
+      "snippet": "Praktiske råd om AI-kompetanse og arbeidsmetoder.",
       "published_at": "2025-06-12T12:00:00+01:00",
       "tone": "reskilling",
       "category": "Norsk arbeidsmarked",
@@ -113,10 +113,10 @@
       "query": "Manuell kuratering"
     },
     {
-      "title": "Tok grep for a heve AI-ferdighetene",
+      "title": "Tok grep for å heve AI-ferdighetene",
       "source": "E24",
       "url": "https://e24.no/karriere-og-ledelse/i/Av127E/tok-grep-for-aa-heve-ai-ferdighetene",
-      "snippet": "Case om kompetanseloft og intern opplaering i virksomheter.",
+      "snippet": "Case om kompetanseloft og intern opplæring i virksomheter.",
       "published_at": "2025-06-17T12:00:00+01:00",
       "tone": "reskilling",
       "category": "Norsk arbeidsmarked",
@@ -135,10 +135,10 @@
       "query": "Manuell kuratering"
     },
     {
-      "title": "Halvparten av hoyt utdannede bruker KI",
+      "title": "Halvparten av høyt utdannede bruker KI",
       "source": "Digi",
       "url": "https://www.digi.no/nyhetsstudio/halvparten-av-hoeyt-utdannede-bruker-ki/82401",
-      "snippet": "Oppsummering av undersokelse om KI-bruk i kunnskapsyrker.",
+      "snippet": "Oppsummering av undersøkelse om KI-bruk i kunnskapsyrker.",
       "published_at": "2025-06-24T12:00:00+01:00",
       "tone": "neutral",
       "category": "Norsk arbeidsmarked",
@@ -168,7 +168,7 @@
       "query": "Manuell kuratering"
     },
     {
-      "title": "YS-lederen bekymret: Unge peker pa arbeidspress bak sykefravaer",
+      "title": "YS-lederen bekymret: Unge peker på arbeidspress bak sykefravær",
       "source": "Arbeidsliv i Norden",
       "url": "https://www.arbeidslivinorden.org/ys-lederen-bekymret-unge-peker-pa-arbeidspress-bak-sykefravaer/",
       "snippet": "Arbeidslivspress og teknologiendring kobles i nordisk kontekst.",
@@ -179,10 +179,10 @@
       "query": "Manuell kuratering"
     },
     {
-      "title": "Bruken av KI har skutt fart det siste aret",
+      "title": "Bruken av KI har skutt fart det siste året",
       "source": "SSB",
       "url": "https://www.ssb.no/teknologi-og-innovasjon/informasjons-og-kommunikasjonsteknologi-ikt/statistikk/bruk-av-ikt-i-naeringslivet/artikler/bruken-av-ki-har-skutt-fart-det-siste-aret",
-      "snippet": "Statistikk om vekst i KI-bruk i norsk naeringsliv.",
+      "snippet": "Statistikk om vekst i KI-bruk i norsk næringsliv.",
       "published_at": "2025-09-24T12:00:00+01:00",
       "tone": "neutral",
       "category": "Norsk arbeidsmarked",
@@ -190,7 +190,7 @@
       "query": "Manuell kuratering"
     },
     {
-      "title": "Riksrevisjonen hevdet at KI kunne spare 155.000 arsverk i staten. Men tallet stammet fra ChatGPT.",
+      "title": "Riksrevisjonen hevdet at KI kunne spare 155.000 årsverk i staten. Men tallet stammet fra ChatGPT.",
       "source": "Aftenposten",
       "url": "https://www.aftenposten.no/norge/politikk/i/PpkVxJ/riksrevisjonen-hevdet-at-ki-kunne-spare-155000-aarsverk-i-staten-men-tallet-stammet-fra-chatgpt",
       "snippet": "Sak om metodekritikk og konsekvenser for politikkutforming i arbeidslivet.",
@@ -201,7 +201,7 @@
       "query": "Manuell kuratering"
     },
     {
-      "title": "AI pavirker arbeidsmarkedet - og det kan ramme de yngste hardest",
+      "title": "AI påvirker arbeidsmarkedet - og det kan ramme de yngste hardest",
       "source": "HR Norge",
       "url": "https://www.hrnorge.no/tema/ressursplanlegging-og-rekruttering/rekruttering/ai-p%C3%A5virker-arbeidsmarkedet-og-det-kan-ramme-de-yngste-hardest",
       "snippet": "Vurdering av hvem som blir mest utsatt i arbeidsmarkedet.",
@@ -212,10 +212,10 @@
       "query": "Manuell kuratering"
     },
     {
-      "title": "Webinar: Kunstig intelligens - muligheter og utfordringer for selvstendig naeringsdrivende",
+      "title": "Webinar: Kunstig intelligens - muligheter og utfordringer for selvstendig næringsdrivende",
       "source": "Akademikerne",
       "url": "https://www.akademikerne.no/webinar-kunstig-intelligens---muligheter-og-utfordringer-for-selvstendig-naeringsdrivende",
-      "snippet": "Perspektiver pa KI for frilansere og selvstendig naeringsdrivende.",
+      "snippet": "Perspektiver på KI for frilansere og selvstendig næringsdrivende.",
       "published_at": "2025-10-29T12:00:00+01:00",
       "tone": "neutral",
       "category": "Norsk arbeidsmarked",
@@ -245,10 +245,10 @@
       "query": "Manuell kuratering"
     },
     {
-      "title": "Hvor sarbart er arbeidslivet for KI?",
+      "title": "Hvor sårbart er arbeidslivet for KI?",
       "source": "Dagens Perspektiv",
       "url": "https://www.dagensperspektiv.no/synspunkt/hvor-sarbart-er-arbeidslivet-for-ki/1377742",
-      "snippet": "Kommentar om sarkbarhet og beredskap i arbeidslivet.",
+      "snippet": "Kommentar om sårbarhet og beredskap i arbeidslivet.",
       "published_at": "2025-12-01T12:00:00+01:00",
       "tone": "replacement_anxiety",
       "category": "Norsk arbeidsmarked",
@@ -270,7 +270,7 @@
       "title": "Kunstig intelligens og arbeidslivet",
       "source": "LO",
       "url": "https://www.lo.no/hvem-vi-er/regioner/vestfold-og-telemark/nyheter-fra-lo-i-vestfold-og-telemark/kunstig-intelligens-og-arbeidslivet/",
-      "snippet": "Fagbevegelsens perspektiv pa KI, medlemmers trygghet og partssamarbeid.",
+      "snippet": "Fagbevegelsens perspektiv på KI, medlemmers trygghet og partssamarbeid.",
       "published_at": "2025-12-10T12:00:00+01:00",
       "tone": "neutral",
       "category": "Norsk arbeidsmarked",
