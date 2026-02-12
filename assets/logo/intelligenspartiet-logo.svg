@@ -1,18 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 260" role="img" aria-labelledby="title desc">
-  <title id="title">Intelligenspartiet logo</title>
-  <desc id="desc">Power-symbol og IP-monogram med teksten Intelligenspartiet</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title desc">
+  <title id="title">Intelligenspartiet logo mark</title>
+  <desc id="desc">Sirkelformet blått krets-symbol med power-ikon</desc>
   <defs>
-    <linearGradient id="coreFill" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0a2b6f" />
-      <stop offset="55%" stop-color="#06498a" />
-      <stop offset="100%" stop-color="#02183d" />
+    <radialGradient id="bg" cx="34%" cy="26%" r="85%">
+      <stop offset="0%" stop-color="#1f7ed1" />
+      <stop offset="62%" stop-color="#0a4a95" />
+      <stop offset="100%" stop-color="#031a47" />
+    </radialGradient>
+    <linearGradient id="neon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#88f5ff" />
+      <stop offset="100%" stop-color="#22b4ff" />
     </linearGradient>
-    <linearGradient id="neonLine" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#7ef1ff" />
-      <stop offset="100%" stop-color="#1ba9ff" />
-    </linearGradient>
-    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
-      <feGaussianBlur stdDeviation="2.6" result="blur" />
+    <filter id="glow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="1.8" result="blur" />
       <feMerge>
         <feMergeNode in="blur" />
         <feMergeNode in="SourceGraphic" />
@@ -20,44 +20,39 @@
     </filter>
   </defs>
 
-  <g transform="translate(18 0)">
-    <circle cx="112" cy="110" r="90" fill="url(#coreFill)" stroke="#2dc7ff" stroke-width="4" />
-    <circle cx="112" cy="110" r="101" fill="none" stroke="#63e7ff" stroke-width="3.2" opacity="0.85" />
-    <circle cx="112" cy="110" r="78" fill="none" stroke="#2ec8ff" stroke-width="4" opacity="0.7" />
+  <circle cx="100" cy="100" r="95" fill="url(#bg)" stroke="#082f72" stroke-width="6" />
+  <circle cx="100" cy="100" r="82" fill="none" stroke="#61e5ff" stroke-width="5" opacity="0.85" />
+  <circle cx="100" cy="100" r="66" fill="none" stroke="#2cc6ff" stroke-width="4" opacity="0.62" />
 
-    <g stroke="url(#neonLine)" stroke-width="3.5" stroke-linecap="round" fill="none" filter="url(#glow)">
-      <path d="M112 52 V82" />
-      <path d="M70 132 A42 42 0 1 1 154 132" />
-    </g>
-
-    <g stroke="#63e7ff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.9">
-      <path d="M20 110 H32" />
-      <path d="M31 70 L41 77" />
-      <path d="M65 38 L71 50" />
-      <path d="M159 38 L153 50" />
-      <path d="M193 70 L183 77" />
-      <path d="M204 110 H192" />
-      <path d="M193 150 L183 143" />
-      <path d="M159 182 L153 170" />
-      <path d="M65 182 L71 170" />
-      <path d="M31 150 L41 143" />
-      <circle cx="18" cy="110" r="4" />
-      <circle cx="30" cy="68" r="4" />
-      <circle cx="64" cy="36" r="4" />
-      <circle cx="112" cy="24" r="4" />
-      <circle cx="160" cy="36" r="4" />
-      <circle cx="194" cy="68" r="4" />
-      <circle cx="206" cy="110" r="4" />
-      <circle cx="194" cy="152" r="4" />
-      <circle cx="160" cy="184" r="4" />
-      <circle cx="112" cy="196" r="4" />
-      <circle cx="64" cy="184" r="4" />
-      <circle cx="30" cy="152" r="4" />
-    </g>
+  <g stroke="#63e7ff" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.9">
+    <path d="M100 10 V18" />
+    <path d="M145 22 L141 29" />
+    <path d="M178 55 L171 59" />
+    <path d="M190 100 H182" />
+    <path d="M178 145 L171 141" />
+    <path d="M145 178 L141 171" />
+    <path d="M100 190 V182" />
+    <path d="M55 178 L59 171" />
+    <path d="M22 145 L29 141" />
+    <path d="M10 100 H18" />
+    <path d="M22 55 L29 59" />
+    <path d="M55 22 L59 29" />
+    <circle cx="100" cy="10" r="4" />
+    <circle cx="145" cy="22" r="4" />
+    <circle cx="178" cy="55" r="4" />
+    <circle cx="190" cy="100" r="4" />
+    <circle cx="178" cy="145" r="4" />
+    <circle cx="145" cy="178" r="4" />
+    <circle cx="100" cy="190" r="4" />
+    <circle cx="55" cy="178" r="4" />
+    <circle cx="22" cy="145" r="4" />
+    <circle cx="10" cy="100" r="4" />
+    <circle cx="22" cy="55" r="4" />
+    <circle cx="55" cy="22" r="4" />
   </g>
 
-  <line x1="298" y1="34" x2="298" y2="188" stroke="url(#neonLine)" stroke-width="4.5" />
-
-  <text x="358" y="150" fill="#ffffff" font-family="Bebas Neue, Arial Black, Arial, sans-serif" font-size="172" font-weight="800" letter-spacing="4">IP</text>
-  <text x="20" y="236" fill="#ffffff" font-family="Source Sans 3, Arial, sans-serif" font-size="72" font-weight="900" letter-spacing="1.5">INTELLIGENSPARTIET</text>
+  <g stroke="url(#neon)" stroke-linecap="round" fill="none" filter="url(#glow)">
+    <path d="M70 116 A30 30 0 1 1 130 116" stroke-width="8" />
+    <path d="M100 66 V90" stroke-width="9" />
+  </g>
 </svg>
