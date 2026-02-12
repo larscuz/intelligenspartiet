@@ -20,6 +20,40 @@ function normalizeEmail(input) {
   return String(input || '').trim().toLowerCase();
 }
 
+function pickEnv(candidates) {
+  for (const candidate of candidates) {
+    const value = String(candidate.value || '').trim();
+    if (value) {
+      return {
+        value,
+        source: candidate.name,
+      };
+    }
+  }
+  return {
+    value: '',
+    source: '',
+  };
+}
+
+function resolveAdminEmailEnv() {
+  const result = pickEnv([
+    { name: 'ADMIN_EMAIL', value: process.env.ADMIN_EMAIL },
+    { name: 'ADMIN_USER_EMAIL', value: process.env.ADMIN_USER_EMAIL },
+    { name: 'ADMIN_LOGIN_EMAIL', value: process.env.ADMIN_LOGIN_EMAIL },
+  ]);
+
+  return {
+    email: normalizeEmail(result.value),
+    source: result.source || null,
+    flags: {
+      ADMIN_EMAIL: Boolean(String(process.env.ADMIN_EMAIL || '').trim()),
+      ADMIN_USER_EMAIL: Boolean(String(process.env.ADMIN_USER_EMAIL || '').trim()),
+      ADMIN_LOGIN_EMAIL: Boolean(String(process.env.ADMIN_LOGIN_EMAIL || '').trim()),
+    },
+  };
+}
+
 function safeEqualHex(a, b) {
   const left = Buffer.from(String(a || ''), 'hex');
   const right = Buffer.from(String(b || ''), 'hex');
@@ -98,7 +132,8 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const adminEmailEnv = normalizeEmail(process.env.ADMIN_EMAIL);
+  const adminEmailInfo = resolveAdminEmailEnv();
+  const adminEmailEnv = adminEmailInfo.email;
   const pepper = process.env.ADMIN_PEPPER || '';
   const setupKey = process.env.ADMIN_SETUP_KEY || process.env.ADMIN_API_KEY || '';
 
@@ -124,6 +159,8 @@ module.exports = async (req, res) => {
       ok: true,
       configured,
       admin_email: adminEmailEnv || configEmail || '',
+      admin_email_source: adminEmailInfo.source,
+      admin_email_env: adminEmailInfo.flags,
       authenticated: session.ok,
       session_email: session.ok ? session.email : '',
     });
@@ -160,7 +197,12 @@ module.exports = async (req, res) => {
     const bootstrapKey = String(body.bootstrap_key || '');
 
     if (!adminEmailEnv) {
-      sendJson(res, 500, { error: 'ADMIN_EMAIL mangler i environment variables.' });
+      sendJson(res, 500, {
+        error: 'ADMIN_EMAIL mangler i environment variables.',
+        missing: ['ADMIN_EMAIL'],
+        admin_email_source: adminEmailInfo.source,
+        admin_email_env: adminEmailInfo.flags,
+      });
       return;
     }
 
