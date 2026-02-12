@@ -54,6 +54,26 @@ function resolveAdminEmailEnv() {
   };
 }
 
+function resolveSetupKeyEnv() {
+  const result = pickEnv([
+    { name: 'ADMIN_SETUP_KEY', value: process.env.ADMIN_SETUP_KEY },
+    { name: 'ADMIN_API_KEY', value: process.env.ADMIN_API_KEY },
+    { name: 'ADMIN_BOOTSTRAP_KEY', value: process.env.ADMIN_BOOTSTRAP_KEY },
+    { name: 'SETUP_KEY', value: process.env.SETUP_KEY },
+  ]);
+
+  return {
+    key: String(result.value || ''),
+    source: result.source || null,
+    flags: {
+      ADMIN_SETUP_KEY: Boolean(String(process.env.ADMIN_SETUP_KEY || '').trim()),
+      ADMIN_API_KEY: Boolean(String(process.env.ADMIN_API_KEY || '').trim()),
+      ADMIN_BOOTSTRAP_KEY: Boolean(String(process.env.ADMIN_BOOTSTRAP_KEY || '').trim()),
+      SETUP_KEY: Boolean(String(process.env.SETUP_KEY || '').trim()),
+    },
+  };
+}
+
 function safeEqualHex(a, b) {
   const left = Buffer.from(String(a || ''), 'hex');
   const right = Buffer.from(String(b || ''), 'hex');
@@ -135,7 +155,8 @@ module.exports = async (req, res) => {
   const adminEmailInfo = resolveAdminEmailEnv();
   const adminEmailEnv = adminEmailInfo.email;
   const pepper = process.env.ADMIN_PEPPER || '';
-  const setupKey = process.env.ADMIN_SETUP_KEY || process.env.ADMIN_API_KEY || '';
+  const setupKeyInfo = resolveSetupKeyEnv();
+  const setupKey = setupKeyInfo.key;
 
   if (!pepper) {
     sendJson(res, 500, { error: 'ADMIN_PEPPER mangler i environment variables.' });
@@ -161,6 +182,8 @@ module.exports = async (req, res) => {
       admin_email: adminEmailEnv || configEmail || '',
       admin_email_source: adminEmailInfo.source,
       admin_email_env: adminEmailInfo.flags,
+      setup_key_source: setupKeyInfo.source,
+      setup_key_env: setupKeyInfo.flags,
       authenticated: session.ok,
       session_email: session.ok ? session.email : '',
     });
@@ -188,7 +211,12 @@ module.exports = async (req, res) => {
     }
 
     if (!setupKey) {
-      sendJson(res, 500, { error: 'ADMIN_SETUP_KEY mangler. Kan ikke fullføre setup.' });
+      sendJson(res, 500, {
+        error: 'ADMIN_SETUP_KEY mangler. Kan ikke fullføre setup.',
+        missing: ['ADMIN_SETUP_KEY'],
+        setup_key_source: setupKeyInfo.source,
+        setup_key_env: setupKeyInfo.flags,
+      });
       return;
     }
 
