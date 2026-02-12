@@ -195,18 +195,14 @@ module.exports = async (req, res) => {
     const email = normalizeEmail(body.email);
     const password = String(body.password || '');
     const bootstrapKey = String(body.bootstrap_key || '');
+    const effectiveAdminEmail = adminEmailEnv || email;
 
-    if (!adminEmailEnv) {
-      sendJson(res, 500, {
-        error: 'ADMIN_EMAIL mangler i environment variables.',
-        missing: ['ADMIN_EMAIL'],
-        admin_email_source: adminEmailInfo.source,
-        admin_email_env: adminEmailInfo.flags,
-      });
+    if (!email) {
+      sendJson(res, 400, { error: 'E-post er paakrevd.' });
       return;
     }
 
-    if (email !== adminEmailEnv) {
+    if (adminEmailEnv && email !== adminEmailEnv) {
       sendJson(res, 400, { error: 'E-post må være admin e-post.' });
       return;
     }
@@ -228,7 +224,7 @@ module.exports = async (req, res) => {
     try {
       await saveAuthConfig(
         {
-          email: adminEmailEnv,
+          email: effectiveAdminEmail,
           password_salt: salt,
           password_hash: passwordHash,
           version: 1,
@@ -242,14 +238,14 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const token = createSessionToken(adminEmailEnv);
+    const token = createSessionToken(effectiveAdminEmail);
     res.setHeader('Set-Cookie', createSessionCookie(req, token));
 
     sendJson(res, 200, {
       ok: true,
       configured: true,
       authenticated: true,
-      admin_email: adminEmailEnv,
+      admin_email: effectiveAdminEmail,
     });
     return;
   }
