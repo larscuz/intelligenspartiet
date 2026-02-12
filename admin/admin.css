@@ -1,64 +1,68 @@
 :root {
-  --bg: #0f1115;
-  --panel: #171a21;
-  --line: #2b3140;
-  --ink: #eef1f8;
-  --muted: #aab4cc;
-  --accent: #ff4055;
-  --ok: #37c978;
-}
-
-* {
-  box-sizing: border-box;
+  --admin-line: #c7c7c7;
+  --admin-panel: #ffffff;
+  --admin-soft: #f8f8f8;
+  --admin-ok: #15803d;
+  --admin-error: #b91c1c;
 }
 
 body {
-  margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at top right, #1c2436 0%, #0f1115 45%);
-  color: var(--ink);
-  font-family: "Space Grotesk", sans-serif;
+}
+
+.admin-pill {
+  margin: 0;
+  justify-self: end;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-nav {
+  width: min(var(--max), calc(100% - 2rem));
+  margin-bottom: 0.8rem;
 }
 
 .admin-shell {
-  width: min(1200px, calc(100% - 2rem));
-  margin: 1.4rem auto 2rem;
+  width: min(var(--max), calc(100% - 2rem));
+  margin: 0 auto 2rem;
   display: grid;
   gap: 1rem;
 }
 
-.admin-header h1 {
-  margin: 0;
-  font-size: clamp(1.8rem, 4vw, 2.8rem);
-}
-
-.admin-header p {
-  margin: 0.35rem 0 0;
-  color: var(--muted);
-}
-
 .card {
-  border: 1px solid var(--line);
-  background: rgba(23, 26, 33, 0.94);
-  border-radius: 12px;
+  border: 1px solid var(--admin-line);
+  background: var(--admin-panel);
+  border-radius: 6px;
   padding: 1rem;
   display: grid;
   gap: 0.7rem;
 }
 
+.cms-head h2,
 .card h2 {
   margin: 0;
-  font-size: 1.15rem;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(1.4rem, 3.2vw, 2.2rem);
+  letter-spacing: 0.03em;
 }
 
-.card h3 {
-  margin: 0;
-  font-size: 1rem;
+.cms-head p {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
 }
 
 label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
   color: var(--muted);
+  font-weight: 700;
 }
 
 input,
@@ -71,11 +75,11 @@ button {
 input,
 select,
 textarea {
-  border: 1px solid var(--line);
-  background: #10131a;
+  border: 1px solid var(--admin-line);
+  background: #fff;
   color: var(--ink);
-  border-radius: 8px;
-  padding: 0.6rem 0.7rem;
+  border-radius: 4px;
+  padding: 0.58rem 0.68rem;
 }
 
 textarea {
@@ -95,7 +99,8 @@ textarea {
 
 .actions,
 .quick-actions,
-.editor-toolbar {
+.editor-toolbar,
+.cms-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
@@ -103,13 +108,13 @@ textarea {
 }
 
 button {
-  border: 1px solid var(--line);
-  background: #1f2533;
+  border: 1px solid var(--admin-line);
+  background: #fff;
   color: var(--ink);
-  border-radius: 8px;
-  padding: 0.5rem 0.8rem;
+  border-radius: 4px;
+  padding: 0.45rem 0.72rem;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 button:disabled,
@@ -120,18 +125,22 @@ textarea:disabled {
 
 button:hover,
 button:focus-visible {
-  border-color: #5e6f97;
+  border-color: var(--ink);
 }
 
-#save-file {
-  background: var(--accent);
-  border-color: var(--accent);
+#save-file,
+#cms-save {
+  background: var(--red);
+  border-color: var(--red);
   color: #fff;
 }
 
 #save-file:hover,
-#save-file:focus-visible {
-  filter: brightness(1.08);
+#save-file:focus-visible,
+#cms-save:hover,
+#cms-save:focus-visible {
+  background: var(--red-dark);
+  border-color: var(--red-dark);
 }
 
 .status {
@@ -141,24 +150,123 @@ button:focus-visible {
 }
 
 .status.ok {
-  color: var(--ok);
+  color: var(--admin-ok);
 }
 
 .status.error {
-  color: #ff7d95;
+  color: var(--admin-error);
 }
 
-.meta-row {
+.meta-row,
+.cms-meta-row {
   display: flex;
   justify-content: space-between;
   gap: 0.6rem;
   flex-wrap: wrap;
 }
 
+.cms-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.cms-item {
+  border: 1px solid var(--admin-line);
+  background: var(--admin-soft);
+  padding: 0.7rem;
+  border-radius: 6px;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.cms-item-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.cms-item-label {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.76rem;
+  color: #374151;
+}
+
+.cms-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.cms-item-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.cms-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.cms-field.is-wide {
+  grid-column: 1 / -1;
+}
+
+.cms-field textarea {
+  min-height: 90px;
+}
+
+.cms-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.cms-switch input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+}
+
+.empty-state.small {
+  padding: 0.7rem;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 1000px) {
+  .masthead-inner {
+    grid-template-columns: 1fr auto;
+  }
+
+  .admin-pill {
+    justify-self: start;
+  }
+
+  .brand {
+    order: -1;
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 720px) {
   .admin-shell {
     width: calc(100% - 1rem);
-    margin-top: 0.5rem;
+  }
+
+  .admin-nav {
+    width: calc(100% - 1rem);
+  }
+
+  .cms-item-grid {
+    grid-template-columns: 1fr;
   }
 
   textarea {

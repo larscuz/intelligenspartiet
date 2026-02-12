@@ -66,6 +66,12 @@ Etter setting av variabler: redeploy prosjektet.
 5. Trykk `Sett passord`.
 
 ### Hva kan redigeres i admin
+- Visuell nyhets-CMS for `assets/data/ai-jobs-news.json`:
+  - kategori (f.eks. `Norsk arbeidsmarked`)
+  - publisert/ikke publisert
+  - flytt opp/ned (rekkefolge)
+  - slett og legg til saker
+  - `Publiser alle` og `Sett kategori: Norsk arbeidsmarked`
 - `index.html`
 - `assets/css/style.css`
 - `assets/js/main.js`
@@ -81,4 +87,5 @@ Etter setting av variabler: redeploy prosjektet.
 ## Publisering
 1. Push endringer til repoet som er koblet til produksjon pa Vercel.
 2. Kjor crawleren for nye saker for deploy, eller sett opp periodisk kjoring via cron/GitHub Actions.
+   - Eksempel med kategori: `python3 scripts/crawl_ai_jobs_news.py --limit 60 --category \"Norsk arbeidsmarked\"`
 3. Verifiser at `assets/data/ai-jobs-news.json` og `assets/data/kling3-prompts.json` er oppdatert i siste deploy.

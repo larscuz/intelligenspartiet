@@ -121,6 +121,11 @@
         <p id="news-meta" class="news-meta">Laster siste crawl ...</p>
       </div>
 
+      <div class="category-row" aria-label="Nyhetskategori">
+        <p class="category-label">Kategori</p>
+        <div id="category-filters" class="category-filters" role="tablist" aria-label="Filtrer kategori"></div>
+      </div>
+
       <div class="filters" role="tablist" aria-label="Filtrer nyheter">
         <button class="filter is-active" data-filter="all" role="tab" aria-selected="true">Alle</button>
         <button class="filter" data-filter="replacement_anxiety" role="tab" aria-selected="false">Erstatningsangst</button>
@@ -284,6 +289,7 @@
       <div class="news-content">
         <div class="news-top">
           <span class="tone"></span>
+          <span class="category"></span>
           <span class="source"></span>
         </div>
         <h3 class="title"></h3>

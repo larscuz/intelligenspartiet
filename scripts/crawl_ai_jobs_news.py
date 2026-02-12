@@ -83,6 +83,11 @@ def parse_args() -> argparse.Namespace:
         default=[],
         help="Extra search query. Can be passed multiple times.",
     )
+    parser.add_argument(
+        "--category",
+        default="Globalt arbeidsmarked",
+        help="Category name to stamp on all crawled items (default: Globalt arbeidsmarked)",
+    )
     return parser.parse_args()
 
 
@@ -141,7 +146,7 @@ def title_without_source(title: str, source: str) -> str:
     return title.strip()
 
 
-def crawl_queries(queries: list[str]) -> list[dict]:
+def crawl_queries(queries: list[str], category: str) -> list[dict]:
     items: list[dict] = []
     seen: set[tuple[str, str]] = set()
 
@@ -174,6 +179,8 @@ def crawl_queries(queries: list[str]) -> list[dict]:
                     "snippet": snippet,
                     "published_at": published_at,
                     "tone": classify_tone(title, snippet),
+                    "category": category,
+                    "published": True,
                     "query": query,
                 }
             )
@@ -194,6 +201,7 @@ def build_payload(items: list[dict], queries: list[str], limit: int) -> dict:
     return {
         "generated_at": now,
         "total_items": len(sliced),
+        "categories": sorted({item.get("category", "") for item in sliced if item.get("category")}),
         "queries": queries,
         "tone_counts": tone_counts,
         "items": sliced,
@@ -205,7 +213,7 @@ def main() -> int:
     queries = DEFAULT_QUERIES + list(args.query)
 
     try:
-        crawled = crawl_queries(queries)
+        crawled = crawl_queries(queries, category=args.category)
     except Exception as exc:
         print(f"crawl failed: {exc}", file=sys.stderr)
         return 1

@@ -7,6 +7,7 @@ const listNode = document.querySelector('#news-list');
 const templateNode = document.querySelector('#news-item-template');
 const metaNode = document.querySelector('#news-meta');
 const filterButtons = Array.from(document.querySelectorAll('.filter'));
+const categoryFiltersNode = document.querySelector('#category-filters');
 const promptListNode = document.querySelector('#prompt-list');
 const promptTemplateNode = document.querySelector('#prompt-item-template');
 const promptMetaNode = document.querySelector('#prompt-meta');
@@ -46,6 +47,10 @@ const VIDEO_POOL = [
 const state = {
   items: [],
   filter: 'all',
+  category: 'all',
+  categories: [],
+  generatedAt: null,
+  totalItems: 0,
 };
 
 function formatNow() {
@@ -76,6 +81,54 @@ function toneLabel(tone) {
   return 'Nøytral';
 }
 
+function normalizeCategory(value) {
+  const cleaned = String(value || '').trim();
+  return cleaned || 'Uten kategori';
+}
+
+function normalizeTone(value) {
+  const tone = String(value || '').trim();
+  if (tone === 'replacement_anxiety' || tone === 'reskilling' || tone === 'neutral') {
+    return tone;
+  }
+  return 'neutral';
+}
+
+function normalizeNewsItem(item) {
+  return {
+    ...item,
+    tone: normalizeTone(item && item.tone),
+    category: normalizeCategory(item && item.category),
+    published: item && item.published !== false,
+  };
+}
+
+function collectCategories(payload, items) {
+  const categories = new Set();
+
+  if (payload && Array.isArray(payload.categories)) {
+    payload.categories.forEach((name) => {
+      const normalized = normalizeCategory(name);
+      if (normalized !== 'Uten kategori') {
+        categories.add(normalized);
+      }
+    });
+  }
+
+  items.forEach((item) => {
+    categories.add(normalizeCategory(item.category));
+  });
+
+  const ordered = Array.from(categories).sort((a, b) => a.localeCompare(b, 'nb-NO'));
+  const norwayIndex = ordered.indexOf('Norsk arbeidsmarked');
+  if (norwayIndex > 0) {
+    ordered.splice(norwayIndex, 1);
+    ordered.unshift('Norsk arbeidsmarked');
+  }
+
+  return ordered;
+}
+
 function cleanSnippet(input) {
   if (!input) return '';
   return input
@@ -102,8 +155,10 @@ function mediaForItem(item, index) {
 }
 
 function visibleItems() {
-  if (state.filter === 'all') return state.items;
-  return state.items.filter((item) => item.tone === state.filter);
+  return state.items
+    .filter((item) => item.published !== false)
+    .filter((item) => state.category === 'all' || normalizeCategory(item.category) === state.category)
+    .filter((item) => state.filter === 'all' || item.tone === state.filter);
 }
 
 function renderNews() {
@@ -128,6 +183,7 @@ function renderNews() {
     const mediaImage = clone.querySelector('.news-image');
     const mediaVideo = clone.querySelector('.news-video');
     const tone = clone.querySelector('.tone');
+    const category = clone.querySelector('.category');
     const source = clone.querySelector('.source');
     const title = clone.querySelector('.title');
     const snippet = clone.querySelector('.snippet');
@@ -137,6 +193,7 @@ function renderNews() {
 
     if (card) card.dataset.tone = item.tone || 'neutral';
     if (tone) tone.textContent = toneLabel(item.tone);
+    if (category) category.textContent = normalizeCategory(item.category);
     if (source) source.textContent = item.source || 'Ukjent kilde';
     if (title) title.textContent = item.title || 'Uten tittel';
     if (snippet) snippet.textContent = cleanSnippet(item.snippet) || 'Ingen ingress tilgjengelig.';
@@ -189,13 +246,45 @@ function setFilter(name) {
     button.setAttribute('aria-selected', String(active));
   });
   renderNews();
+  updateMeta();
 }
 
-function updateMeta(data) {
+function setCategory(name) {
+  state.category = name;
+  renderCategoryFilters();
+  renderNews();
+  updateMeta();
+}
+
+function renderCategoryFilters() {
+  if (!categoryFiltersNode) return;
+
+  categoryFiltersNode.innerHTML = '';
+  const categories = ['all', ...state.categories];
+
+  categories.forEach((name) => {
+    const button = document.createElement('button');
+    const active = state.category === name;
+    button.type = 'button';
+    button.className = 'category-filter';
+    button.dataset.category = name;
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-selected', String(active));
+    button.classList.toggle('is-active', active);
+    button.textContent = name === 'all' ? 'Alle kategorier' : name;
+    button.addEventListener('click', () => setCategory(name));
+    categoryFiltersNode.appendChild(button);
+  });
+}
+
+function updateMeta() {
   if (!metaNode) return;
-  const generated = data.generated_at ? formatPublished(data.generated_at) : 'ukjent';
-  const count = Array.isArray(data.items) ? data.items.length : 0;
-  metaNode.textContent = `Sist oppdatert: ${generated}. Totalt ${count} saker.`;
+  const generated = state.generatedAt ? formatPublished(state.generatedAt) : 'ukjent';
+  const total = state.totalItems || state.items.length;
+  const published = state.items.filter((item) => item.published !== false).length;
+  const visible = visibleItems().length;
+  const category = state.category === 'all' ? 'Alle kategorier' : state.category;
+  metaNode.textContent = `Sist oppdatert: ${generated}. Viser ${visible} av ${published} publiserte saker (${category}). Totalt registrert: ${total}.`;
 }
 
 function applyScrollyStep(step) {
@@ -320,6 +409,7 @@ function renderPrompts(prompts, meta) {
 async function loadNews() {
   const fallback = {
     generated_at: null,
+    categories: ['Norsk arbeidsmarked'],
     items: [
       {
         title: 'Kjør crawleren for å hente nye saker',
@@ -327,6 +417,8 @@ async function loadNews() {
         url: '#',
         published_at: new Date().toISOString(),
         tone: 'neutral',
+        category: 'Norsk arbeidsmarked',
+        published: true,
         snippet: 'Bruk scripts/crawl_ai_jobs_news.py for å oppdatere wire med ferske nyheter.',
       },
     ],
@@ -336,12 +428,25 @@ async function loadNews() {
     const response = await fetch('assets/data/ai-jobs-news.json', { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    state.items = Array.isArray(data.items) ? data.items : [];
-    updateMeta(data);
+    state.generatedAt = data.generated_at || null;
+    state.totalItems = Number(data.total_items) || (Array.isArray(data.items) ? data.items.length : 0);
+    state.items = Array.isArray(data.items) ? data.items.map(normalizeNewsItem) : [];
+    state.categories = collectCategories(data, state.items);
+    const available = new Set(['all', ...state.categories]);
+    if (!available.has(state.category) || state.category === 'all') {
+      state.category = state.categories.includes('Norsk arbeidsmarked') ? 'Norsk arbeidsmarked' : 'all';
+    }
+    renderCategoryFilters();
+    updateMeta();
     renderNews();
   } catch (error) {
-    state.items = fallback.items;
-    updateMeta(fallback);
+    state.generatedAt = fallback.generated_at || null;
+    state.totalItems = fallback.items.length;
+    state.items = fallback.items.map(normalizeNewsItem);
+    state.categories = collectCategories(fallback, state.items);
+    state.category = state.categories.includes('Norsk arbeidsmarked') ? 'Norsk arbeidsmarked' : 'all';
+    renderCategoryFilters();
+    updateMeta();
     renderNews();
     if (metaNode) {
       metaNode.textContent = `Kunne ikke laste crawl-data (${String(error)}). Viser fallback.`;

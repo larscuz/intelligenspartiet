@@ -3,22 +3,72 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Intelligenspartiet Admin</title>
+  <title>Intelligenspartiet Admin CMS</title>
   <link rel="icon" type="image/svg+xml" href="/assets/logo/intelligenspartiet-favicon.svg" />
   <link rel="shortcut icon" href="/assets/logo/intelligenspartiet-favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/style.css" />
   <link rel="stylesheet" href="/admin/admin.css" />
 </head>
 <body>
-  <main class="admin-shell">
-    <header class="admin-header">
-      <h1>Intelligenspartiet Admin</h1>
-      <p>Kun for autorisert redigering av nettsted og video-prompter.</p>
-    </header>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <p class="topbar-note">ADMIN DESK</p>
+      <p class="timestamp">Visuell CMS for norsk AI- og arbeidsmarkedsstoff</p>
+      <p class="topbar-note">INTELLIGENSPARTIET</p>
+    </div>
+  </header>
 
-    <section class="card auth-card">
+  <header class="masthead">
+    <div class="masthead-inner">
+      <p class="tagline">Kontrollsenter for publisering</p>
+      <a href="/" class="brand" aria-label="Intelligenspartiet">
+        <img class="brand-mark" src="/assets/logo/intelligenspartiet-logo.svg" alt="" aria-hidden="true" />
+        <span class="brand-text">INTELLIGENSPARTIET</span>
+      </a>
+      <p class="admin-pill">VISUELL CMS</p>
+    </div>
+  </header>
+
+  <nav class="section-nav admin-nav" aria-label="Adminseksjoner">
+    <a href="#cms">Nyhets-CMS</a>
+    <a href="#auth">Innlogging</a>
+    <a href="#editor">Filredigering</a>
+    <a href="#quick">Hurtigfiler</a>
+  </nav>
+
+  <main class="admin-shell">
+    <section id="cms" class="card cms-card">
+      <div class="cms-head">
+        <h2>Norsk arbeidsmarked</h2>
+        <p>Publiser, slett og flytt artikler visuelt. Endringer lagres til <code>assets/data/ai-jobs-news.json</code>.</p>
+      </div>
+
+      <div class="editor-toolbar">
+        <button id="cms-load" type="button" disabled>Last nyhetsdata</button>
+        <button id="cms-add" type="button" disabled>Legg til sak</button>
+        <button id="cms-publish-all" type="button" disabled>Publiser alle</button>
+        <button id="cms-assign-norsk" type="button" disabled>Sett kategori: Norsk arbeidsmarked</button>
+      </div>
+
+      <label for="cms-commit-message">Commit-melding</label>
+      <input id="cms-commit-message" type="text" value="Admin CMS update: Norsk arbeidsmarked" />
+
+      <div class="cms-meta-row">
+        <p id="cms-meta" class="status">Logg inn for å laste CMS.</p>
+        <p id="cms-status" class="status"></p>
+      </div>
+
+      <div id="cms-list" class="cms-list" aria-live="polite"></div>
+
+      <div class="actions">
+        <button id="cms-save" type="button" disabled>Lagre CMS til GitHub</button>
+      </div>
+    </section>
+
+    <section id="auth" class="card auth-card">
       <h2>Logg inn</h2>
       <p id="auth-mode" class="status">Sjekker oppsett ...</p>
 
@@ -60,7 +110,7 @@
       <p id="auth-status" class="status"></p>
     </section>
 
-    <section class="card editor-card">
+    <section id="editor" class="card editor-card">
       <div class="editor-toolbar">
         <label for="file-select">Fil</label>
         <select id="file-select"></select>
@@ -83,7 +133,7 @@
       </div>
     </section>
 
-    <section class="card quick-card">
+    <section id="quick" class="card quick-card">
       <h2>Hurtigfiler</h2>
       <div class="quick-actions">
         <button class="quick-open" data-path="assets/data/kling3-prompts.json" type="button" disabled>Kling prompts</button>
