@@ -245,6 +245,7 @@ let videoStoryActiveIndex = 0;
 let videoStoryMode = false;
 let videoStoryObserver = null;
 let videoStoryScenes = [];
+let videoStorySwapToken = 0;
 const videoStoryPreloaded = new Set();
 let scrollyActiveIndex = 0;
 let scrollySectionInView = true;
@@ -1022,6 +1023,46 @@ function preloadVideoStoryScene(index) {
   probe.load();
 }
 
+function swapVideoStorySource(nextSource, shouldAutoplay = true) {
+  if (!videoStoryPlayer) return;
+
+  const targetSource = String(nextSource || '').trim();
+  if (!targetSource) return;
+
+  const activeSource = String(videoStoryPlayer.dataset.activeSrc || '').trim();
+  if (targetSource === activeSource) {
+    if (shouldAutoplay) {
+      videoStoryPlayer.play().catch(() => {});
+    }
+    return;
+  }
+
+  const token = videoStorySwapToken + 1;
+  videoStorySwapToken = token;
+  videoStoryPlayer.classList.add('is-transitioning');
+
+  const clearTransition = () => {
+    if (videoStorySwapToken !== token) return;
+    videoStoryPlayer.classList.remove('is-transitioning');
+  };
+
+  window.setTimeout(() => {
+    if (videoStorySwapToken !== token) return;
+    videoStoryPlayer.src = targetSource;
+    videoStoryPlayer.dataset.activeSrc = targetSource;
+    videoStoryPlayer.load();
+    if (shouldAutoplay) {
+      videoStoryPlayer.play().catch(() => {});
+    }
+  }, 120);
+
+  videoStoryPlayer.addEventListener('loadeddata', () => {
+    window.setTimeout(clearTransition, 120);
+  }, { once: true });
+
+  window.setTimeout(clearTransition, 900);
+}
+
 function activateVideoStoryScene(index, options = {}) {
   if (!videoStoryScenes.length) return;
 
@@ -1043,14 +1084,7 @@ function activateVideoStoryScene(index, options = {}) {
 
   if (videoStoryPlayer) {
     const nextSource = String(scene.video || '').trim();
-    const currentSource = String(videoStoryPlayer.getAttribute('src') || '').trim();
-    if (nextSource && nextSource !== currentSource) {
-      videoStoryPlayer.src = nextSource;
-      videoStoryPlayer.load();
-    }
-    if (nextSource && shouldAutoplay) {
-      videoStoryPlayer.play().catch(() => {});
-    }
+    swapVideoStorySource(nextSource, shouldAutoplay);
   }
 
   if (videoStoryScroll) {
@@ -1153,6 +1187,8 @@ function teardownVideoStory(clearMarkup = true) {
   if (videoStoryPlayer) {
     videoStoryPlayer.pause();
     videoStoryPlayer.removeAttribute('src');
+    delete videoStoryPlayer.dataset.activeSrc;
+    videoStoryPlayer.classList.remove('is-transitioning');
     videoStoryPlayer.load();
   }
 
@@ -1165,6 +1201,7 @@ function teardownVideoStory(clearMarkup = true) {
 
   videoStoryScenes = [];
   videoStoryActiveIndex = 0;
+  videoStorySwapToken = 0;
   videoStoryPreloaded.clear();
   videoStoryMode = false;
   setVideoModalMode(false);
