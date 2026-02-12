@@ -20,6 +20,11 @@ body {
   padding: 0;
 }
 
+html {
+  filter: invert(1);
+  background: #000;
+}
+
 body {
   font-family: "Source Sans 3", sans-serif;
   background: linear-gradient(180deg, #f3f3f3, #e7e7e7);
