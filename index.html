@@ -115,6 +115,33 @@
       </aside>
     </section>
 
+    <section id="series-hero" class="series-hero">
+      <video
+        class="series-hero-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        poster="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=1800&q=80"
+        data-popup-disabled="true"
+      >
+        <source src="https://larscuzner.com/static/_upload/1ChristTheater.mp4" type="video/mp4" />
+      </video>
+      <div class="series-hero-overlay"></div>
+      <div class="series-hero-content">
+        <p class="series-hero-kicker">Scrollytelling-serie</p>
+        <h2>Christiania Theater i 1830-årene</h2>
+        <p class="series-hero-sub">4 scener / ca. 2 min</p>
+        <p id="series-hero-progress" class="series-hero-progress">Scene 1 av 4</p>
+        <div class="series-hero-actions">
+          <a id="series-start-link" class="cta" href="#scrollytelling">Start serien</a>
+          <button id="series-fullscreen-open" class="series-hero-button" type="button">Åpne i fullskjerm</button>
+          <button id="series-resume-button" class="series-hero-button is-resume" type="button" hidden>Fortsett der du slapp</button>
+        </div>
+      </div>
+    </section>
+
     <section id="wire" class="news-wire">
       <div class="section-headline-row">
         <h2>AI-jobbwire</h2>
@@ -156,47 +183,189 @@
 
     <section id="scrollytelling" class="scrolly-story">
       <div class="section-headline-row">
-        <h2>Scrollytelling: Hva skjer når AI kutter førstelinjejobber?</h2>
-        <p class="news-meta">Scroll for stegvis utvikling</p>
+        <h2>Scrollytelling: Christiania Theater i 1830-årene</h2>
+        <div class="scrolly-headline-actions">
+          <p class="news-meta">Fra teaterbråk til norsk partihistorie</p>
+          <button id="scrolly-open-fullscreen" class="scrolly-fullscreen-button" type="button">Åpne i fullskjerm</button>
+        </div>
       </div>
 
       <div class="scrolly-layout">
         <aside class="scrolly-media" aria-live="polite">
-          <p id="scrolly-kicker" class="kicker">Steg 1</p>
-          <h3 id="scrolly-title">Kutt starter i repetitive frontlinjeoppgaver</h3>
-          <p id="scrolly-body">
-            Selskaper automatiserer først kundeservice, backoffice og enklere vurderinger for å redusere kostnader raskt.
-          </p>
-          <div class="scrolly-frame">
-            <img id="scrolly-image" src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=80" alt="Team i workshop" loading="lazy" />
-            <video id="scrolly-video" muted loop playsinline preload="none"></video>
+          <div class="scrolly-frame" aria-label="Video-scrollytelling">
+            <div class="scrolly-video-layer is-active" data-scene-index="0">
+              <img
+                class="scrolly-scene-poster"
+                src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=1600&q=80"
+                alt=""
+                loading="lazy"
+              />
+              <video
+                class="scrolly-scene-video"
+                poster="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=1600&q=80"
+                muted
+                loop
+                playsinline
+                preload="auto"
+                data-popup-disabled="true"
+              >
+                <source src="https://larscuzner.com/static/_upload/1ChristTheater.mp4" type="video/mp4" />
+              </video>
+            </div>
+
+            <div class="scrolly-video-layer" data-scene-index="1">
+              <img
+                class="scrolly-scene-poster"
+                src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1600&q=80"
+                alt=""
+                loading="lazy"
+              />
+              <video
+                class="scrolly-scene-video"
+                poster="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1600&q=80"
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                data-popup-disabled="true"
+              >
+                <source src="https://larscuzner.com/static/_upload/2ChristTheater.mp4" type="video/mp4" />
+              </video>
+            </div>
+
+            <div class="scrolly-video-layer" data-scene-index="2">
+              <img
+                class="scrolly-scene-poster"
+                src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1600&q=80"
+                alt=""
+                loading="lazy"
+              />
+              <video
+                class="scrolly-scene-video"
+                poster="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1600&q=80"
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                data-popup-disabled="true"
+              >
+                <source src="https://larscuzner.com/static/_upload/3ChristTheater.mp4" type="video/mp4" />
+              </video>
+            </div>
+
+            <div class="scrolly-video-layer" data-scene-index="3">
+              <img
+                class="scrolly-scene-poster"
+                src="https://images.unsplash.com/photo-1523861751938-1218bc347f2d?auto=format&fit=crop&w=1600&q=80"
+                alt=""
+                loading="lazy"
+              />
+              <video
+                class="scrolly-scene-video"
+                poster="https://images.unsplash.com/photo-1523861751938-1218bc347f2d?auto=format&fit=crop&w=1600&q=80"
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                data-popup-disabled="true"
+              >
+                <source src="https://larscuzner.com/static/_upload/4ChristTheater.mp4" type="video/mp4" />
+              </video>
+            </div>
+
+            <div class="scrolly-frame-overlay"></div>
+            <p id="scrolly-counter" class="scrolly-counter">Scene 1 / 4</p>
+            <div class="scrolly-audio-panel" role="group" aria-label="Lydkontroller">
+              <button
+                id="scrolly-audio-toggle"
+                class="scrolly-audio-toggle"
+                type="button"
+                aria-pressed="false"
+              >
+                Lyd: Av
+              </button>
+              <label class="scrolly-volume-label" for="scrolly-volume">Volum</label>
+              <input
+                id="scrolly-volume"
+                class="scrolly-volume-slider"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="80"
+                aria-label="Volum for aktiv scene"
+              />
+              <p id="scrolly-audio-status" class="scrolly-audio-status" aria-live="polite">Lyd er av.</p>
+            </div>
+            <p id="scrolly-caption" class="scrolly-caption">
+              Publikumet i 1830-årenes Christiania var alt annet enn stille.
+            </p>
           </div>
         </aside>
 
         <div class="scrolly-steps">
-          <article class="scrolly-step is-active" data-kicker="Steg 1" data-title="Kutt starter i repetitive frontlinjeoppgaver" data-body="Selskaper automatiserer først kundeservice, backoffice og enklere vurderinger for å redusere kostnader raskt." data-image="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=80" data-video="">
-            <h3>Steg 1: Kostnadsjakt</h3>
-            <p>Førstelinjen blir testarena for AI fordi oppgavene er standardiserte og lette å måle.</p>
+          <article
+            class="scrolly-step is-active"
+            data-scene-index="0"
+            data-kicker="Scene 1"
+            data-title="Et teater i kok"
+            data-body="Christiania Theater åpnet i 1827, og i 1830-årene var salen kjent for pipekonserter, jubel og høylytte protester."
+            data-caption="Publikumet i 1830-årenes Christiania var alt annet enn stille."
+            data-video="https://larscuzner.com/static/_upload/1ChristTheater.mp4"
+          >
+            <div class="scrolly-step-card">
+              <p class="scrolly-step-kicker">Scene 1</p>
+              <h3>Vill offentlighet</h3>
+              <p>Folk buet, klappet og ropte. Teateret ble en arena for sosial makt, smakskamp og nasjonal selviscenesettelse.</p>
+            </div>
           </article>
 
-          <article class="scrolly-step" data-kicker="Steg 2" data-title="Bemanning reduseres før nye roller er klare" data-body="Når AI tar volum, kuttes stillinger raskt. Men opplæringsplaner og nye roller kommer ofte for sent." data-image="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1600&q=80" data-video="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4">
-            <h3>Steg 2: Ubalanse</h3>
-            <p>Organisasjonen høster gevinster nå, mens ansatte må bære risikoen i overgangsperioden.</p>
+          <article
+            class="scrolly-step"
+            data-scene-index="1"
+            data-kicker="Scene 2"
+            data-title="Wergeland og Norskhetspartiet"
+            data-body="Henrik Wergeland omfavnet den folkelige energien og kjempet for en tydelig norsk kultur, språk og offentlighet gjennom Norskhetspartiet, også kalt Patriotene."
+            data-caption="Norskhetspartiet, ofte kalt Patriotene, samlet Wergelands tilhengere i 1830-årene."
+            data-video="https://larscuzner.com/static/_upload/2ChristTheater.mp4"
+          >
+            <div class="scrolly-step-card">
+              <p class="scrolly-step-kicker">Scene 2</p>
+              <h3>Norskhetspartiet</h3>
+              <p>For Wergelands krets var teaterbråket et tegn på politisk liv: bred deltakelse og nasjonal mobilisering nedenfra.</p>
+            </div>
           </article>
 
-          <article class="scrolly-step" data-kicker="Steg 3" data-title="Kvalitetsproblemer skaper dobbeltarbeid" data-body="Uten kontroll på modellkvalitet og ansvar må mennesker rydde opp i feil, ofte under høyere tidspress." data-image="https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1600&q=80" data-video="https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4">
-            <h3>Steg 3: Friksjon</h3>
-            <p>Nye systemer uten innsyn gjør arbeidsdagen mindre forutsigbar og mer stressende.</p>
+          <article
+            class="scrolly-step"
+            data-scene-index="2"
+            data-kicker="Scene 3"
+            data-title="Welhaven og Intelligenspartiet"
+            data-body="Johan Sebastian Welhaven svarte med krav om dannelse, orden og orientering mot den europeiske embets- og kultursfæren."
+            data-caption="Welhaven sto i hard offentlig feide med Wergeland gjennom 1830-årene."
+            data-video="https://larscuzner.com/static/_upload/3ChristTheater.mp4"
+          >
+            <div class="scrolly-step-card">
+              <p class="scrolly-step-kicker">Scene 3</p>
+              <h3>Motreaksjonen</h3>
+              <p>Intelligenspartiet så den samme støyen som forfall. De ville ha disiplin, elitestyrt reform og kulturell kontroll.</p>
+            </div>
           </article>
 
-          <article class="scrolly-step" data-kicker="Steg 4" data-title="Lokal uro blir politisk sak" data-body="Når mange mister fotfeste samtidig, blir det et samfunnsspørsmål: hvem finansierer trygg overgang?" data-image="https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1600&q=80" data-video="">
-            <h3>Steg 4: Politisk press</h3>
-            <p>Fagmiljøer, kommuner og arbeidstakere krever overgangsfond, omskolering og rett til innsyn.</p>
-          </article>
-
-          <article class="scrolly-step" data-kicker="Steg 5" data-title="Ny kontrakt mellom teknologi og trygghet" data-body="Målet er ikke å stoppe AI, men å fordele risiko og gevinst rettferdig når arbeid endres." data-image="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=80" data-video="https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4">
-            <h3>Steg 5: Løsning</h3>
-            <p>Scrollytellingen ender i konkret politikk: overgangsfond, opplæringsgaranti og AI-tilsyn.</p>
+          <article
+            class="scrolly-step"
+            data-scene-index="3"
+            data-kicker="Scene 4"
+            data-title="Fra kulturkamp til partilinjer"
+            data-body="Striden var ikke identisk med partisystemet i 1884, men konfliktlinjene ble en forhistorie til Venstre og Høyre."
+            data-caption="Nasjonal folkelinje mot embets- og eliteorientering preget norsk politikk i tiårene etter."
+            data-video="https://larscuzner.com/static/_upload/4ChristTheater.mp4"
+          >
+            <div class="scrolly-step-card">
+              <p class="scrolly-step-kicker">Scene 4</p>
+              <h3>Forløpere</h3>
+              <p>Norskhetspartiets folkelige nasjonalisme peker frem mot Venstre, mens Intelligenspartiets embetslinje peker mot Høyres tradisjon.</p>
+            </div>
           </article>
         </div>
       </div>
@@ -285,6 +454,41 @@
       <button id="video-modal-close" class="video-modal-close" type="button" aria-label="Lukk video">×</button>
       <p id="video-modal-title" class="video-modal-title">Video</p>
       <video id="video-modal-player" controls playsinline preload="metadata"></video>
+    </div>
+  </div>
+
+  <div id="scrolly-fullscreen-modal" class="scrolly-fullscreen-modal" hidden aria-hidden="true">
+    <div class="scrolly-fullscreen-backdrop" data-close-scrolly-fullscreen></div>
+    <div class="scrolly-fullscreen-dialog" role="dialog" aria-modal="true" aria-labelledby="scrolly-fullscreen-title">
+      <button id="scrolly-fullscreen-close" class="scrolly-fullscreen-close" type="button" aria-label="Lukk fullskjerm">×</button>
+      <div class="scrolly-fullscreen-head">
+        <p id="scrolly-fullscreen-counter" class="scrolly-fullscreen-counter">Scene 1 / 4</p>
+        <div class="scrolly-fullscreen-audio">
+          <button id="scrolly-fullscreen-audio-toggle" class="scrolly-fullscreen-audio-toggle" type="button" aria-pressed="false">Lyd: Av</button>
+          <label class="scrolly-fullscreen-volume-label" for="scrolly-fullscreen-volume">Volum</label>
+          <input
+            id="scrolly-fullscreen-volume"
+            class="scrolly-fullscreen-volume"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value="80"
+            aria-label="Volum i fullskjerm"
+          />
+        </div>
+      </div>
+      <video id="scrolly-fullscreen-video" class="scrolly-fullscreen-video" controls playsinline preload="auto"></video>
+      <div class="scrolly-fullscreen-copy">
+        <p id="scrolly-fullscreen-kicker" class="scrolly-fullscreen-kicker">Scene 1</p>
+        <h3 id="scrolly-fullscreen-title">Et teater i kok</h3>
+        <p id="scrolly-fullscreen-body">Christiania Theater åpnet i 1827, og i 1830-årene var salen kjent for pipekonserter, jubel og høylytte protester.</p>
+        <p id="scrolly-fullscreen-caption" class="scrolly-fullscreen-caption">Publikumet i 1830-årenes Christiania var alt annet enn stille.</p>
+      </div>
+      <div class="scrolly-fullscreen-nav">
+        <button id="scrolly-fullscreen-prev" class="scrolly-fullscreen-nav-button" type="button">Forrige</button>
+        <button id="scrolly-fullscreen-next" class="scrolly-fullscreen-nav-button" type="button">Neste</button>
+      </div>
     </div>
   </div>
 

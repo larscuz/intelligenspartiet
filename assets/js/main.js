@@ -11,13 +11,39 @@ const categoryFiltersNode = document.querySelector('#category-filters');
 const promptListNode = document.querySelector('#prompt-list');
 const promptTemplateNode = document.querySelector('#prompt-item-template');
 const promptMetaNode = document.querySelector('#prompt-meta');
+const scrollyStory = document.querySelector('#scrollytelling');
 const scrollySteps = Array.from(document.querySelectorAll('.scrolly-step'));
 const scrollyMedia = document.querySelector('.scrolly-media');
 const scrollyKicker = document.querySelector('#scrolly-kicker');
 const scrollyTitle = document.querySelector('#scrolly-title');
 const scrollyBody = document.querySelector('#scrolly-body');
-const scrollyImage = document.querySelector('#scrolly-image');
-const scrollyVideo = document.querySelector('#scrolly-video');
+const scrollyCaption = document.querySelector('#scrolly-caption');
+const scrollyCounter = document.querySelector('#scrolly-counter');
+const scrollyAudioToggle = document.querySelector('#scrolly-audio-toggle');
+const scrollyVolumeSlider = document.querySelector('#scrolly-volume');
+const scrollyAudioStatus = document.querySelector('#scrolly-audio-status');
+const scrollyVideoLayers = Array.from(document.querySelectorAll('.scrolly-video-layer'));
+const scrollySceneVideos = scrollyVideoLayers
+  .map((layer) => layer.querySelector('.scrolly-scene-video'))
+  .filter((videoNode) => videoNode instanceof HTMLVideoElement);
+const seriesHeroProgress = document.querySelector('#series-hero-progress');
+const seriesStartLink = document.querySelector('#series-start-link');
+const seriesResumeButton = document.querySelector('#series-resume-button');
+const seriesFullscreenOpenButton = document.querySelector('#series-fullscreen-open');
+const scrollyFullscreenOpenButton = document.querySelector('#scrolly-open-fullscreen');
+const scrollyFullscreenModal = document.querySelector('#scrolly-fullscreen-modal');
+const scrollyFullscreenBackdrop = document.querySelector('[data-close-scrolly-fullscreen]');
+const scrollyFullscreenClose = document.querySelector('#scrolly-fullscreen-close');
+const scrollyFullscreenVideo = document.querySelector('#scrolly-fullscreen-video');
+const scrollyFullscreenKicker = document.querySelector('#scrolly-fullscreen-kicker');
+const scrollyFullscreenTitle = document.querySelector('#scrolly-fullscreen-title');
+const scrollyFullscreenBody = document.querySelector('#scrolly-fullscreen-body');
+const scrollyFullscreenCaption = document.querySelector('#scrolly-fullscreen-caption');
+const scrollyFullscreenCounter = document.querySelector('#scrolly-fullscreen-counter');
+const scrollyFullscreenPrev = document.querySelector('#scrolly-fullscreen-prev');
+const scrollyFullscreenNext = document.querySelector('#scrolly-fullscreen-next');
+const scrollyFullscreenAudioToggle = document.querySelector('#scrolly-fullscreen-audio-toggle');
+const scrollyFullscreenVolume = document.querySelector('#scrolly-fullscreen-volume');
 const videoModal = document.querySelector('#video-modal');
 const videoModalTitle = document.querySelector('#video-modal-title');
 const videoModalPlayer = document.querySelector('#video-modal-player');
@@ -59,6 +85,64 @@ const state = {
 };
 
 let modalTriggerNode = null;
+let scrollyActiveIndex = 0;
+let scrollySectionInView = true;
+let scrollySoundEnabled = false;
+let scrollyVolume = 0.8;
+let scrollyForcePause = false;
+let scrollyFullscreenSoundEnabled = false;
+let scrollyFullscreenVolumeLevel = 0.8;
+let scrollyFullscreenReturnY = 0;
+
+const SCROLLY_PROGRESS_KEY = 'ip_scrolly_last_scene';
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getStoredScrollyIndex() {
+  try {
+    if (!window.localStorage) return 0;
+    const raw = Number(window.localStorage.getItem(SCROLLY_PROGRESS_KEY) || '0');
+    if (!Number.isFinite(raw)) return 0;
+    return clamp(Math.round(raw), 0, Math.max(0, scrollySteps.length - 1));
+  } catch {
+    return 0;
+  }
+}
+
+function storeScrollyIndex(index) {
+  try {
+    if (!window.localStorage) return;
+    window.localStorage.setItem(SCROLLY_PROGRESS_KEY, String(index));
+  } catch {
+    // Ignore storage write failures.
+  }
+}
+
+function updateSeriesHeroProgress() {
+  if (seriesHeroProgress) {
+    seriesHeroProgress.textContent = `Scene ${scrollyActiveIndex + 1} av ${scrollySteps.length}`;
+  }
+
+  const storedIndex = getStoredScrollyIndex();
+  const shouldShowResume = storedIndex > 0;
+  if (seriesResumeButton) {
+    seriesResumeButton.hidden = !shouldShowResume;
+    seriesResumeButton.textContent = shouldShowResume
+      ? `Fortsett der du slapp (scene ${storedIndex + 1})`
+      : 'Fortsett der du slapp';
+  }
+}
+
+function jumpToScrollyScene(index) {
+  if (!scrollySteps.length) return;
+  const safeIndex = clamp(index, 0, scrollySteps.length - 1);
+  const step = scrollySteps[safeIndex];
+  if (!(step instanceof HTMLElement)) return;
+  step.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  applyScrollyStep(step);
+}
 
 function getSourceFromVideo(videoNode) {
   if (!(videoNode instanceof HTMLVideoElement)) return '';
@@ -99,6 +183,8 @@ function markVideoTriggers(rootNode = document) {
   rootNode.querySelectorAll('video').forEach((videoNode) => {
     if (!(videoNode instanceof HTMLVideoElement)) return;
     if (videoNode.id === 'video-modal-player') return;
+    if (videoNode.id === 'scrolly-fullscreen-video') return;
+    if (videoNode.dataset.popupDisabled === 'true') return;
     if (!getSourceFromVideo(videoNode)) return;
 
     videoNode.classList.add('video-popup-trigger');
@@ -346,60 +432,499 @@ function updateMeta() {
   metaNode.textContent = `Sist oppdatert: ${generated}. Viser ${visible} av ${published} publiserte saker (${category}). Totalt registrert: ${total}.`;
 }
 
+function scrollyAutoplayAllowed() {
+  return scrollySectionInView && !document.hidden && !scrollyForcePause;
+}
+
+function getActiveScrollyVideo() {
+  const activeVideo = scrollySceneVideos[scrollyActiveIndex];
+  return activeVideo instanceof HTMLVideoElement ? activeVideo : null;
+}
+
+function videoLikelyHasAudio(videoNode) {
+  if (!(videoNode instanceof HTMLVideoElement)) return false;
+
+  if (videoNode.audioTracks && typeof videoNode.audioTracks.length === 'number') {
+    return videoNode.audioTracks.length > 0;
+  }
+
+  if (typeof videoNode.mozHasAudio === 'boolean') {
+    return videoNode.mozHasAudio;
+  }
+
+  if (
+    typeof videoNode.webkitAudioDecodedByteCount === 'number'
+    && videoNode.currentTime > 0.05
+  ) {
+    return videoNode.webkitAudioDecodedByteCount > 0;
+  }
+
+  return true;
+}
+
+function setScrollyAudioStatus(message) {
+  if (!(scrollyAudioStatus instanceof HTMLElement)) return;
+  scrollyAudioStatus.textContent = message;
+}
+
+function updateScrollyAudioToggle() {
+  const volumePercent = Math.round(scrollyVolume * 100);
+
+  if (scrollyAudioToggle instanceof HTMLButtonElement) {
+    scrollyAudioToggle.setAttribute('aria-pressed', String(scrollySoundEnabled));
+    scrollyAudioToggle.textContent = scrollySoundEnabled ? 'Lyd: På' : 'Lyd: Av';
+  }
+
+  if (scrollyVolumeSlider instanceof HTMLInputElement) {
+    scrollyVolumeSlider.value = String(volumePercent);
+    scrollyVolumeSlider.setAttribute('aria-valuetext', `${volumePercent} prosent`);
+  }
+}
+
+function updateScrollyAudioStatusFromActiveVideo() {
+  const volumePercent = Math.round(scrollyVolume * 100);
+
+  if (!scrollySoundEnabled) {
+    setScrollyAudioStatus('Lyd er av.');
+    return;
+  }
+
+  if (!scrollyAutoplayAllowed()) {
+    setScrollyAudioStatus(`Lyd klar (${volumePercent}%).`);
+    return;
+  }
+
+  const activeVideo = getActiveScrollyVideo();
+  if (!(activeVideo instanceof HTMLVideoElement)) {
+    setScrollyAudioStatus(`Lyd klar (${volumePercent}%).`);
+    return;
+  }
+
+  if (!videoLikelyHasAudio(activeVideo)) {
+    setScrollyAudioStatus('Lyd på, men aktiv video ser ut til å mangle lydspor.');
+    return;
+  }
+
+  setScrollyAudioStatus(`Lyd på (${volumePercent}%).`);
+}
+
+function setVideoMutedState(videoNode, shouldMute) {
+  if (!(videoNode instanceof HTMLVideoElement)) return;
+  videoNode.muted = shouldMute;
+  videoNode.defaultMuted = shouldMute;
+  videoNode.volume = shouldMute ? 0 : 1;
+  if (shouldMute) {
+    videoNode.setAttribute('muted', '');
+  } else {
+    videoNode.removeAttribute('muted');
+  }
+}
+
+function syncScrollyPlayback() {
+  if (!scrollySceneVideos.length) return;
+
+  const autoplay = scrollyAutoplayAllowed();
+
+  if (scrollyMedia) {
+    scrollyMedia.classList.toggle('is-poster-mode', !autoplay);
+  }
+
+  scrollyVideoLayers.forEach((layer, idx) => {
+    layer.classList.toggle('is-active', idx === scrollyActiveIndex);
+  });
+
+  scrollySceneVideos.forEach((videoNode, idx) => {
+    const distance = Math.abs(idx - scrollyActiveIndex);
+    videoNode.preload = distance <= 1 ? 'auto' : 'metadata';
+
+    if (!autoplay) {
+      videoNode.pause();
+      setVideoMutedState(videoNode, true);
+      if (videoNode.currentTime > 0.01) {
+        try {
+          videoNode.currentTime = 0;
+        } catch {
+          // Ignore seek errors on unloaded media.
+        }
+      }
+      return;
+    }
+
+    if (idx === scrollyActiveIndex) {
+      const shouldMute = !scrollySoundEnabled;
+      setVideoMutedState(videoNode, shouldMute);
+      videoNode.volume = shouldMute ? 0 : scrollyVolume;
+      videoNode.autoplay = true;
+      videoNode.playsInline = true;
+      if (videoNode.readyState < 2) {
+        videoNode.load();
+      }
+      const playback = videoNode.play();
+      if (playback) {
+        playback.catch(() => {
+          if (scrollySoundEnabled) {
+            setScrollyAudioStatus('Trykk Lyd: På for å aktivere lyd i denne scenen.');
+          }
+        });
+      }
+      return;
+    }
+
+    videoNode.pause();
+    setVideoMutedState(videoNode, true);
+    if (videoNode.currentTime > 0.01) {
+      try {
+        videoNode.currentTime = 0;
+      } catch {
+        // Ignore seek errors on unloaded media.
+      }
+    }
+  });
+
+  updateScrollyAudioStatusFromActiveVideo();
+}
+
+function attemptScrollyAudioStart({ userInitiated = false } = {}) {
+  if (!scrollySoundEnabled) {
+    updateScrollyAudioStatusFromActiveVideo();
+    return;
+  }
+
+  const activeVideo = getActiveScrollyVideo();
+  if (!(activeVideo instanceof HTMLVideoElement)) {
+    updateScrollyAudioStatusFromActiveVideo();
+    return;
+  }
+
+  setVideoMutedState(activeVideo, false);
+  activeVideo.volume = scrollyVolume;
+  if (activeVideo.readyState < 2) {
+    activeVideo.load();
+  }
+
+  const playback = activeVideo.play();
+  if (!playback) {
+    updateScrollyAudioStatusFromActiveVideo();
+    return;
+  }
+
+  playback
+    .then(() => {
+      updateScrollyAudioStatusFromActiveVideo();
+    })
+    .catch(() => {
+      if (userInitiated) {
+        scrollySoundEnabled = false;
+        updateScrollyAudioToggle();
+        syncScrollyPlayback();
+        setScrollyAudioStatus('Nettleseren blokkerte lyd. Trykk Lyd: På igjen.');
+        return;
+      }
+      setScrollyAudioStatus('Lyd krever ny brukerklikk i denne scenen.');
+    });
+}
+
+function isScrollyFullscreenOpen() {
+  return Boolean(scrollyFullscreenModal && !scrollyFullscreenModal.hidden);
+}
+
+function updateScrollyFullscreenAudioToggle() {
+  if (scrollyFullscreenAudioToggle instanceof HTMLButtonElement) {
+    scrollyFullscreenAudioToggle.setAttribute('aria-pressed', String(scrollyFullscreenSoundEnabled));
+    scrollyFullscreenAudioToggle.textContent = scrollyFullscreenSoundEnabled ? 'Lyd: På' : 'Lyd: Av';
+  }
+
+  if (scrollyFullscreenVolume instanceof HTMLInputElement) {
+    const volumePercent = Math.round(scrollyFullscreenVolumeLevel * 100);
+    scrollyFullscreenVolume.value = String(volumePercent);
+    scrollyFullscreenVolume.setAttribute('aria-valuetext', `${volumePercent} prosent`);
+  }
+}
+
+function syncScrollyFullscreenModal() {
+  if (!isScrollyFullscreenOpen() || !(scrollyFullscreenVideo instanceof HTMLVideoElement)) return;
+
+  const activeStep = scrollySteps[scrollyActiveIndex];
+  if (!(activeStep instanceof HTMLElement)) return;
+
+  const kicker = activeStep.dataset.kicker || '';
+  const title = activeStep.dataset.title || '';
+  const bodyText = activeStep.dataset.body || '';
+  const caption = activeStep.dataset.caption || '';
+  const source = activeStep.dataset.video || getSourceFromVideo(scrollySceneVideos[scrollyActiveIndex]);
+  const poster = scrollySceneVideos[scrollyActiveIndex] instanceof HTMLVideoElement
+    ? (scrollySceneVideos[scrollyActiveIndex].getAttribute('poster') || '')
+    : '';
+
+  if (scrollyFullscreenKicker) scrollyFullscreenKicker.textContent = kicker;
+  if (scrollyFullscreenTitle) scrollyFullscreenTitle.textContent = title;
+  if (scrollyFullscreenBody) scrollyFullscreenBody.textContent = bodyText;
+  if (scrollyFullscreenCaption) scrollyFullscreenCaption.textContent = caption;
+  if (scrollyFullscreenCounter) {
+    scrollyFullscreenCounter.textContent = `Scene ${scrollyActiveIndex + 1} / ${scrollySteps.length}`;
+  }
+
+  if (scrollyFullscreenPrev instanceof HTMLButtonElement) {
+    scrollyFullscreenPrev.disabled = scrollyActiveIndex <= 0;
+  }
+  if (scrollyFullscreenNext instanceof HTMLButtonElement) {
+    scrollyFullscreenNext.disabled = scrollyActiveIndex >= scrollySteps.length - 1;
+  }
+
+  const currentSource = getSourceFromVideo(scrollyFullscreenVideo);
+  if (source && source !== currentSource) {
+    scrollyFullscreenVideo.src = source;
+    if (poster) scrollyFullscreenVideo.poster = poster;
+    scrollyFullscreenVideo.load();
+  }
+
+  const shouldMute = !scrollyFullscreenSoundEnabled;
+  setVideoMutedState(scrollyFullscreenVideo, shouldMute);
+  scrollyFullscreenVideo.volume = shouldMute ? 0 : scrollyFullscreenVolumeLevel;
+  scrollyFullscreenVideo.playsInline = true;
+
+  const playback = scrollyFullscreenVideo.play();
+  if (playback) {
+    playback.catch(() => {
+      if (scrollyFullscreenSoundEnabled) {
+        scrollyFullscreenSoundEnabled = false;
+        updateScrollyFullscreenAudioToggle();
+        syncScrollyFullscreenModal();
+      }
+    });
+  }
+}
+
+function closeScrollyFullscreen() {
+  if (!scrollyFullscreenModal || scrollyFullscreenModal.hidden) return;
+
+  scrollyFullscreenModal.hidden = true;
+  scrollyFullscreenModal.setAttribute('aria-hidden', 'true');
+  body.classList.remove('scrolly-fullscreen-open');
+
+  if (scrollyFullscreenVideo instanceof HTMLVideoElement) {
+    scrollyFullscreenVideo.pause();
+    scrollyFullscreenVideo.removeAttribute('src');
+    scrollyFullscreenVideo.load();
+  }
+
+  scrollyForcePause = false;
+  syncScrollyPlayback();
+  window.scrollTo({ top: scrollyFullscreenReturnY, behavior: 'auto' });
+}
+
+function openScrollyFullscreen() {
+  if (!scrollyFullscreenModal || !(scrollyFullscreenVideo instanceof HTMLVideoElement)) return;
+
+  scrollyFullscreenReturnY = window.scrollY;
+  scrollyFullscreenModal.hidden = false;
+  scrollyFullscreenModal.setAttribute('aria-hidden', 'false');
+  body.classList.add('scrolly-fullscreen-open');
+
+  scrollyForcePause = true;
+  syncScrollyPlayback();
+
+  scrollyFullscreenSoundEnabled = false;
+  if (scrollyFullscreenVolume instanceof HTMLInputElement) {
+    const initialVolume = Number(scrollyFullscreenVolume.value);
+    if (Number.isFinite(initialVolume)) {
+      scrollyFullscreenVolumeLevel = clamp(initialVolume, 0, 100) / 100;
+    }
+  }
+  updateScrollyFullscreenAudioToggle();
+  syncScrollyFullscreenModal();
+}
+
+function initScrollySeriesActions() {
+  if (seriesStartLink instanceof HTMLAnchorElement) {
+    seriesStartLink.addEventListener('click', (event) => {
+      event.preventDefault();
+      jumpToScrollyScene(0);
+    });
+  }
+
+  if (seriesResumeButton instanceof HTMLButtonElement) {
+    seriesResumeButton.addEventListener('click', () => {
+      jumpToScrollyScene(getStoredScrollyIndex());
+    });
+  }
+
+  if (seriesFullscreenOpenButton instanceof HTMLButtonElement) {
+    seriesFullscreenOpenButton.addEventListener('click', openScrollyFullscreen);
+  }
+
+  if (scrollyFullscreenOpenButton instanceof HTMLButtonElement) {
+    scrollyFullscreenOpenButton.addEventListener('click', openScrollyFullscreen);
+  }
+
+  if (scrollyFullscreenClose instanceof HTMLButtonElement) {
+    scrollyFullscreenClose.addEventListener('click', closeScrollyFullscreen);
+  }
+
+  if (scrollyFullscreenBackdrop instanceof HTMLElement) {
+    scrollyFullscreenBackdrop.addEventListener('click', closeScrollyFullscreen);
+  }
+
+  if (scrollyFullscreenPrev instanceof HTMLButtonElement) {
+    scrollyFullscreenPrev.addEventListener('click', () => {
+      jumpToScrollyScene(scrollyActiveIndex - 1);
+      syncScrollyFullscreenModal();
+    });
+  }
+
+  if (scrollyFullscreenNext instanceof HTMLButtonElement) {
+    scrollyFullscreenNext.addEventListener('click', () => {
+      jumpToScrollyScene(scrollyActiveIndex + 1);
+      syncScrollyFullscreenModal();
+    });
+  }
+
+  if (scrollyFullscreenAudioToggle instanceof HTMLButtonElement) {
+    scrollyFullscreenAudioToggle.addEventListener('click', () => {
+      scrollyFullscreenSoundEnabled = !scrollyFullscreenSoundEnabled;
+      updateScrollyFullscreenAudioToggle();
+      syncScrollyFullscreenModal();
+    });
+  }
+
+  if (scrollyFullscreenVolume instanceof HTMLInputElement) {
+    scrollyFullscreenVolume.addEventListener('input', () => {
+      const nextVolume = clamp(Number(scrollyFullscreenVolume.value), 0, 100) / 100;
+      scrollyFullscreenVolumeLevel = nextVolume;
+      scrollyFullscreenSoundEnabled = nextVolume > 0;
+      updateScrollyFullscreenAudioToggle();
+      syncScrollyFullscreenModal();
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && isScrollyFullscreenOpen()) {
+      closeScrollyFullscreen();
+    }
+  });
+}
+
 function applyScrollyStep(step) {
-  if (!step || !scrollyMedia) return;
+  if (!(step instanceof HTMLElement)) return;
+
+  const rawIndex = Number(step.dataset.sceneIndex);
+  const fallbackIndex = scrollySteps.indexOf(step);
+  const safeIndex = Number.isFinite(rawIndex) ? rawIndex : fallbackIndex;
+  scrollyActiveIndex = clamp(safeIndex, 0, Math.max(0, scrollySteps.length - 1));
 
   const kicker = step.dataset.kicker || '';
   const title = step.dataset.title || '';
   const bodyText = step.dataset.body || '';
-  const image = step.dataset.image || '';
-  const video = step.dataset.video || '';
+  const caption = step.dataset.caption || '';
 
   if (scrollyKicker) scrollyKicker.textContent = kicker;
   if (scrollyTitle) scrollyTitle.textContent = title;
   if (scrollyBody) scrollyBody.textContent = bodyText;
-  if (scrollyImage && image) scrollyImage.src = image;
-
-  if (scrollyVideo) {
-    if (video) {
-      scrollyVideo.src = video;
-      scrollyVideo.load();
-      scrollyVideo.play().catch(() => {});
-      scrollyMedia.classList.add('has-video');
-    } else {
-      scrollyVideo.removeAttribute('src');
-      scrollyVideo.load();
-      scrollyMedia.classList.remove('has-video');
-    }
-  }
+  if (scrollyCaption) scrollyCaption.textContent = caption;
+  if (scrollyCounter) scrollyCounter.textContent = `Scene ${scrollyActiveIndex + 1} / ${scrollySteps.length}`;
 
   scrollySteps.forEach((entry) => {
     entry.classList.toggle('is-active', entry === step);
   });
 
-  markVideoTriggers(scrollyMedia || document);
+  storeScrollyIndex(scrollyActiveIndex);
+  updateSeriesHeroProgress();
+  syncScrollyPlayback();
+  syncScrollyFullscreenModal();
 }
 
 function initScrollytelling() {
   if (!scrollySteps.length) return;
 
-  applyScrollyStep(scrollySteps[0]);
+  if (scrollyVolumeSlider instanceof HTMLInputElement) {
+    const initialVolume = Number(scrollyVolumeSlider.value);
+    if (Number.isFinite(initialVolume)) {
+      scrollyVolume = clamp(initialVolume, 0, 100) / 100;
+    }
+  }
 
-  const observer = new IntersectionObserver(
+  updateScrollyAudioToggle();
+  updateScrollyAudioStatusFromActiveVideo();
+
+  if (scrollyAudioToggle instanceof HTMLButtonElement) {
+    scrollyAudioToggle.addEventListener('click', () => {
+      scrollySoundEnabled = !scrollySoundEnabled;
+      updateScrollyAudioToggle();
+      syncScrollyPlayback();
+      if (scrollySoundEnabled) {
+        attemptScrollyAudioStart({ userInitiated: true });
+      } else {
+        updateScrollyAudioStatusFromActiveVideo();
+      }
+    });
+  }
+
+  if (scrollyVolumeSlider instanceof HTMLInputElement) {
+    scrollyVolumeSlider.addEventListener('input', () => {
+      const nextVolume = clamp(Number(scrollyVolumeSlider.value), 0, 100) / 100;
+      scrollyVolume = nextVolume;
+      scrollySoundEnabled = nextVolume > 0;
+      updateScrollyAudioToggle();
+      syncScrollyPlayback();
+      if (scrollySoundEnabled) {
+        attemptScrollyAudioStart({ userInitiated: true });
+      } else {
+        updateScrollyAudioStatusFromActiveVideo();
+      }
+    });
+  }
+
+  scrollySceneVideos.forEach((videoNode) => {
+    videoNode.addEventListener('canplay', () => {
+      syncScrollyPlayback();
+    });
+    videoNode.addEventListener('loadedmetadata', () => {
+      updateScrollyAudioStatusFromActiveVideo();
+    });
+    videoNode.addEventListener('playing', () => {
+      updateScrollyAudioStatusFromActiveVideo();
+    });
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    syncScrollyPlayback();
+  });
+
+  const updateScrollyInView = () => {
+    if (!scrollyStory) {
+      scrollySectionInView = true;
+      syncScrollyPlayback();
+      return;
+    }
+
+    const rect = scrollyStory.getBoundingClientRect();
+    scrollySectionInView = rect.bottom > 0 && rect.top < window.innerHeight;
+    syncScrollyPlayback();
+  };
+
+  updateScrollyInView();
+  window.addEventListener('scroll', updateScrollyInView, { passive: true });
+  window.addEventListener('resize', updateScrollyInView);
+
+  const initialIndex = getStoredScrollyIndex();
+  applyScrollyStep(scrollySteps[initialIndex] || scrollySteps[0]);
+
+  const stepObserver = new IntersectionObserver(
     (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          applyScrollyStep(entry.target);
-        }
-      });
+      const visibleSteps = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+
+      if (!visibleSteps.length) return;
+      applyScrollyStep(visibleSteps[0].target);
     },
     {
-      threshold: 0.6,
-      rootMargin: '-12% 0px -25% 0px',
+      threshold: [0.25, 0.45, 0.65, 0.85],
+      rootMargin: '-15% 0px -35% 0px',
     }
   );
 
-  scrollySteps.forEach((step) => observer.observe(step));
+  scrollySteps.forEach((step) => stepObserver.observe(step));
 }
 
 function closeVideoModal() {
@@ -655,6 +1180,7 @@ if (yearNode) {
 setTopClock();
 window.setInterval(setTopClock, 30_000);
 initScrollytelling();
+initScrollySeriesActions();
 initVideoModal();
 loadNews();
 loadPrompts();
