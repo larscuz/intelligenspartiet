@@ -1,5 +1,5 @@
 const { getSessionFromRequest } = require('./_auth');
-const { hasRepoEnv, githubGetFile, githubPutFile } = require('./_github');
+const { getRepoEnvStatus, githubGetFile, githubPutFile } = require('./_github');
 
 const EDITABLE_PREFIXES = ['assets/', 'admin/'];
 const EDITABLE_EXACT = new Set(['index.html', 'README.md', 'scripts/crawl_ai_jobs_news.py']);
@@ -57,8 +57,14 @@ module.exports = async (req, res) => {
     return;
   }
 
-  if (!hasRepoEnv()) {
-    sendJson(res, 500, { error: 'GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO mangler.' });
+  const repoEnvStatus = getRepoEnvStatus();
+  if (!repoEnvStatus.ok) {
+    sendJson(res, 500, {
+      error: `GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO mangler. Mangler: ${repoEnvStatus.missing.join(', ')}`,
+      missing: repoEnvStatus.missing,
+      resolved: repoEnvStatus.resolved,
+      sources: repoEnvStatus.sources,
+    });
     return;
   }
 

@@ -5,7 +5,7 @@ const {
   createSessionCookie,
   clearSessionCookie,
 } = require('./_auth');
-const { hasRepoEnv, githubGetFile, githubPutFile } = require('./_github');
+const { getRepoEnvStatus, githubGetFile, githubPutFile } = require('./_github');
 
 const AUTH_CONFIG_PATH = '.admin/auth-config.json';
 
@@ -87,8 +87,14 @@ module.exports = async (req, res) => {
     return;
   }
 
-  if (!hasRepoEnv()) {
-    sendJson(res, 500, { error: 'GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO mangler.' });
+  const repoEnvStatus = getRepoEnvStatus();
+  if (!repoEnvStatus.ok) {
+    sendJson(res, 500, {
+      error: `GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO mangler. Mangler: ${repoEnvStatus.missing.join(', ')}`,
+      missing: repoEnvStatus.missing,
+      resolved: repoEnvStatus.resolved,
+      sources: repoEnvStatus.sources,
+    });
     return;
   }
 

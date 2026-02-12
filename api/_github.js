@@ -1,13 +1,118 @@
+function pickEnv(candidates) {
+  for (const candidate of candidates) {
+    const value = String(candidate.value || '').trim();
+    if (value) {
+      return {
+        value,
+        source: candidate.name,
+      };
+    }
+  }
+  return {
+    value: '',
+    source: '',
+  };
+}
+
+function parseOwnerRepo(repositoryValue) {
+  const value = String(repositoryValue || '').trim();
+  if (!value) {
+    return { owner: '', repo: '' };
+  }
+
+  const parts = value.split('/').filter(Boolean);
+  if (parts.length < 2) {
+    return { owner: '', repo: '' };
+  }
+
+  return {
+    owner: parts[0],
+    repo: parts[1],
+  };
+}
+
+function normalizeBranch(branch) {
+  const value = String(branch || '').trim();
+  if (!value) {
+    return '';
+  }
+
+  if (value.startsWith('refs/heads/')) {
+    return value.slice('refs/heads/'.length);
+  }
+
+  return value;
+}
+
+function resolveRepoEnv() {
+  const repoFromPair = parseOwnerRepo(process.env.GITHUB_REPOSITORY);
+
+  const token = pickEnv([
+    { name: 'GITHUB_TOKEN', value: process.env.GITHUB_TOKEN },
+    { name: 'GH_TOKEN', value: process.env.GH_TOKEN },
+    { name: 'GITHUB_PAT', value: process.env.GITHUB_PAT },
+  ]);
+
+  const owner = pickEnv([
+    { name: 'GITHUB_OWNER', value: process.env.GITHUB_OWNER },
+    { name: 'GH_OWNER', value: process.env.GH_OWNER },
+    { name: 'GITHUB_ORG', value: process.env.GITHUB_ORG },
+    { name: 'GITHUB_REPOSITORY(owner)', value: repoFromPair.owner },
+    { name: 'VERCEL_GIT_REPO_OWNER', value: process.env.VERCEL_GIT_REPO_OWNER },
+  ]);
+
+  const repo = pickEnv([
+    { name: 'GITHUB_REPO', value: process.env.GITHUB_REPO },
+    { name: 'GH_REPO', value: process.env.GH_REPO },
+    { name: 'GITHUB_REPOSITORY(repo)', value: repoFromPair.repo },
+    { name: 'VERCEL_GIT_REPO_SLUG', value: process.env.VERCEL_GIT_REPO_SLUG },
+  ]);
+
+  const branch = pickEnv([
+    { name: 'GITHUB_BRANCH', value: process.env.GITHUB_BRANCH },
+    { name: 'VERCEL_GIT_COMMIT_REF', value: normalizeBranch(process.env.VERCEL_GIT_COMMIT_REF) },
+    { name: 'default', value: 'main' },
+  ]);
+
+  return {
+    token: token.value,
+    owner: owner.value,
+    repo: repo.value,
+    branch: branch.value || 'main',
+    sources: {
+      token: token.source || null,
+      owner: owner.source || null,
+      repo: repo.source || null,
+      branch: branch.source || null,
+    },
+  };
+}
+
+function getRepoEnvStatus() {
+  const resolved = resolveRepoEnv();
+  const missing = [];
+  if (!resolved.token) missing.push('GITHUB_TOKEN');
+  if (!resolved.owner) missing.push('GITHUB_OWNER');
+  if (!resolved.repo) missing.push('GITHUB_REPO');
+
+  return {
+    ok: missing.length === 0,
+    missing,
+    resolved: {
+      owner: resolved.owner || null,
+      repo: resolved.repo || null,
+      branch: resolved.branch || 'main',
+    },
+    sources: resolved.sources,
+  };
+}
+
 function hasRepoEnv() {
-  return (
-    Boolean(process.env.GITHUB_TOKEN) &&
-    Boolean(process.env.GITHUB_OWNER) &&
-    Boolean(process.env.GITHUB_REPO)
-  );
+  return getRepoEnvStatus().ok;
 }
 
 function getBranch() {
-  return process.env.GITHUB_BRANCH || 'main';
+  return resolveRepoEnv().branch || 'main';
 }
 
 function encodeRepoPath(path) {
@@ -18,23 +123,24 @@ function encodeRepoPath(path) {
     .join('/');
 }
 
-function requestHeaders() {
+function requestHeaders(token) {
   return {
-    Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+    Authorization: `Bearer ${token}`,
     Accept: 'application/vnd.github+json',
     'User-Agent': 'intelligenspartiet-admin',
   };
 }
 
 async function githubGetFile(path, options = {}) {
-  const owner = process.env.GITHUB_OWNER;
-  const repo = process.env.GITHUB_REPO;
-  const branch = getBranch();
+  const resolved = resolveRepoEnv();
+  const owner = resolved.owner;
+  const repo = resolved.repo;
+  const branch = resolved.branch;
   const encodedPath = encodeRepoPath(path);
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`;
 
   const response = await fetch(url, {
-    headers: requestHeaders(),
+    headers: requestHeaders(resolved.token),
   });
 
   const payload = await response.json();
@@ -57,9 +163,10 @@ async function githubGetFile(path, options = {}) {
 }
 
 async function githubPutFile({ path, content, sha, message }) {
-  const owner = process.env.GITHUB_OWNER;
-  const repo = process.env.GITHUB_REPO;
-  const branch = getBranch();
+  const resolved = resolveRepoEnv();
+  const owner = resolved.owner;
+  const repo = resolved.repo;
+  const branch = resolved.branch;
   const encodedPath = encodeRepoPath(path);
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
 
@@ -76,7 +183,7 @@ async function githubPutFile({ path, content, sha, message }) {
   const response = await fetch(url, {
     method: 'PUT',
     headers: {
-      ...requestHeaders(),
+      ...requestHeaders(resolved.token),
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
@@ -96,6 +203,7 @@ async function githubPutFile({ path, content, sha, message }) {
 
 module.exports = {
   hasRepoEnv,
+  getRepoEnvStatus,
   getBranch,
   githubGetFile,
   githubPutFile,
