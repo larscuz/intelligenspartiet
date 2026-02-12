@@ -8,6 +8,7 @@ const {
 const { getRepoEnvStatus, githubGetFile, githubPutFile } = require('./_github');
 
 const AUTH_CONFIG_PATH = '.admin/auth-config.json';
+const DEFAULT_ADMIN_EMAIL = 'lars@larscuzner.com';
 
 function sendJson(res, status, payload) {
   res.statusCode = status;
@@ -43,13 +44,17 @@ function resolveAdminEmailEnv() {
     { name: 'ADMIN_LOGIN_EMAIL', value: process.env.ADMIN_LOGIN_EMAIL },
   ]);
 
+  const fallbackEmail = normalizeEmail(DEFAULT_ADMIN_EMAIL);
+  const resolvedEmail = normalizeEmail(result.value || fallbackEmail);
+
   return {
-    email: normalizeEmail(result.value),
-    source: result.source || null,
+    email: resolvedEmail,
+    source: result.source || 'DEFAULT_ADMIN_EMAIL',
     flags: {
       ADMIN_EMAIL: Boolean(String(process.env.ADMIN_EMAIL || '').trim()),
       ADMIN_USER_EMAIL: Boolean(String(process.env.ADMIN_USER_EMAIL || '').trim()),
       ADMIN_LOGIN_EMAIL: Boolean(String(process.env.ADMIN_LOGIN_EMAIL || '').trim()),
+      DEFAULT_ADMIN_EMAIL: Boolean(fallbackEmail),
     },
   };
 }
@@ -62,14 +67,19 @@ function resolveSetupKeyEnv() {
     { name: 'SETUP_KEY', value: process.env.SETUP_KEY },
   ]);
 
+  const pepperFallback = String(process.env.ADMIN_PEPPER || '').trim();
+  const key = String(result.value || pepperFallback);
+  const source = result.source || (pepperFallback ? 'ADMIN_PEPPER(fallback)' : null);
+
   return {
-    key: String(result.value || ''),
-    source: result.source || null,
+    key,
+    source,
     flags: {
       ADMIN_SETUP_KEY: Boolean(String(process.env.ADMIN_SETUP_KEY || '').trim()),
       ADMIN_API_KEY: Boolean(String(process.env.ADMIN_API_KEY || '').trim()),
       ADMIN_BOOTSTRAP_KEY: Boolean(String(process.env.ADMIN_BOOTSTRAP_KEY || '').trim()),
       SETUP_KEY: Boolean(String(process.env.SETUP_KEY || '').trim()),
+      ADMIN_PEPPER_FALLBACK: Boolean(pepperFallback),
     },
   };
 }
