@@ -206,11 +206,11 @@ video {
   gap: 1.5rem;
 }
 
-.page > .video-world {
+.page > #scrollytelling {
   order: 1;
 }
 
-.page > #scrollytelling {
+.page > .video-world {
   order: 2;
 }
 
