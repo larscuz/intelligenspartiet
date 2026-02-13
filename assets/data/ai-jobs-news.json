@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-02-12T09:30:00+01:00",
-  "total_items": 24,
+  "generated_at": "2026-02-13T10:30:00+01:00",
+  "total_items": 28,
   "categories": [
     "Norsk arbeidsmarked"
   ],
@@ -8,11 +8,55 @@
     "Manuell kuratering: norske artikler om AI/KI og arbeidsmarked (siste 12 måneder)"
   ],
   "tone_counts": {
-    "replacement_anxiety": 4,
+    "replacement_anxiety": 7,
     "reskilling": 3,
-    "neutral": 17
+    "neutral": 18
   },
   "items": [
+    {
+      "title": "KI spiser ikke konsulenter, ifølge Deloitte-sjefen",
+      "source": "Digi",
+      "url": "https://www.digi.no/artikler/ki-spiser-ikke-konsulenter-ifolge-deloitte-sjefen/559027",
+      "snippet": "Deloitte mener at økt tilgang på KI kan løfte produktivitet og samtidig øke etterspørselen etter konsulenttjenester.",
+      "published_at": "2026-02-11T13:59:00+01:00",
+      "tone": "neutral",
+      "category": "Norsk arbeidsmarked",
+      "published": true,
+      "query": "Manuell kuratering 2026"
+    },
+    {
+      "title": "Kampen mellom roboter og ufaglærte i fabrikkene raser",
+      "source": "Digi",
+      "url": "https://www.digi.no/artikler/kampen-mellom-roboter-og-ufaglaerte-i-fabrikkene-raser/558825",
+      "snippet": "Sak om hvordan automatisering og KI påvirker ufaglærte roller i industrien.",
+      "published_at": "2026-02-09T12:58:00+01:00",
+      "tone": "replacement_anxiety",
+      "category": "Norsk arbeidsmarked",
+      "published": true,
+      "query": "Manuell kuratering 2026"
+    },
+    {
+      "title": "Amazon skal kvitte seg med 16.000 ansatte i 2026",
+      "source": "FriFagbevegelse",
+      "url": "https://frifagbevegelse.no/nyheter/amazon-skal-kvitte-seg-med-16000-ansatte-i-2026-6.158.1115322.cfa7c0a5c7",
+      "snippet": "Stor nedbemanning koblet til satsing på KI og automatisering.",
+      "published_at": "2026-01-29T12:00:00+01:00",
+      "tone": "replacement_anxiety",
+      "category": "Norsk arbeidsmarked",
+      "published": true,
+      "query": "Manuell kuratering 2026"
+    },
+    {
+      "title": "DNB-toppen om 2026: AI-boble og strammere arbeidsmarked for nyutdannede",
+      "source": "E24",
+      "url": "https://e24.no/naeringsliv/i/OodQxb/dnb-toppen-om-2026-ai-boble-trump-og-frykt-for-unge-jobbsoekere",
+      "snippet": "Analyse av KI-bølge og konsekvenser for unge jobbsøkere i et strammere marked.",
+      "published_at": "2026-01-19T12:00:00+01:00",
+      "tone": "replacement_anxiety",
+      "category": "Norsk arbeidsmarked",
+      "published": true,
+      "query": "Manuell kuratering 2026"
+    },
     {
       "title": "Fra teori til praksis - ny ekspertgruppe skal få fart på kunstig intelligens i arbeidslivet",
       "source": "Regjeringen",
