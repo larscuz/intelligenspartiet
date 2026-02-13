@@ -1,4 +1,5 @@
 const FILE_OPTIONS = [
+  'assets/data/scrollytelling-welhaven-wergeland-cuzner.json',
   'assets/data/kling3-prompts.json',
   'assets/data/ai-jobs-news.json',
   'index.html',
@@ -14,6 +15,9 @@ const FILE_OPTIONS = [
 const CMS_PATH = 'assets/data/ai-jobs-news.json';
 const CMS_DEFAULT_CATEGORY = 'Norsk arbeidsmarked';
 const CMS_TONE_OPTIONS = ['replacement_anxiety', 'reskilling', 'neutral'];
+const STORY_PATH = 'assets/data/scrollytelling-welhaven-wergeland-cuzner.json';
+const STORY_DEFAULT_TITLE = 'INTELLIGENSPARTIET - Welhaven, Wergeland og Cuzner';
+const STORY_DEFAULT_META = 'Historiske strider, nåtidens arbeidsliv og et surrealistisk frampek';
 
 const state = {
   currentPath: FILE_OPTIONS[0],
@@ -28,6 +32,16 @@ const state = {
     generatedAt: null,
     queries: [],
     items: [],
+    dirty: false,
+  },
+  story: {
+    loaded: false,
+    sha: '',
+    branch: 'main',
+    updatedAt: null,
+    sectionTitle: STORY_DEFAULT_TITLE,
+    sectionMeta: STORY_DEFAULT_META,
+    scenes: [],
     dirty: false,
   },
 };
@@ -68,6 +82,16 @@ const cmsCommitMessageInput = document.querySelector('#cms-commit-message');
 const cmsListNode = document.querySelector('#cms-list');
 const cmsMetaNode = document.querySelector('#cms-meta');
 const cmsStatusNode = document.querySelector('#cms-status');
+
+const storyLoadButton = document.querySelector('#story-load');
+const storyAddButton = document.querySelector('#story-add');
+const storySaveButton = document.querySelector('#story-save');
+const storyCommitMessageInput = document.querySelector('#story-commit-message');
+const storyTitleInput = document.querySelector('#story-title');
+const storyMetaInput = document.querySelector('#story-meta-input');
+const storyListNode = document.querySelector('#story-list');
+const storyMetaNode = document.querySelector('#story-meta');
+const storyStatusNode = document.querySelector('#story-status');
 
 function setStatus(node, message, kind = '') {
   if (!node) return;
@@ -147,6 +171,34 @@ function createEmptyCmsItem() {
   };
 }
 
+function normalizeStoryScene(scene, index = 0) {
+  const sceneNumber = index + 1;
+  return {
+    kicker: String(scene && scene.kicker ? scene.kicker : `Scene ${sceneNumber}`).trim() || `Scene ${sceneNumber}`,
+    step_title: String(scene && scene.step_title ? scene.step_title : '').trim(),
+    step_text: String(scene && scene.step_text ? scene.step_text : '').trim(),
+    title: String(scene && scene.title ? scene.title : '').trim(),
+    body: String(scene && scene.body ? scene.body : '').trim(),
+    caption: String(scene && scene.caption ? scene.caption : '').trim(),
+    video: String(scene && scene.video ? scene.video : '').trim(),
+    poster: String(scene && scene.poster ? scene.poster : '').trim(),
+  };
+}
+
+function createEmptyStoryScene(index = 0) {
+  const sceneNumber = index + 1;
+  return {
+    kicker: `Scene ${sceneNumber}`,
+    step_title: `Ny scene ${sceneNumber}`,
+    step_text: '',
+    title: '',
+    body: '',
+    caption: '',
+    video: '',
+    poster: '',
+  };
+}
+
 async function apiRequest(method, path, payload) {
   const options = {
     method,
@@ -169,16 +221,60 @@ async function apiRequest(method, path, payload) {
   return data;
 }
 
+async function requestR2UploadUrl({ filename, contentType, folder }) {
+  return apiRequest('POST', '/api/r2-upload-url', {
+    filename,
+    content_type: contentType || '',
+    folder,
+    expires_in: 900,
+  });
+}
+
+async function uploadFileToR2(file, folder) {
+  if (!(file instanceof File)) {
+    throw new Error('Mangler fil å laste opp.');
+  }
+
+  const uploadTarget = await requestR2UploadUrl({
+    filename: file.name || 'file',
+    contentType: file.type || 'application/octet-stream',
+    folder,
+  });
+
+  const response = await fetch(uploadTarget.upload_url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type || 'application/octet-stream',
+    },
+    body: file,
+  });
+
+  if (!response.ok) {
+    const payload = await response.text().catch(() => '');
+    throw new Error(`R2 upload feilet (${response.status}): ${payload || 'ukjent feil'}`);
+  }
+
+  return uploadTarget;
+}
+
 function updateCmsActionState() {
   const loggedIn = state.authenticated;
-  const loaded = loggedIn && state.cms.loaded;
+  const cmsLoaded = loggedIn && state.cms.loaded;
+  const storyLoaded = loggedIn && state.story.loaded;
 
   if (cmsLoadButton) cmsLoadButton.disabled = !loggedIn;
   if (cmsCommitMessageInput) cmsCommitMessageInput.disabled = !loggedIn;
-  if (cmsAddButton) cmsAddButton.disabled = !loaded;
-  if (cmsPublishAllButton) cmsPublishAllButton.disabled = !loaded;
-  if (cmsAssignNorskButton) cmsAssignNorskButton.disabled = !loaded;
-  if (cmsSaveButton) cmsSaveButton.disabled = !loaded || !state.cms.dirty;
+  if (cmsAddButton) cmsAddButton.disabled = !cmsLoaded;
+  if (cmsPublishAllButton) cmsPublishAllButton.disabled = !cmsLoaded;
+  if (cmsAssignNorskButton) cmsAssignNorskButton.disabled = !cmsLoaded;
+  if (cmsSaveButton) cmsSaveButton.disabled = !cmsLoaded || !state.cms.dirty;
+
+  if (storyLoadButton) storyLoadButton.disabled = !loggedIn;
+  if (storyCommitMessageInput) storyCommitMessageInput.disabled = !loggedIn;
+  if (storyTitleInput) storyTitleInput.disabled = !storyLoaded;
+  if (storyMetaInput) storyMetaInput.disabled = !storyLoaded;
+  if (storyAddButton) storyAddButton.disabled = !storyLoaded;
+  if (storySaveButton) storySaveButton.disabled = !storyLoaded || !state.story.dirty;
 }
 
 function resetCmsState() {
@@ -194,6 +290,26 @@ function resetCmsState() {
   renderCmsList();
   setStatus(cmsMetaNode, 'Logg inn for å laste CMS.');
   setStatus(cmsStatusNode, '');
+  updateCmsActionState();
+}
+
+function resetStoryState() {
+  state.story = {
+    loaded: false,
+    sha: '',
+    branch: 'main',
+    updatedAt: null,
+    sectionTitle: STORY_DEFAULT_TITLE,
+    sectionMeta: STORY_DEFAULT_META,
+    scenes: [],
+    dirty: false,
+  };
+
+  if (storyTitleInput) storyTitleInput.value = '';
+  if (storyMetaInput) storyMetaInput.value = '';
+  if (storyListNode) storyListNode.innerHTML = '';
+  setStatus(storyMetaNode, 'Logg inn for å laste scrollytelling-CMS.');
+  setStatus(storyStatusNode, '');
   updateCmsActionState();
 }
 
@@ -217,6 +333,7 @@ function setEditorEnabled(enabled) {
     setStatus(fileMeta, 'Logg inn for å laste/redigere filer.');
     setStatus(saveStatus, '');
     resetCmsState();
+    resetStoryState();
   }
 }
 
@@ -600,6 +717,432 @@ function assignNorskCategoryToAll() {
   markCmsDirty(`Alle saker er flyttet til kategorien "${CMS_DEFAULT_CATEGORY}".`);
 }
 
+function markStoryDirty(message = 'Ulagrede scrollytelling-endringer.') {
+  state.story.dirty = true;
+  setStatus(storyStatusNode, message);
+  updateStoryMeta();
+  updateCmsActionState();
+}
+
+function updateStoryMeta() {
+  if (!storyMetaNode) return;
+
+  if (!state.story.loaded) {
+    setStatus(storyMetaNode, 'Logg inn for å laste scrollytelling-CMS.');
+    return;
+  }
+
+  const total = state.story.scenes.length;
+  const updated = formatNorwegianDate(state.story.updatedAt);
+  const dirtyNote = state.story.dirty ? ' Ulagrede endringer.' : '';
+  setStatus(storyMetaNode, `Scener: ${total}. Sist oppdatert: ${updated}.${dirtyNote}`);
+}
+
+function renderStoryList() {
+  if (!storyListNode) return;
+  storyListNode.innerHTML = '';
+
+  if (!state.story.loaded) {
+    const placeholder = document.createElement('p');
+    placeholder.className = 'empty-state small';
+    placeholder.textContent = 'Logg inn og trykk "Last scrollytelling" for visuell redigering.';
+    storyListNode.appendChild(placeholder);
+    return;
+  }
+
+  if (!state.story.scenes.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty-state small';
+    empty.textContent = 'Ingen scener tilgjengelig. Legg til ny scene.';
+    storyListNode.appendChild(empty);
+    return;
+  }
+
+  state.story.scenes.forEach((rawScene, index) => {
+    const scene = normalizeStoryScene(rawScene, index);
+    state.story.scenes[index] = scene;
+
+    const card = document.createElement('article');
+    card.className = 'story-item';
+
+    const head = document.createElement('div');
+    head.className = 'story-item-head';
+
+    const label = document.createElement('p');
+    label.className = 'story-item-label';
+    label.textContent = `Scene ${index + 1}`;
+
+    const actions = document.createElement('div');
+    actions.className = 'cms-actions';
+
+    const moveUpButton = document.createElement('button');
+    moveUpButton.type = 'button';
+    moveUpButton.textContent = 'Flytt opp';
+    moveUpButton.disabled = index === 0;
+    moveUpButton.addEventListener('click', () => {
+      const previous = state.story.scenes[index - 1];
+      state.story.scenes[index - 1] = state.story.scenes[index];
+      state.story.scenes[index] = previous;
+      renderStoryList();
+      markStoryDirty('Scene flyttet opp.');
+    });
+
+    const moveDownButton = document.createElement('button');
+    moveDownButton.type = 'button';
+    moveDownButton.textContent = 'Flytt ned';
+    moveDownButton.disabled = index === state.story.scenes.length - 1;
+    moveDownButton.addEventListener('click', () => {
+      const next = state.story.scenes[index + 1];
+      state.story.scenes[index + 1] = state.story.scenes[index];
+      state.story.scenes[index] = next;
+      renderStoryList();
+      markStoryDirty('Scene flyttet ned.');
+    });
+
+    const addAfterButton = document.createElement('button');
+    addAfterButton.type = 'button';
+    addAfterButton.textContent = 'Ny scene etter';
+    addAfterButton.addEventListener('click', () => {
+      state.story.scenes.splice(index + 1, 0, createEmptyStoryScene(index + 1));
+      renderStoryList();
+      markStoryDirty('Ny scene lagt til.');
+    });
+
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.textContent = 'Slett';
+    deleteButton.disabled = state.story.scenes.length === 1;
+    deleteButton.addEventListener('click', () => {
+      state.story.scenes.splice(index, 1);
+      renderStoryList();
+      markStoryDirty('Scene slettet.');
+    });
+
+    actions.appendChild(moveUpButton);
+    actions.appendChild(moveDownButton);
+    actions.appendChild(addAfterButton);
+    actions.appendChild(deleteButton);
+    head.appendChild(label);
+    head.appendChild(actions);
+
+    const preview = document.createElement('figure');
+    preview.className = 'story-preview';
+
+    const previewVideo = document.createElement('video');
+    previewVideo.autoplay = true;
+    previewVideo.muted = true;
+    previewVideo.loop = true;
+    previewVideo.playsInline = true;
+    previewVideo.poster = scene.poster || '';
+    if (scene.video) previewVideo.src = scene.video;
+
+    const overlay = document.createElement('figcaption');
+    overlay.className = 'story-preview-overlay';
+
+    const overlayKicker = document.createElement('p');
+    overlayKicker.className = 'mini-kicker';
+    overlayKicker.textContent = scene.kicker || `Scene ${index + 1}`;
+
+    const overlayTitle = document.createElement('h3');
+    overlayTitle.textContent = scene.step_title || scene.title || `Scene ${index + 1}`;
+
+    const overlayText = document.createElement('p');
+    overlayText.textContent = scene.step_text || scene.body || 'Ingen tekst ennå.';
+
+    overlay.appendChild(overlayKicker);
+    overlay.appendChild(overlayTitle);
+    overlay.appendChild(overlayText);
+    preview.appendChild(previewVideo);
+    preview.appendChild(overlay);
+
+    const grid = document.createElement('div');
+    grid.className = 'cms-item-grid';
+
+    const kickerInput = document.createElement('input');
+    kickerInput.type = 'text';
+    kickerInput.value = scene.kicker;
+    kickerInput.addEventListener('input', () => {
+      state.story.scenes[index].kicker = kickerInput.value;
+      overlayKicker.textContent = kickerInput.value || `Scene ${index + 1}`;
+      markStoryDirty();
+    });
+    grid.appendChild(createField('Kicker (scene-label)', kickerInput));
+
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.value = scene.step_title;
+    titleInput.addEventListener('input', () => {
+      state.story.scenes[index].step_title = titleInput.value;
+      overlayTitle.textContent = titleInput.value || state.story.scenes[index].title || `Scene ${index + 1}`;
+      markStoryDirty();
+    });
+    grid.appendChild(createField('Kort tittel i kortet', titleInput));
+
+    const teaserArea = document.createElement('textarea');
+    teaserArea.value = scene.step_text;
+    teaserArea.addEventListener('input', () => {
+      state.story.scenes[index].step_text = teaserArea.value;
+      overlayText.textContent = teaserArea.value || state.story.scenes[index].body || 'Ingen tekst ennå.';
+      markStoryDirty();
+    });
+    grid.appendChild(createField('Kort tekst i kortet', teaserArea, true));
+
+    const dataTitleInput = document.createElement('input');
+    dataTitleInput.type = 'text';
+    dataTitleInput.value = scene.title;
+    dataTitleInput.addEventListener('input', () => {
+      state.story.scenes[index].title = dataTitleInput.value;
+      if (!state.story.scenes[index].step_title) {
+        overlayTitle.textContent = dataTitleInput.value || `Scene ${index + 1}`;
+      }
+      markStoryDirty();
+    });
+    grid.appendChild(createField('Scene-tittel (data-title)', dataTitleInput));
+
+    const bodyArea = document.createElement('textarea');
+    bodyArea.value = scene.body;
+    bodyArea.addEventListener('input', () => {
+      state.story.scenes[index].body = bodyArea.value;
+      if (!state.story.scenes[index].step_text) {
+        overlayText.textContent = bodyArea.value || 'Ingen tekst ennå.';
+      }
+      markStoryDirty();
+    });
+    grid.appendChild(createField('Scene-tekst (data-body)', bodyArea, true));
+
+    const captionArea = document.createElement('textarea');
+    captionArea.value = scene.caption;
+    captionArea.addEventListener('input', () => {
+      state.story.scenes[index].caption = captionArea.value;
+      markStoryDirty();
+    });
+    grid.appendChild(createField('Caption under video', captionArea, true));
+
+    const videoInput = document.createElement('input');
+    videoInput.type = 'url';
+    videoInput.placeholder = 'https://...mp4';
+    videoInput.value = scene.video;
+    videoInput.addEventListener('input', () => {
+      state.story.scenes[index].video = videoInput.value;
+      previewVideo.src = videoInput.value || '';
+      markStoryDirty();
+    });
+    grid.appendChild(createField('Video URL', videoInput, true));
+
+    const videoUploadInput = document.createElement('input');
+    videoUploadInput.type = 'file';
+    videoUploadInput.accept = 'video/*';
+    videoUploadInput.className = 'story-file-input';
+
+    const videoUploadButton = document.createElement('button');
+    videoUploadButton.type = 'button';
+    videoUploadButton.textContent = 'Last opp video til R2';
+
+    const videoUploadStatus = document.createElement('p');
+    videoUploadStatus.className = 'status';
+
+    const videoUploadRow = document.createElement('div');
+    videoUploadRow.className = 'story-upload-row';
+    videoUploadRow.appendChild(videoUploadInput);
+    videoUploadRow.appendChild(videoUploadButton);
+
+    const videoUploadField = document.createElement('div');
+    videoUploadField.className = 'cms-field is-wide';
+    const videoUploadLabel = document.createElement('span');
+    videoUploadLabel.textContent = 'Direkte opplasting video';
+    videoUploadField.appendChild(videoUploadLabel);
+    videoUploadField.appendChild(videoUploadRow);
+    videoUploadField.appendChild(videoUploadStatus);
+    grid.appendChild(videoUploadField);
+
+    videoUploadButton.addEventListener('click', async () => {
+      const file = videoUploadInput.files && videoUploadInput.files[0];
+      if (!file) {
+        setStatus(videoUploadStatus, 'Velg en videofil først.', 'error');
+        return;
+      }
+
+      videoUploadButton.disabled = true;
+      setStatus(videoUploadStatus, 'Laster opp video til R2 ...');
+      try {
+        const uploaded = await uploadFileToR2(file, 'scrollytelling/videos');
+        state.story.scenes[index].video = uploaded.public_url;
+        videoInput.value = uploaded.public_url;
+        previewVideo.src = uploaded.public_url;
+        markStoryDirty('Video lastet opp til R2.');
+        setStatus(videoUploadStatus, `Video lastet opp: ${uploaded.public_url}`, 'ok');
+      } catch (error) {
+        setStatus(videoUploadStatus, `Video-upload feilet: ${parseError(error)}`, 'error');
+      } finally {
+        videoUploadButton.disabled = false;
+      }
+    });
+
+    const posterInput = document.createElement('input');
+    posterInput.type = 'url';
+    posterInput.placeholder = 'https://...jpg/png';
+    posterInput.value = scene.poster;
+    posterInput.addEventListener('input', () => {
+      state.story.scenes[index].poster = posterInput.value;
+      previewVideo.poster = posterInput.value || '';
+      markStoryDirty();
+    });
+    grid.appendChild(createField('Fallback-bilde (poster)', posterInput, true));
+
+    const posterUploadInput = document.createElement('input');
+    posterUploadInput.type = 'file';
+    posterUploadInput.accept = 'image/*';
+    posterUploadInput.className = 'story-file-input';
+
+    const posterUploadButton = document.createElement('button');
+    posterUploadButton.type = 'button';
+    posterUploadButton.textContent = 'Last opp fallback-bilde til R2';
+
+    const posterUploadStatus = document.createElement('p');
+    posterUploadStatus.className = 'status';
+
+    const posterUploadRow = document.createElement('div');
+    posterUploadRow.className = 'story-upload-row';
+    posterUploadRow.appendChild(posterUploadInput);
+    posterUploadRow.appendChild(posterUploadButton);
+
+    const posterUploadField = document.createElement('div');
+    posterUploadField.className = 'cms-field is-wide';
+    const posterUploadLabel = document.createElement('span');
+    posterUploadLabel.textContent = 'Direkte opplasting fallback-bilde';
+    posterUploadField.appendChild(posterUploadLabel);
+    posterUploadField.appendChild(posterUploadRow);
+    posterUploadField.appendChild(posterUploadStatus);
+    grid.appendChild(posterUploadField);
+
+    posterUploadButton.addEventListener('click', async () => {
+      const file = posterUploadInput.files && posterUploadInput.files[0];
+      if (!file) {
+        setStatus(posterUploadStatus, 'Velg et bilde først.', 'error');
+        return;
+      }
+
+      posterUploadButton.disabled = true;
+      setStatus(posterUploadStatus, 'Laster opp fallback-bilde til R2 ...');
+      try {
+        const uploaded = await uploadFileToR2(file, 'scrollytelling/posters');
+        state.story.scenes[index].poster = uploaded.public_url;
+        posterInput.value = uploaded.public_url;
+        previewVideo.poster = uploaded.public_url;
+        markStoryDirty('Fallback-bilde lastet opp til R2.');
+        setStatus(posterUploadStatus, `Bilde lastet opp: ${uploaded.public_url}`, 'ok');
+      } catch (error) {
+        setStatus(posterUploadStatus, `Bilde-upload feilet: ${parseError(error)}`, 'error');
+      } finally {
+        posterUploadButton.disabled = false;
+      }
+    });
+
+    card.appendChild(head);
+    card.appendChild(preview);
+    card.appendChild(grid);
+    storyListNode.appendChild(card);
+  });
+}
+
+async function loadStoryCms() {
+  if (!state.authenticated) return;
+
+  setStatus(storyStatusNode, 'Laster scrollytelling ...');
+  try {
+    const file = await apiRequest('GET', `/api/repo-file?path=${encodeURIComponent(STORY_PATH)}`);
+    const parsed = JSON.parse(file.content || '{}');
+    const scenes = Array.isArray(parsed.scenes) ? parsed.scenes.map((scene, index) => normalizeStoryScene(scene, index)) : [];
+
+    state.story.loaded = true;
+    state.story.sha = file.sha || '';
+    state.story.branch = file.branch || 'main';
+    state.story.updatedAt = parsed.updated_at || null;
+    state.story.sectionTitle = String(parsed.section_title || STORY_DEFAULT_TITLE).trim() || STORY_DEFAULT_TITLE;
+    state.story.sectionMeta = String(parsed.section_meta || STORY_DEFAULT_META).trim() || STORY_DEFAULT_META;
+    state.story.scenes = scenes.length ? scenes : [createEmptyStoryScene(0)];
+    state.story.dirty = false;
+
+    if (storyTitleInput) storyTitleInput.value = state.story.sectionTitle;
+    if (storyMetaInput) storyMetaInput.value = state.story.sectionMeta;
+
+    renderStoryList();
+    updateStoryMeta();
+    updateCmsActionState();
+    setStatus(storyStatusNode, 'Scrollytelling lastet.', 'ok');
+  } catch (error) {
+    setStatus(storyStatusNode, `Kunne ikke laste scrollytelling: ${parseError(error)}`, 'error');
+  }
+}
+
+function buildStoryPayload() {
+  const scenes = state.story.scenes
+    .map((scene, index) => normalizeStoryScene(scene, index))
+    .filter((scene) => scene.video || scene.poster || scene.step_title || scene.title || scene.body || scene.step_text);
+
+  if (!scenes.length) {
+    scenes.push(createEmptyStoryScene(0));
+  }
+
+  return {
+    updated_at: new Date().toISOString(),
+    section_title: String(state.story.sectionTitle || STORY_DEFAULT_TITLE).trim() || STORY_DEFAULT_TITLE,
+    section_meta: String(state.story.sectionMeta || STORY_DEFAULT_META).trim() || STORY_DEFAULT_META,
+    scenes,
+  };
+}
+
+async function saveStoryCms() {
+  if (!state.authenticated || !state.story.loaded) return;
+  if (!state.story.sha) {
+    setStatus(storyStatusNode, 'Mangler SHA. Last scrollytelling på nytt før lagring.', 'error');
+    return;
+  }
+
+  const message = (storyCommitMessageInput && storyCommitMessageInput.value.trim())
+    || 'Admin CMS update: Scrollytelling';
+
+  setStatus(storyStatusNode, 'Lagrer scrollytelling til GitHub ...');
+
+  try {
+    const payload = buildStoryPayload();
+    const response = await apiRequest('PUT', '/api/repo-file', {
+      path: STORY_PATH,
+      content: JSON.stringify(payload, null, 2),
+      sha: state.story.sha,
+      message,
+    });
+
+    state.story.sha = response.sha || '';
+    state.story.branch = response.branch || 'main';
+    state.story.updatedAt = payload.updated_at;
+    state.story.sectionTitle = payload.section_title;
+    state.story.sectionMeta = payload.section_meta;
+    state.story.scenes = payload.scenes;
+    state.story.dirty = false;
+    updateStoryMeta();
+    updateCmsActionState();
+
+    if (state.currentPath === STORY_PATH && fileEditor) {
+      fileEditor.value = JSON.stringify(payload, null, 2);
+      state.sha = response.sha || state.sha;
+      setStatus(fileMeta, `Fil: ${STORY_PATH} | SHA: ${String(state.sha || '').slice(0, 10)} | Branch: ${state.story.branch}`);
+    }
+
+    const commitNote = response.commit_url ? ` Commit: ${response.commit_url}` : '';
+    setStatus(storyStatusNode, `Scrollytelling lagret.${commitNote}`, 'ok');
+  } catch (error) {
+    setStatus(storyStatusNode, `Scrollytelling-lagring feilet: ${parseError(error)}`, 'error');
+  }
+}
+
+function addStoryScene() {
+  if (!state.story.loaded) return;
+  state.story.scenes.push(createEmptyStoryScene(state.story.scenes.length));
+  renderStoryList();
+  markStoryDirty('Ny scene lagt til.');
+}
+
 async function refreshAuthStatus() {
   try {
     const data = await apiRequest('GET', '/api/admin-auth');
@@ -615,6 +1158,7 @@ async function refreshAuthStatus() {
       setStatus(authStatus, 'Innlogging aktiv.', 'ok');
       await loadFile(state.currentPath);
       await loadCms();
+      await loadStoryCms();
     } else {
       setStatus(authStatus, '');
     }
@@ -782,7 +1326,12 @@ function initKeyboardShortcut() {
     event.preventDefault();
 
     const target = event.target instanceof Element ? event.target : null;
+    const insideStoryCms = Boolean(target && target.closest('#story-cms'));
     const insideCms = Boolean(target && target.closest('#cms'));
+    if (insideStoryCms && state.story.loaded) {
+      saveStoryCms();
+      return;
+    }
     if (insideCms && state.cms.loaded) {
       saveCms();
       return;
@@ -824,6 +1373,22 @@ function init() {
   if (cmsPublishAllButton) cmsPublishAllButton.addEventListener('click', publishAllCmsItems);
   if (cmsAssignNorskButton) cmsAssignNorskButton.addEventListener('click', assignNorskCategoryToAll);
   if (cmsSaveButton) cmsSaveButton.addEventListener('click', saveCms);
+
+  if (storyLoadButton) storyLoadButton.addEventListener('click', loadStoryCms);
+  if (storyAddButton) storyAddButton.addEventListener('click', addStoryScene);
+  if (storySaveButton) storySaveButton.addEventListener('click', saveStoryCms);
+  if (storyTitleInput) {
+    storyTitleInput.addEventListener('input', () => {
+      state.story.sectionTitle = String(storyTitleInput.value || '').trim();
+      markStoryDirty();
+    });
+  }
+  if (storyMetaInput) {
+    storyMetaInput.addEventListener('input', () => {
+      state.story.sectionMeta = String(storyMetaInput.value || '').trim();
+      markStoryDirty();
+    });
+  }
 
   setEditorEnabled(false);
   refreshAuthStatus();
