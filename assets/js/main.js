@@ -53,6 +53,7 @@ const SCROLLY_CMS_PATH = 'assets/data/scrollytelling-welhaven-wergeland-cuzner.j
 const SCROLLY_DEFAULT_TITLE = 'INTELLIGENSPARTIET';
 const SCROLLY_DEFAULT_META = 'Historiske strider, nåtidens arbeidsliv og et surrealistisk frampek';
 const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+const LOCKED_TONE_FILTER = 'replacement_anxiety';
 
 let scrollySteps = [];
 let scrollyVideoLayers = [];
@@ -248,7 +249,7 @@ const VIDEO_STORY_TITLE_ALIASES = {
 
 const state = {
   items: [],
-  filter: 'all',
+  filter: LOCKED_TONE_FILTER,
   category: 'all',
   categories: [],
   generatedAt: null,
@@ -723,10 +724,11 @@ function mediaForItem(item, index) {
 }
 
 function visibleItems() {
+  const toneFilter = LOCKED_TONE_FILTER || state.filter;
   return state.items
     .filter((item) => item.published !== false)
     .filter((item) => state.category === 'all' || normalizeCategory(item.category) === state.category)
-    .filter((item) => state.filter === 'all' || item.tone === state.filter);
+    .filter((item) => toneFilter === 'all' || item.tone === toneFilter);
 }
 
 function renderNews() {
@@ -808,6 +810,13 @@ function renderNews() {
 }
 
 function setFilter(name) {
+  if (LOCKED_TONE_FILTER) {
+    state.filter = LOCKED_TONE_FILTER;
+    renderNews();
+    updateMeta();
+    return;
+  }
+
   state.filter = name;
   filterButtons.forEach((button) => {
     const active = button.dataset.filter === name;
@@ -823,6 +832,32 @@ function setCategory(name) {
   renderCategoryFilters();
   renderNews();
   updateMeta();
+}
+
+function renderToneFilters() {
+  if (!filterButtons.length) return;
+  filterButtons.forEach((button) => {
+    const tone = button.dataset.filter || 'all';
+    const activeTone = LOCKED_TONE_FILTER || state.filter;
+    const active = tone === activeTone;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-selected', String(active));
+
+    if (LOCKED_TONE_FILTER && !active) {
+      button.hidden = true;
+      button.setAttribute('aria-hidden', 'true');
+      button.tabIndex = -1;
+      return;
+    }
+
+    button.hidden = false;
+    button.removeAttribute('aria-hidden');
+    button.tabIndex = 0;
+    if (LOCKED_TONE_FILTER && active) {
+      button.disabled = true;
+      button.setAttribute('aria-disabled', 'true');
+    }
+  });
 }
 
 function renderCategoryFilters() {
@@ -2155,6 +2190,7 @@ if (menuToggle && navNode) {
 
 filterButtons.forEach((button) => {
   button.addEventListener('click', () => {
+    if (LOCKED_TONE_FILTER) return;
     const target = button.dataset.filter || 'all';
     setFilter(target);
   });
@@ -2169,6 +2205,7 @@ window.setInterval(setTopClock, 30_000);
 
 async function bootstrapPage() {
   initScrollCue();
+  renderToneFilters();
   syncScrollyNodes();
   await loadScrollyContent();
   initScrollySceneMenu();
