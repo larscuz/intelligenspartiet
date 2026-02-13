@@ -658,7 +658,7 @@ function normalizeScrollyScene(rawScene, index) {
 
 function normalizeScrollyPayload(payload) {
   const scenes = Array.isArray(payload && payload.scenes)
-    ? payload.scenes.map((scene, index) => normalizeScrollyScene(scene, index)).filter((scene) => scene.video)
+    ? payload.scenes.map((scene, index) => normalizeScrollyScene(scene, index))
     : [];
 
   return {
@@ -690,10 +690,18 @@ function createScrollyLayerNode(scene, index) {
   videoNode.preload = index === 0 ? 'auto' : 'metadata';
   videoNode.dataset.popupDisabled = 'true';
 
-  const sourceNode = document.createElement('source');
-  sourceNode.src = scene.video;
-  sourceNode.type = 'video/mp4';
-  videoNode.appendChild(sourceNode);
+  const hasVideo = Boolean(scene.video);
+  videoNode.dataset.hasVideo = hasVideo ? 'true' : 'false';
+
+  if (hasVideo) {
+    const sourceNode = document.createElement('source');
+    sourceNode.src = scene.video;
+    sourceNode.type = 'video/mp4';
+    videoNode.appendChild(sourceNode);
+  } else {
+    videoNode.preload = 'none';
+    layerNode.classList.add('is-fallback');
+  }
 
   layerNode.appendChild(posterNode);
   layerNode.appendChild(videoNode);
@@ -786,7 +794,8 @@ function scrollyAutoplayAllowed() {
 
 function getActiveScrollyVideo() {
   const activeVideo = scrollySceneVideos[scrollyActiveIndex];
-  return activeVideo instanceof HTMLVideoElement ? activeVideo : null;
+  if (!(activeVideo instanceof HTMLVideoElement)) return null;
+  return activeVideo.dataset.hasVideo === 'false' ? null : activeVideo;
 }
 
 function videoLikelyHasAudio(videoNode) {
@@ -884,6 +893,12 @@ function syncScrollyPlayback() {
   scrollySceneVideos.forEach((videoNode, idx) => {
     const distance = Math.abs(idx - scrollyActiveIndex);
     videoNode.preload = distance <= 1 ? 'auto' : 'metadata';
+
+    const hasVideo = videoNode.dataset.hasVideo !== 'false';
+    if (!hasVideo) {
+      videoNode.pause();
+      return;
+    }
 
     if (!autoplay) {
       videoNode.pause();
