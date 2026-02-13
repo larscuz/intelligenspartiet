@@ -33,6 +33,7 @@
   </header>
 
   <nav class="section-nav admin-nav" aria-label="Adminseksjoner">
+    <a href="#story-cms">Scrollytelling-CMS</a>
     <a href="#cms">Nyhets-CMS</a>
     <a href="#auth">Innlogging</a>
     <a href="#editor">Filredigering</a>
@@ -40,6 +41,40 @@
   </nav>
 
   <main class="admin-shell">
+    <section id="story-cms" class="card story-cms-card">
+      <div class="cms-head">
+        <h2>Scrollytelling-CMS</h2>
+        <p>Visuell redigering av <code>INTELLIGENSPARTIET - Welhaven, Wergeland og Cuzner</code>. Legg til nye scener, video, tekst og fallback-bilde.</p>
+      </div>
+
+      <div class="editor-toolbar">
+        <button id="story-load" type="button" disabled>Last scrollytelling</button>
+        <button id="story-add" type="button" disabled>Legg til ny scene</button>
+      </div>
+
+      <label for="story-commit-message">Commit-melding</label>
+      <input id="story-commit-message" type="text" value="Admin CMS update: Scrollytelling" />
+
+      <div class="story-settings-grid">
+        <label for="story-title">Seksjonstittel</label>
+        <input id="story-title" type="text" disabled />
+
+        <label for="story-meta-input">Ingress / undertittel</label>
+        <input id="story-meta-input" type="text" disabled />
+      </div>
+
+      <div class="cms-meta-row">
+        <p id="story-meta" class="status">Logg inn for å laste scrollytelling-CMS.</p>
+        <p id="story-status" class="status"></p>
+      </div>
+
+      <div id="story-list" class="story-list" aria-live="polite"></div>
+
+      <div class="actions">
+        <button id="story-save" type="button" disabled>Lagre scrollytelling til GitHub</button>
+      </div>
+    </section>
+
     <section id="cms" class="card cms-card">
       <div class="cms-head">
         <h2>Norsk arbeidsmarked</h2>
@@ -136,6 +171,7 @@
     <section id="quick" class="card quick-card">
       <h2>Hurtigfiler</h2>
       <div class="quick-actions">
+        <button class="quick-open" data-path="assets/data/scrollytelling-welhaven-wergeland-cuzner.json" type="button" disabled>Scrollytelling data</button>
         <button class="quick-open" data-path="assets/data/kling3-prompts.json" type="button" disabled>Kling prompts</button>
         <button class="quick-open" data-path="index.html" type="button" disabled>Forside HTML</button>
         <button class="quick-open" data-path="assets/css/style.css" type="button" disabled>Forside CSS</button>

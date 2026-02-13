@@ -12,8 +12,9 @@ const promptListNode = document.querySelector('#prompt-list');
 const promptTemplateNode = document.querySelector('#prompt-item-template');
 const promptMetaNode = document.querySelector('#prompt-meta');
 const scrollyStory = document.querySelector('#scrollytelling');
-const scrollySteps = Array.from(document.querySelectorAll('.scrolly-step'));
 const scrollyMedia = document.querySelector('.scrolly-media');
+const scrollySectionTitle = document.querySelector('#scrollytelling .section-headline-row h2');
+const scrollySectionMeta = document.querySelector('#scrollytelling .section-headline-row .news-meta');
 const scrollyKicker = document.querySelector('#scrolly-kicker');
 const scrollyTitle = document.querySelector('#scrolly-title');
 const scrollyBody = document.querySelector('#scrolly-body');
@@ -22,10 +23,6 @@ const scrollyCounter = document.querySelector('#scrolly-counter');
 const scrollyAudioToggle = document.querySelector('#scrolly-audio-toggle');
 const scrollyVolumeSlider = document.querySelector('#scrolly-volume');
 const scrollyAudioStatus = document.querySelector('#scrolly-audio-status');
-const scrollyVideoLayers = Array.from(document.querySelectorAll('.scrolly-video-layer'));
-const scrollySceneVideos = scrollyVideoLayers
-  .map((layer) => layer.querySelector('.scrolly-scene-video'))
-  .filter((videoNode) => videoNode instanceof HTMLVideoElement);
 const seriesHeroProgress = document.querySelector('#series-hero-progress');
 const seriesStartLink = document.querySelector('#series-start-link');
 const seriesResumeButton = document.querySelector('#series-resume-button');
@@ -45,6 +42,14 @@ const videoStoryStepTemplate = document.querySelector('#video-story-step-templat
 const videoStoryAudioToggle = document.querySelector('#video-story-audio-toggle');
 const videoStoryVolumeSlider = document.querySelector('#video-story-volume');
 const videoStoryAudioStatus = document.querySelector('#video-story-audio-status');
+
+const SCROLLY_CMS_PATH = 'assets/data/scrollytelling-welhaven-wergeland-cuzner.json';
+const SCROLLY_DEFAULT_TITLE = 'INTELLIGENSPARTIET - Welhaven, Wergeland og Cuzner';
+const SCROLLY_DEFAULT_META = 'Historiske strider, nåtidens arbeidsliv og et surrealistisk frampek';
+
+let scrollySteps = [];
+let scrollyVideoLayers = [];
+let scrollySceneVideos = [];
 
 const IMAGE_POOL = [
   'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
@@ -258,6 +263,21 @@ let scrollySoundEnabled = false;
 let scrollyVolume = 0.8;
 
 const SCROLLY_PROGRESS_KEY = 'ip_scrolly_last_scene';
+
+function syncScrollyNodes() {
+  if (!scrollyStory) {
+    scrollySteps = [];
+    scrollyVideoLayers = [];
+    scrollySceneVideos = [];
+    return;
+  }
+
+  scrollySteps = Array.from(scrollyStory.querySelectorAll('.scrolly-step'));
+  scrollyVideoLayers = Array.from(scrollyStory.querySelectorAll('.scrolly-video-layer'));
+  scrollySceneVideos = scrollyVideoLayers
+    .map((layer) => layer.querySelector('.scrolly-scene-video'))
+    .filter((videoNode) => videoNode instanceof HTMLVideoElement);
+}
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -622,6 +642,144 @@ function updateMeta() {
   metaNode.textContent = `Sist oppdatert: ${generated}. Viser ${visible} av ${published} publiserte saker (${category}). Totalt registrert: ${total}.`;
 }
 
+function normalizeScrollyScene(rawScene, index) {
+  const sceneIndex = Number.isFinite(index) ? index : 0;
+  return {
+    kicker: String(rawScene && rawScene.kicker || `Scene ${sceneIndex + 1}`).trim() || `Scene ${sceneIndex + 1}`,
+    title: String(rawScene && rawScene.title || '').trim(),
+    body: String(rawScene && rawScene.body || '').trim(),
+    caption: String(rawScene && rawScene.caption || '').trim(),
+    video: String(rawScene && rawScene.video || '').trim(),
+    poster: String(rawScene && rawScene.poster || '').trim(),
+    step_title: String(rawScene && rawScene.step_title || '').trim(),
+    step_text: String(rawScene && rawScene.step_text || '').trim(),
+  };
+}
+
+function normalizeScrollyPayload(payload) {
+  const scenes = Array.isArray(payload && payload.scenes)
+    ? payload.scenes.map((scene, index) => normalizeScrollyScene(scene, index)).filter((scene) => scene.video)
+    : [];
+
+  return {
+    section_title: String(payload && payload.section_title || SCROLLY_DEFAULT_TITLE).trim() || SCROLLY_DEFAULT_TITLE,
+    section_meta: String(payload && payload.section_meta || SCROLLY_DEFAULT_META).trim() || SCROLLY_DEFAULT_META,
+    scenes,
+  };
+}
+
+function createScrollyLayerNode(scene, index) {
+  const layerNode = document.createElement('div');
+  layerNode.className = 'scrolly-video-layer';
+  if (index === 0) layerNode.classList.add('is-active');
+  layerNode.dataset.sceneIndex = String(index);
+
+  const posterNode = document.createElement('img');
+  posterNode.className = 'scrolly-scene-poster';
+  posterNode.src = scene.poster || '';
+  posterNode.alt = '';
+  posterNode.loading = 'lazy';
+
+  const videoNode = document.createElement('video');
+  videoNode.className = 'scrolly-scene-video';
+  videoNode.poster = scene.poster || '';
+  videoNode.muted = true;
+  videoNode.defaultMuted = true;
+  videoNode.loop = true;
+  videoNode.playsInline = true;
+  videoNode.preload = index === 0 ? 'auto' : 'metadata';
+  videoNode.dataset.popupDisabled = 'true';
+
+  const sourceNode = document.createElement('source');
+  sourceNode.src = scene.video;
+  sourceNode.type = 'video/mp4';
+  videoNode.appendChild(sourceNode);
+
+  layerNode.appendChild(posterNode);
+  layerNode.appendChild(videoNode);
+  return layerNode;
+}
+
+function createScrollyStepNode(scene, index) {
+  const stepNode = document.createElement('article');
+  stepNode.className = 'scrolly-step';
+  if (index === 0) stepNode.classList.add('is-active');
+  stepNode.dataset.sceneIndex = String(index);
+  stepNode.dataset.kicker = scene.kicker;
+  stepNode.dataset.title = scene.title;
+  stepNode.dataset.body = scene.body;
+  stepNode.dataset.caption = scene.caption;
+  stepNode.dataset.video = scene.video;
+
+  const cardNode = document.createElement('div');
+  cardNode.className = 'scrolly-step-card';
+
+  const kickerNode = document.createElement('p');
+  kickerNode.className = 'scrolly-step-kicker';
+  kickerNode.textContent = scene.kicker;
+
+  const titleNode = document.createElement('h3');
+  titleNode.textContent = scene.step_title || scene.title || `Scene ${index + 1}`;
+
+  const bodyNode = document.createElement('p');
+  bodyNode.textContent = scene.step_text || scene.body || '';
+
+  cardNode.appendChild(kickerNode);
+  cardNode.appendChild(titleNode);
+  cardNode.appendChild(bodyNode);
+  stepNode.appendChild(cardNode);
+  return stepNode;
+}
+
+function renderScrollyFromPayload(payload) {
+  if (!scrollyStory) return;
+
+  const normalized = normalizeScrollyPayload(payload);
+  if (!normalized.scenes.length) return;
+
+  if (scrollySectionTitle) scrollySectionTitle.textContent = normalized.section_title;
+  if (scrollySectionMeta) scrollySectionMeta.textContent = normalized.section_meta;
+
+  const frameNode = scrollyStory.querySelector('.scrolly-frame');
+  const stepsNode = scrollyStory.querySelector('.scrolly-steps');
+  if (!(frameNode instanceof HTMLElement) || !(stepsNode instanceof HTMLElement)) return;
+
+  frameNode.querySelectorAll('.scrolly-video-layer').forEach((layerNode) => layerNode.remove());
+  const insertBeforeNode = frameNode.querySelector('.scrolly-frame-overlay') || null;
+
+  normalized.scenes.forEach((scene, index) => {
+    const layerNode = createScrollyLayerNode(scene, index);
+    frameNode.insertBefore(layerNode, insertBeforeNode);
+  });
+
+  stepsNode.innerHTML = '';
+  normalized.scenes.forEach((scene, index) => {
+    stepsNode.appendChild(createScrollyStepNode(scene, index));
+  });
+
+  if (scrollyCaption) {
+    scrollyCaption.textContent = normalized.scenes[0].caption || '';
+  }
+  if (scrollyCounter) {
+    scrollyCounter.textContent = `Scene 1 / ${normalized.scenes.length}`;
+  }
+
+  scrollyActiveIndex = 0;
+  syncScrollyNodes();
+}
+
+async function loadScrollyContent() {
+  if (!scrollyStory) return;
+  try {
+    const response = await fetch(SCROLLY_CMS_PATH, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    renderScrollyFromPayload(payload);
+  } catch {
+    syncScrollyNodes();
+  }
+}
+
 function scrollyAutoplayAllowed() {
   return scrollySectionInView && !document.hidden;
 }
@@ -899,14 +1057,26 @@ function initScrollytelling() {
   }
 
   scrollySceneVideos.forEach((videoNode) => {
+    const layerNode = videoNode.closest('.scrolly-video-layer');
     videoNode.addEventListener('canplay', () => {
+      if (layerNode) layerNode.classList.remove('is-fallback');
       syncScrollyPlayback();
+    });
+    videoNode.addEventListener('loadeddata', () => {
+      if (layerNode) layerNode.classList.remove('is-fallback');
     });
     videoNode.addEventListener('loadedmetadata', () => {
       updateScrollyAudioStatusFromActiveVideo();
     });
     videoNode.addEventListener('playing', () => {
+      if (layerNode) layerNode.classList.remove('is-fallback');
       updateScrollyAudioStatusFromActiveVideo();
+    });
+    videoNode.addEventListener('error', () => {
+      if (layerNode) layerNode.classList.add('is-fallback');
+    });
+    videoNode.addEventListener('stalled', () => {
+      if (layerNode) layerNode.classList.add('is-fallback');
     });
   });
 
@@ -1699,8 +1869,15 @@ if (yearNode) {
 
 setTopClock();
 window.setInterval(setTopClock, 30_000);
-initScrollytelling();
-initScrollySeriesActions();
-initVideoModal();
-loadNews();
-loadPrompts();
+
+async function bootstrapPage() {
+  syncScrollyNodes();
+  await loadScrollyContent();
+  initScrollytelling();
+  initScrollySeriesActions();
+  initVideoModal();
+  loadNews();
+  loadPrompts();
+}
+
+bootstrapPage();
