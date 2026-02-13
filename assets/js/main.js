@@ -28,6 +28,7 @@ const scrollyAudioStatus = document.querySelector('#scrolly-audio-status');
 const scrollySceneNav = document.querySelector('.scrolly-scene-nav');
 const scrollySceneMenu = document.querySelector('#scrolly-scene-menu');
 const scrollySceneMenuToggle = document.querySelector('#scrolly-scene-menu-toggle');
+const scrollyFullscreenToggle = document.querySelector('#scrolly-fullscreen-toggle');
 const seriesHeroProgress = document.querySelector('#series-hero-progress');
 const seriesStartLink = document.querySelector('#series-start-link');
 const seriesResumeButton = document.querySelector('#series-resume-button');
@@ -284,6 +285,15 @@ function syncScrollyNodes() {
     .filter((videoNode) => videoNode instanceof HTMLVideoElement);
 }
 
+function syncScrollyStickyOffsets() {
+  if (!(scrollyStory instanceof HTMLElement)) return;
+  const headlineNode = scrollyStory.querySelector('.section-headline-row');
+  if (!(headlineNode instanceof HTMLElement)) return;
+
+  const headlineHeight = Math.max(0, Math.round(headlineNode.getBoundingClientRect().height));
+  scrollyStory.style.setProperty('--scrolly-headline-h', `${headlineHeight}px`);
+}
+
 function syncScrollySceneMenuActive() {
   if (!(scrollySceneMenu instanceof HTMLElement)) return;
   const sceneButtons = Array.from(scrollySceneMenu.querySelectorAll('.scrolly-scene-thumb'));
@@ -351,6 +361,7 @@ function renderScrollySceneMenu(scenes = []) {
 }
 
 function syncScrollyFrameHeight() {
+  syncScrollyStickyOffsets();
   if (!(scrollyLayout instanceof HTMLElement)) return;
   if (!(scrollyMedia instanceof HTMLElement)) return;
 
@@ -376,6 +387,84 @@ function syncScrollyFrameHeight() {
   frameHeight = clamp(frameHeight, minHeight, maxHeight);
 
   scrollyLayout.style.setProperty('--scrolly-frame-h', `${Math.round(frameHeight)}px`);
+}
+
+function getScrollyFullscreenTarget() {
+  if (scrollyStory instanceof HTMLElement) return scrollyStory;
+  if (scrollyLayout instanceof HTMLElement) return scrollyLayout;
+  return null;
+}
+
+function getDocumentFullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function isScrollyFullscreenActive() {
+  const fullscreenNode = getDocumentFullscreenElement();
+  const scrollyTarget = getScrollyFullscreenTarget();
+  if (!(fullscreenNode instanceof Element)) return false;
+  if (!(scrollyTarget instanceof Element)) return false;
+  return fullscreenNode === scrollyTarget || scrollyTarget.contains(fullscreenNode);
+}
+
+function updateScrollyFullscreenToggle() {
+  if (!(scrollyFullscreenToggle instanceof HTMLButtonElement)) return;
+  const scrollyTarget = getScrollyFullscreenTarget();
+  const supported = Boolean(
+    scrollyTarget
+    && (typeof scrollyTarget.requestFullscreen === 'function'
+      || typeof scrollyTarget.webkitRequestFullscreen === 'function')
+  );
+
+  scrollyFullscreenToggle.hidden = !supported;
+  if (!supported) return;
+
+  const active = isScrollyFullscreenActive();
+  scrollyFullscreenToggle.textContent = active ? 'Lukk fullskjerm' : 'Fullskjerm';
+  scrollyFullscreenToggle.setAttribute('aria-pressed', String(active));
+}
+
+function toggleScrollyFullscreen() {
+  const scrollyTarget = getScrollyFullscreenTarget();
+  if (!(scrollyTarget instanceof HTMLElement)) return;
+
+  if (isScrollyFullscreenActive()) {
+    const exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen;
+    if (typeof exitFullscreen === 'function') {
+      const exitResult = exitFullscreen.call(document);
+      if (exitResult && typeof exitResult.catch === 'function') {
+        exitResult.catch(() => {});
+      }
+    }
+    return;
+  }
+
+  const requestFullscreen = scrollyTarget.requestFullscreen || scrollyTarget.webkitRequestFullscreen;
+  if (typeof requestFullscreen === 'function') {
+    const requestResult = requestFullscreen.call(scrollyTarget);
+    if (requestResult && typeof requestResult.catch === 'function') {
+      requestResult.catch(() => {});
+    }
+  }
+}
+
+function initScrollyFullscreen() {
+  if (!(scrollyFullscreenToggle instanceof HTMLButtonElement)) return;
+
+  updateScrollyFullscreenToggle();
+
+  scrollyFullscreenToggle.addEventListener('click', () => {
+    toggleScrollyFullscreen();
+  });
+
+  const onFullscreenChange = () => {
+    syncScrollyFrameHeight();
+    syncScrollyPlayback();
+    updateScrollyFullscreenToggle();
+  };
+
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 }
 
 function clamp(value, min, max) {
@@ -2077,6 +2166,7 @@ async function bootstrapPage() {
   await loadScrollyContent();
   initScrollySceneMenu();
   initScrollytelling();
+  initScrollyFullscreen();
   initScrollySeriesActions();
   initVideoModal();
   loadNews();
