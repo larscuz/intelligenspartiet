@@ -52,6 +52,7 @@ const videoStoryAudioStatus = document.querySelector('#video-story-audio-status'
 const SCROLLY_CMS_PATH = 'assets/data/scrollytelling-welhaven-wergeland-cuzner.json';
 const SCROLLY_DEFAULT_TITLE = 'INTELLIGENSPARTIET';
 const SCROLLY_DEFAULT_META = 'Historiske strider, nåtidens arbeidsliv og et surrealistisk frampek';
+const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
 
 let scrollySteps = [];
 let scrollyVideoLayers = [];
@@ -328,7 +329,7 @@ function renderScrollySceneMenu(scenes = []) {
 
     const image = document.createElement('img');
     image.className = 'scrolly-scene-thumb-image';
-    image.src = scene.poster || '';
+    image.src = scene.poster || TRANSPARENT_PIXEL;
     image.alt = '';
     image.loading = 'lazy';
 
@@ -889,13 +890,19 @@ function createScrollyLayerNode(scene, index) {
 
   const posterNode = document.createElement('img');
   posterNode.className = 'scrolly-scene-poster';
-  posterNode.src = scene.poster || '';
+  if (scene.poster) {
+    posterNode.src = scene.poster;
+  } else {
+    posterNode.src = TRANSPARENT_PIXEL;
+  }
   posterNode.alt = '';
   posterNode.loading = 'lazy';
 
   const videoNode = document.createElement('video');
   videoNode.className = 'scrolly-scene-video';
-  videoNode.poster = scene.poster || '';
+  if (scene.poster) {
+    videoNode.poster = scene.poster;
+  }
   videoNode.muted = true;
   videoNode.defaultMuted = true;
   videoNode.loop = true;
