@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-02-13T10:28:22.500Z",
+  "updated_at": "2026-02-13T10:32:54.377Z",
   "section_title": "INTELLIGENSPARTIET - Welhaven, Wergeland og Cuzner",
   "section_meta": "Historiske strider, nåtidens arbeidsliv og et surrealistisk frampek",
   "scenes": [
@@ -42,6 +42,16 @@
       "caption": "Fortidens språkstrid og elitestyring speiles i samtidens konflikt om teknologi, arbeid og demokratisk kontroll.",
       "video": "https://larscuzner.com/static/_upload/4ChristTheater.mp4",
       "poster": "https://images.unsplash.com/photo-1523861751938-1218bc347f2d?auto=format&fit=crop&w=1600&q=80"
+    },
+    {
+      "kicker": "Scene 5",
+      "step_title": "Ny scene 5",
+      "step_text": "",
+      "title": "",
+      "body": "",
+      "caption": "",
+      "video": "",
+      "poster": "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/posters/1770978770701-9aa82706-1.jpg"
     }
   ]
 }
