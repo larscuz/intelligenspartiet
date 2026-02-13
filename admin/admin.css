@@ -256,6 +256,23 @@ button:focus-visible {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.story-upload-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.story-file-input {
+  min-width: 240px;
+  max-width: 100%;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.story-upload-row button {
+  flex: 0 0 auto;
+}
+
 .story-item textarea,
 .story-item input,
 #story-title,

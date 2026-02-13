@@ -221,6 +221,42 @@ async function apiRequest(method, path, payload) {
   return data;
 }
 
+async function requestR2UploadUrl({ filename, contentType, folder }) {
+  return apiRequest('POST', '/api/r2-upload-url', {
+    filename,
+    content_type: contentType || '',
+    folder,
+    expires_in: 900,
+  });
+}
+
+async function uploadFileToR2(file, folder) {
+  if (!(file instanceof File)) {
+    throw new Error('Mangler fil å laste opp.');
+  }
+
+  const uploadTarget = await requestR2UploadUrl({
+    filename: file.name || 'file',
+    contentType: file.type || 'application/octet-stream',
+    folder,
+  });
+
+  const response = await fetch(uploadTarget.upload_url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type || 'application/octet-stream',
+    },
+    body: file,
+  });
+
+  if (!response.ok) {
+    const payload = await response.text().catch(() => '');
+    throw new Error(`R2 upload feilet (${response.status}): ${payload || 'ukjent feil'}`);
+  }
+
+  return uploadTarget;
+}
+
 function updateCmsActionState() {
   const loggedIn = state.authenticated;
   const cmsLoaded = loggedIn && state.cms.loaded;
@@ -893,6 +929,55 @@ function renderStoryList() {
     });
     grid.appendChild(createField('Video URL', videoInput, true));
 
+    const videoUploadInput = document.createElement('input');
+    videoUploadInput.type = 'file';
+    videoUploadInput.accept = 'video/*';
+    videoUploadInput.className = 'story-file-input';
+
+    const videoUploadButton = document.createElement('button');
+    videoUploadButton.type = 'button';
+    videoUploadButton.textContent = 'Last opp video til R2';
+
+    const videoUploadStatus = document.createElement('p');
+    videoUploadStatus.className = 'status';
+
+    const videoUploadRow = document.createElement('div');
+    videoUploadRow.className = 'story-upload-row';
+    videoUploadRow.appendChild(videoUploadInput);
+    videoUploadRow.appendChild(videoUploadButton);
+
+    const videoUploadField = document.createElement('div');
+    videoUploadField.className = 'cms-field is-wide';
+    const videoUploadLabel = document.createElement('span');
+    videoUploadLabel.textContent = 'Direkte opplasting video';
+    videoUploadField.appendChild(videoUploadLabel);
+    videoUploadField.appendChild(videoUploadRow);
+    videoUploadField.appendChild(videoUploadStatus);
+    grid.appendChild(videoUploadField);
+
+    videoUploadButton.addEventListener('click', async () => {
+      const file = videoUploadInput.files && videoUploadInput.files[0];
+      if (!file) {
+        setStatus(videoUploadStatus, 'Velg en videofil først.', 'error');
+        return;
+      }
+
+      videoUploadButton.disabled = true;
+      setStatus(videoUploadStatus, 'Laster opp video til R2 ...');
+      try {
+        const uploaded = await uploadFileToR2(file, 'scrollytelling/videos');
+        state.story.scenes[index].video = uploaded.public_url;
+        videoInput.value = uploaded.public_url;
+        previewVideo.src = uploaded.public_url;
+        markStoryDirty('Video lastet opp til R2.');
+        setStatus(videoUploadStatus, `Video lastet opp: ${uploaded.public_url}`, 'ok');
+      } catch (error) {
+        setStatus(videoUploadStatus, `Video-upload feilet: ${parseError(error)}`, 'error');
+      } finally {
+        videoUploadButton.disabled = false;
+      }
+    });
+
     const posterInput = document.createElement('input');
     posterInput.type = 'url';
     posterInput.placeholder = 'https://...jpg/png';
@@ -903,6 +988,55 @@ function renderStoryList() {
       markStoryDirty();
     });
     grid.appendChild(createField('Fallback-bilde (poster)', posterInput, true));
+
+    const posterUploadInput = document.createElement('input');
+    posterUploadInput.type = 'file';
+    posterUploadInput.accept = 'image/*';
+    posterUploadInput.className = 'story-file-input';
+
+    const posterUploadButton = document.createElement('button');
+    posterUploadButton.type = 'button';
+    posterUploadButton.textContent = 'Last opp fallback-bilde til R2';
+
+    const posterUploadStatus = document.createElement('p');
+    posterUploadStatus.className = 'status';
+
+    const posterUploadRow = document.createElement('div');
+    posterUploadRow.className = 'story-upload-row';
+    posterUploadRow.appendChild(posterUploadInput);
+    posterUploadRow.appendChild(posterUploadButton);
+
+    const posterUploadField = document.createElement('div');
+    posterUploadField.className = 'cms-field is-wide';
+    const posterUploadLabel = document.createElement('span');
+    posterUploadLabel.textContent = 'Direkte opplasting fallback-bilde';
+    posterUploadField.appendChild(posterUploadLabel);
+    posterUploadField.appendChild(posterUploadRow);
+    posterUploadField.appendChild(posterUploadStatus);
+    grid.appendChild(posterUploadField);
+
+    posterUploadButton.addEventListener('click', async () => {
+      const file = posterUploadInput.files && posterUploadInput.files[0];
+      if (!file) {
+        setStatus(posterUploadStatus, 'Velg et bilde først.', 'error');
+        return;
+      }
+
+      posterUploadButton.disabled = true;
+      setStatus(posterUploadStatus, 'Laster opp fallback-bilde til R2 ...');
+      try {
+        const uploaded = await uploadFileToR2(file, 'scrollytelling/posters');
+        state.story.scenes[index].poster = uploaded.public_url;
+        posterInput.value = uploaded.public_url;
+        previewVideo.poster = uploaded.public_url;
+        markStoryDirty('Fallback-bilde lastet opp til R2.');
+        setStatus(posterUploadStatus, `Bilde lastet opp: ${uploaded.public_url}`, 'ok');
+      } catch (error) {
+        setStatus(posterUploadStatus, `Bilde-upload feilet: ${parseError(error)}`, 'error');
+      } finally {
+        posterUploadButton.disabled = false;
+      }
+    });
 
     card.appendChild(head);
     card.appendChild(preview);
