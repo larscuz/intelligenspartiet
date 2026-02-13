@@ -2030,6 +2030,9 @@ body.modal-open {
     --scrolly-frame-h: clamp(260px, 56vw, 620px);
     grid-template-columns: 1fr;
     gap: 0.55rem;
+    display: block;
+    min-height: 0;
+    overflow: visible;
   }
 
   .scrolly-scene-nav {
@@ -2059,13 +2062,16 @@ body.modal-open {
 
   .scrolly-media {
     grid-column: 1;
-    position: relative;
-    top: auto;
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0.5rem;
     height: var(--scrolly-frame-h);
+    z-index: 5;
   }
 
   .scrolly-steps {
     grid-column: 1;
+    margin-top: calc(-1 * var(--scrolly-frame-h));
   }
 
   .video-modal-dialog.is-story-mode {

@@ -49,7 +49,7 @@ const videoStoryVolumeSlider = document.querySelector('#video-story-volume');
 const videoStoryAudioStatus = document.querySelector('#video-story-audio-status');
 
 const SCROLLY_CMS_PATH = 'assets/data/scrollytelling-welhaven-wergeland-cuzner.json';
-const SCROLLY_DEFAULT_TITLE = 'INTELLIGENSPARTIET - Welhaven, Wergeland og Cuzner';
+const SCROLLY_DEFAULT_TITLE = 'INTELLIGENSPARTIET';
 const SCROLLY_DEFAULT_META = 'Historiske strider, nåtidens arbeidsliv og et surrealistisk frampek';
 
 let scrollySteps = [];
@@ -818,6 +818,7 @@ function createScrollyLayerNode(scene, index) {
   videoNode.dataset.hasVideo = hasVideo ? 'true' : 'false';
 
   if (hasVideo) {
+    layerNode.classList.add('is-fallback');
     const sourceNode = document.createElement('source');
     sourceNode.src = scene.video;
     sourceNode.type = 'video/mp4';
@@ -1018,15 +1019,18 @@ function syncScrollyPlayback() {
 
   scrollySceneVideos.forEach((videoNode, idx) => {
     const distance = Math.abs(idx - scrollyActiveIndex);
+    const layerNode = scrollyVideoLayers[idx] || videoNode.closest('.scrolly-video-layer');
     videoNode.preload = distance <= 1 ? 'auto' : 'metadata';
 
     const hasVideo = videoNode.dataset.hasVideo !== 'false';
     if (!hasVideo) {
+      if (layerNode) layerNode.classList.add('is-fallback');
       videoNode.pause();
       return;
     }
 
     if (!autoplay) {
+      if (layerNode) layerNode.classList.add('is-fallback');
       videoNode.pause();
       setVideoMutedState(videoNode, true);
       if (videoNode.currentTime > 0.01) {
@@ -1045,16 +1049,31 @@ function syncScrollyPlayback() {
       videoNode.volume = shouldMute ? 0 : scrollyVolume;
       videoNode.autoplay = true;
       videoNode.playsInline = true;
+      videoNode.setAttribute('playsinline', '');
+      videoNode.setAttribute('webkit-playsinline', '');
+
+      if (layerNode && videoNode.readyState < 2) {
+        layerNode.classList.add('is-fallback');
+      }
+
       if (videoNode.readyState < 2) {
         videoNode.load();
       }
+
       const playback = videoNode.play();
       if (playback) {
-        playback.catch(() => {
-          if (scrollySoundEnabled) {
-            setScrollyAudioStatus('Trykk Lyd: På for å aktivere lyd i denne scenen.');
-          }
-        });
+        playback
+          .then(() => {
+            if (layerNode && videoNode.readyState >= 2) {
+              layerNode.classList.remove('is-fallback');
+            }
+          })
+          .catch(() => {
+            if (layerNode) layerNode.classList.add('is-fallback');
+            if (scrollySoundEnabled) {
+              setScrollyAudioStatus('Trykk Lyd: På for å aktivere lyd i denne scenen.');
+            }
+          });
       }
       return;
     }
@@ -1252,6 +1271,9 @@ function initScrollytelling() {
       if (layerNode) layerNode.classList.add('is-fallback');
     });
     videoNode.addEventListener('stalled', () => {
+      if (layerNode) layerNode.classList.add('is-fallback');
+    });
+    videoNode.addEventListener('waiting', () => {
       if (layerNode) layerNode.classList.add('is-fallback');
     });
   });
