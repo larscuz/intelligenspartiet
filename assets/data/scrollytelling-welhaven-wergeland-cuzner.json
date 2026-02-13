@@ -1,45 +1,45 @@
 {
-  "updated_at": "2026-02-13T09:45:00+01:00",
+  "updated_at": "2026-02-13T08:52:33.325Z",
   "section_title": "INTELLIGENSPARTIET - Welhaven, Wergeland og Cuzner",
   "section_meta": "Historiske strider, nåtidens arbeidsliv og et surrealistisk frampek",
   "scenes": [
     {
       "kicker": "Scene 1",
+      "step_title": "Vill offentlighet",
+      "step_text": "Folk buet, kastet mat og ropte. Teateret ble en arena for sosial makt, smakskamp og nasjonal selviscenesettelse.",
       "title": "Et teater i kok",
       "body": "Christiania Theater åpnet i 1827, og i 1830-årene var salen kjent for pipekonserter, jubel og høylytte protester.",
       "caption": "Publikumet i 1830-årenes Christiania var alt annet enn stille.",
-      "step_title": "Vill offentlighet",
-      "step_text": "Folk buet, klappet og ropte. Teateret ble en arena for sosial makt, smakskamp og nasjonal selviscenesettelse.",
       "video": "https://larscuzner.com/static/_upload/1ChristTheater.mp4",
       "poster": "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=1600&q=80"
     },
     {
       "kicker": "Scene 2",
+      "step_title": "Norskhetspartiet",
+      "step_text": "For Wergelands krets var teaterbråket et tegn på politisk liv: bred deltakelse og nasjonal mobilisering nedenfra.",
       "title": "Wergeland og Norskhetspartiet",
       "body": "Henrik Wergeland omfavnet den folkelige energien og kjempet for en tydelig norsk kultur, språk og offentlighet gjennom Norskhetspartiet, også kalt Patriotene.",
       "caption": "Norskhetspartiet, ofte kalt Patriotene, samlet Wergelands tilhengere i 1830-årene.",
-      "step_title": "Norskhetspartiet",
-      "step_text": "For Wergelands krets var teaterbråket et tegn på politisk liv: bred deltakelse og nasjonal mobilisering nedenfra.",
       "video": "https://larscuzner.com/static/_upload/2ChristTheater.mp4",
       "poster": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1600&q=80"
     },
     {
       "kicker": "Scene 3",
+      "step_title": "Motreaksjonen",
+      "step_text": "Intelligenspartiet så den samme støyen som forfall. De ville ha disiplin, elitestyrt reform og kulturell kontroll.",
       "title": "Welhaven og Intelligenspartiet",
       "body": "Johan Sebastian Welhaven svarte med krav om dannelse, orden og orientering mot den europeiske embets- og kultursfæren.",
       "caption": "Welhaven sto i hard offentlig feide med Wergeland gjennom 1830-årene.",
-      "step_title": "Motreaksjonen",
-      "step_text": "Intelligenspartiet så den samme støyen som forfall. De ville ha disiplin, elitestyrt reform og kulturell kontroll.",
       "video": "https://larscuzner.com/static/_upload/3ChristTheater.mp4",
       "poster": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1600&q=80"
     },
     {
       "kicker": "Scene 4",
+      "step_title": "Omdannelse",
+      "step_text": "Welhaven og Wergeland blir her aktive figurer i et moderne AI-drama om makt, arbeid og demokratisk kontroll.",
       "title": "Fra 1830-tallet til Cuzners omdannelse",
       "body": "Kulturstriden var en historisk forløper for senere partilinjer. I dagens prosjekt brukes den som råmateriale for å forstå AI, arbeidsmarked og hvem som bærer risiko når samfunn bygges om.",
       "caption": "Fortidens språkstrid og elitestyring speiles i samtidens konflikt om teknologi, arbeid og demokratisk kontroll.",
-      "step_title": "Omdannelse",
-      "step_text": "Welhaven og Wergeland blir her aktive figurer i et moderne AI-drama om makt, arbeid og demokratisk kontroll.",
       "video": "https://larscuzner.com/static/_upload/4ChristTheater.mp4",
       "poster": "https://images.unsplash.com/photo-1523861751938-1218bc347f2d?auto=format&fit=crop&w=1600&q=80"
     }
