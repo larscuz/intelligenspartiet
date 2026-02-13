@@ -1262,18 +1262,18 @@ video {
 
 .scrolly-scene-thumb-kicker {
   margin: 0;
-  font-size: 0.64rem;
+  font-size: 0.58rem;
   font-weight: 800;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.78);
 }
 
 .scrolly-scene-thumb-title {
   margin: 0;
-  font-size: 0.91rem;
+  font-size: 0.82rem;
   font-weight: 800;
-  line-height: 1.08;
+  line-height: 1.04;
   color: #ffffff;
 }
 
@@ -2297,7 +2297,7 @@ body.modal-open {
   }
 
   .scrolly-scene-thumb-title {
-    font-size: 0.82rem;
+    font-size: 0.74rem;
   }
 
   .scrolly-audio-panel {
