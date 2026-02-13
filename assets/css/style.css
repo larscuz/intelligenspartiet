@@ -623,6 +623,28 @@ video {
   padding: 1rem;
 }
 
+.scrolly-story {
+  background: transparent;
+  border: 0;
+  backdrop-filter: none;
+  padding: 0;
+}
+
+.scrolly-story .section-headline-row {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: linear-gradient(120deg, rgba(6, 10, 18, 0.78), rgba(12, 17, 28, 0.72));
+}
+
+.scrolly-story .section-headline-row h2 {
+  color: #ffffff;
+}
+
+.scrolly-story .news-meta {
+  color: rgba(235, 241, 251, 0.84);
+}
+
 .video-world {
   background:
     linear-gradient(150deg, rgba(4, 8, 14, 0.92), rgba(12, 18, 29, 0.87)),
@@ -1050,12 +1072,12 @@ video {
 }
 
 .scrolly-layout {
-  --scrolly-frame-h: min(82vh, 860px);
-  margin-top: 1rem;
+  --scrolly-frame-h: clamp(360px, 56.25vw, 720px);
+  margin-top: 0.75rem;
   position: relative;
   width: 100%;
   margin-left: 0;
-  min-height: calc(var(--scrolly-frame-h) + 88vh);
+  min-height: calc(var(--scrolly-frame-h) + 72vh);
 }
 
 .scrolly-media {
@@ -1953,7 +1975,7 @@ body.modal-open {
   }
 
   .scrolly-layout {
-    --scrolly-frame-h: 72vh;
+    --scrolly-frame-h: clamp(300px, 56vw, 560px);
   }
 
   .scrolly-step {
@@ -2029,7 +2051,7 @@ body.modal-open {
 
 @media (max-width: 540px) {
   .scrolly-layout {
-    --scrolly-frame-h: 64vh;
+    --scrolly-frame-h: clamp(240px, 56vw, 420px);
   }
 
   .scrolly-step {
