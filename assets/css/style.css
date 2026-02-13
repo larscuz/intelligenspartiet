@@ -268,38 +268,6 @@ video {
   gap: 1.5rem;
 }
 
-.page > #scrollytelling {
-  order: 1;
-}
-
-.page > .video-world {
-  order: 2;
-}
-
-.page > .origin-feature {
-  order: 3;
-}
-
-.page > .lead-grid {
-  order: 4;
-}
-
-#wire {
-  order: 5;
-}
-
-#video {
-  order: 6;
-}
-
-#prompts {
-  order: 7;
-}
-
-#plattform {
-  order: 8;
-}
-
 .media-belt {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
