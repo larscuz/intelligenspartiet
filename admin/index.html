@@ -34,6 +34,7 @@
 
   <nav class="section-nav admin-nav" aria-label="Adminseksjoner">
     <a href="#story-cms">Scrollytelling-CMS</a>
+    <a href="#prompt-cms">Kling promptbank</a>
     <a href="#cms">Nyhets-CMS</a>
     <a href="#auth">Innlogging</a>
     <a href="#editor">Filredigering</a>
@@ -72,6 +73,35 @@
 
       <div class="actions">
         <button id="story-save" type="button" disabled>Lagre scrollytelling til GitHub</button>
+      </div>
+    </section>
+
+    <section id="prompt-cms" class="card prompt-cms-card">
+      <div class="cms-head">
+        <h2>Kling 3.0 promptbank</h2>
+        <p>Visuell redigering av <code>assets/data/kling3-prompts.json</code>.</p>
+      </div>
+
+      <div class="editor-toolbar">
+        <button id="prompt-load" type="button" disabled>Last promptbank</button>
+        <button id="prompt-add" type="button" disabled>Legg til prompt</button>
+      </div>
+
+      <label for="prompt-commit-message">Commit-melding</label>
+      <input id="prompt-commit-message" type="text" value="Admin CMS update: Kling promptbank" />
+
+      <label for="prompt-model">Standardmodell</label>
+      <input id="prompt-model" type="text" disabled />
+
+      <div class="cms-meta-row">
+        <p id="prompt-cms-meta" class="status">Logg inn for å laste promptbank-CMS.</p>
+        <p id="prompt-cms-status" class="status"></p>
+      </div>
+
+      <div id="prompt-cms-list" class="cms-list" aria-live="polite"></div>
+
+      <div class="actions">
+        <button id="prompt-save" type="button" disabled>Lagre promptbank til GitHub</button>
       </div>
     </section>
 

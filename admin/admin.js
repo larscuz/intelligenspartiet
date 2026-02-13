@@ -18,6 +18,8 @@ const CMS_TONE_OPTIONS = ['replacement_anxiety', 'reskilling', 'neutral'];
 const STORY_PATH = 'assets/data/scrollytelling-welhaven-wergeland-cuzner.json';
 const STORY_DEFAULT_TITLE = 'INTELLIGENSPARTIET - Welhaven, Wergeland og Cuzner';
 const STORY_DEFAULT_META = 'Historiske strider, nåtidens arbeidsliv og et surrealistisk frampek';
+const PROMPT_PATH = 'assets/data/kling3-prompts.json';
+const PROMPT_DEFAULT_MODEL = 'Kling 3.0';
 
 const state = {
   currentPath: FILE_OPTIONS[0],
@@ -42,6 +44,15 @@ const state = {
     sectionTitle: STORY_DEFAULT_TITLE,
     sectionMeta: STORY_DEFAULT_META,
     scenes: [],
+    dirty: false,
+  },
+  prompt: {
+    loaded: false,
+    sha: '',
+    branch: 'main',
+    updatedAt: null,
+    model: PROMPT_DEFAULT_MODEL,
+    prompts: [],
     dirty: false,
   },
 };
@@ -92,6 +103,15 @@ const storyMetaInput = document.querySelector('#story-meta-input');
 const storyListNode = document.querySelector('#story-list');
 const storyMetaNode = document.querySelector('#story-meta');
 const storyStatusNode = document.querySelector('#story-status');
+
+const promptLoadButton = document.querySelector('#prompt-load');
+const promptAddButton = document.querySelector('#prompt-add');
+const promptSaveButton = document.querySelector('#prompt-save');
+const promptCommitMessageInput = document.querySelector('#prompt-commit-message');
+const promptModelInput = document.querySelector('#prompt-model');
+const promptListNode = document.querySelector('#prompt-cms-list');
+const promptMetaNode = document.querySelector('#prompt-cms-meta');
+const promptStatusNode = document.querySelector('#prompt-cms-status');
 
 function setStatus(node, message, kind = '') {
   if (!node) return;
@@ -199,6 +219,39 @@ function createEmptyStoryScene(index = 0) {
   };
 }
 
+function normalizePromptItem(item, index = 0) {
+  const promptNumber = index + 1;
+  const rawDuration = Number(item && item.duration_sec);
+  const durationSec = Number.isFinite(rawDuration)
+    ? Math.max(1, Math.round(rawDuration))
+    : 8;
+
+  return {
+    id: String(item && item.id ? item.id : `prompt-${String(promptNumber).padStart(2, '0')}`).trim(),
+    placement: String(item && item.placement ? item.placement : `Plassering ${promptNumber}`).trim(),
+    title: String(item && item.title ? item.title : '').trim(),
+    model: String(item && item.model ? item.model : state.prompt.model || PROMPT_DEFAULT_MODEL).trim() || PROMPT_DEFAULT_MODEL,
+    duration_sec: durationSec,
+    aspect_ratio: String(item && item.aspect_ratio ? item.aspect_ratio : '16:9').trim() || '16:9',
+    prompt: String(item && item.prompt ? item.prompt : '').trim(),
+    negative_prompt: String(item && item.negative_prompt ? item.negative_prompt : '').trim(),
+  };
+}
+
+function createEmptyPromptItem(index = 0) {
+  const promptNumber = index + 1;
+  return {
+    id: `prompt-${String(promptNumber).padStart(2, '0')}`,
+    placement: `Plassering ${promptNumber}`,
+    title: '',
+    model: state.prompt.model || PROMPT_DEFAULT_MODEL,
+    duration_sec: 8,
+    aspect_ratio: '16:9',
+    prompt: '',
+    negative_prompt: '',
+  };
+}
+
 async function apiRequest(method, path, payload) {
   const options = {
     method,
@@ -261,6 +314,7 @@ function updateCmsActionState() {
   const loggedIn = state.authenticated;
   const cmsLoaded = loggedIn && state.cms.loaded;
   const storyLoaded = loggedIn && state.story.loaded;
+  const promptLoaded = loggedIn && state.prompt.loaded;
 
   if (cmsLoadButton) cmsLoadButton.disabled = !loggedIn;
   if (cmsCommitMessageInput) cmsCommitMessageInput.disabled = !loggedIn;
@@ -275,6 +329,12 @@ function updateCmsActionState() {
   if (storyMetaInput) storyMetaInput.disabled = !storyLoaded;
   if (storyAddButton) storyAddButton.disabled = !storyLoaded;
   if (storySaveButton) storySaveButton.disabled = !storyLoaded || !state.story.dirty;
+
+  if (promptLoadButton) promptLoadButton.disabled = !loggedIn;
+  if (promptCommitMessageInput) promptCommitMessageInput.disabled = !loggedIn;
+  if (promptModelInput) promptModelInput.disabled = !promptLoaded;
+  if (promptAddButton) promptAddButton.disabled = !promptLoaded;
+  if (promptSaveButton) promptSaveButton.disabled = !promptLoaded || !state.prompt.dirty;
 }
 
 function resetCmsState() {
@@ -313,6 +373,24 @@ function resetStoryState() {
   updateCmsActionState();
 }
 
+function resetPromptState() {
+  state.prompt = {
+    loaded: false,
+    sha: '',
+    branch: 'main',
+    updatedAt: null,
+    model: PROMPT_DEFAULT_MODEL,
+    prompts: [],
+    dirty: false,
+  };
+
+  if (promptModelInput) promptModelInput.value = '';
+  if (promptListNode) promptListNode.innerHTML = '';
+  setStatus(promptMetaNode, 'Logg inn for å laste promptbank-CMS.');
+  setStatus(promptStatusNode, '');
+  updateCmsActionState();
+}
+
 function setEditorEnabled(enabled) {
   state.authenticated = enabled;
 
@@ -334,6 +412,7 @@ function setEditorEnabled(enabled) {
     setStatus(saveStatus, '');
     resetCmsState();
     resetStoryState();
+    resetPromptState();
   }
 }
 
@@ -715,6 +794,289 @@ function assignNorskCategoryToAll() {
   }));
   renderCmsList();
   markCmsDirty(`Alle saker er flyttet til kategorien "${CMS_DEFAULT_CATEGORY}".`);
+}
+
+function markPromptDirty(message = 'Ulagrede prompt-endringer.') {
+  state.prompt.dirty = true;
+  setStatus(promptStatusNode, message);
+  updatePromptMeta();
+  updateCmsActionState();
+}
+
+function updatePromptMeta() {
+  if (!promptMetaNode) return;
+
+  if (!state.prompt.loaded) {
+    setStatus(promptMetaNode, 'Logg inn for å laste promptbank-CMS.');
+    return;
+  }
+
+  const total = state.prompt.prompts.length;
+  const updated = formatNorwegianDate(state.prompt.updatedAt);
+  const dirtyNote = state.prompt.dirty ? ' Ulagrede endringer.' : '';
+  setStatus(promptMetaNode, `Prompter: ${total}. Sist oppdatert: ${updated}.${dirtyNote}`);
+}
+
+function renderPromptList() {
+  if (!promptListNode) return;
+  promptListNode.innerHTML = '';
+
+  if (!state.prompt.loaded) {
+    const placeholder = document.createElement('p');
+    placeholder.className = 'empty-state small';
+    placeholder.textContent = 'Logg inn og trykk "Last promptbank" for visuell redigering.';
+    promptListNode.appendChild(placeholder);
+    return;
+  }
+
+  if (!state.prompt.prompts.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty-state small';
+    empty.textContent = 'Ingen prompter tilgjengelig. Legg til ny prompt.';
+    promptListNode.appendChild(empty);
+    return;
+  }
+
+  state.prompt.prompts.forEach((rawPrompt, index) => {
+    const prompt = normalizePromptItem(rawPrompt, index);
+    state.prompt.prompts[index] = prompt;
+
+    const card = document.createElement('article');
+    card.className = 'cms-item';
+
+    const head = document.createElement('div');
+    head.className = 'cms-item-head';
+
+    const label = document.createElement('p');
+    label.className = 'cms-item-label';
+    label.textContent = `Prompt ${index + 1} · ${prompt.id || 'uten id'}`;
+
+    const actions = document.createElement('div');
+    actions.className = 'cms-actions';
+
+    const moveUpButton = document.createElement('button');
+    moveUpButton.type = 'button';
+    moveUpButton.textContent = 'Flytt opp';
+    moveUpButton.disabled = index === 0;
+    moveUpButton.addEventListener('click', () => {
+      const previous = state.prompt.prompts[index - 1];
+      state.prompt.prompts[index - 1] = state.prompt.prompts[index];
+      state.prompt.prompts[index] = previous;
+      renderPromptList();
+      markPromptDirty('Prompt flyttet opp.');
+    });
+
+    const moveDownButton = document.createElement('button');
+    moveDownButton.type = 'button';
+    moveDownButton.textContent = 'Flytt ned';
+    moveDownButton.disabled = index === state.prompt.prompts.length - 1;
+    moveDownButton.addEventListener('click', () => {
+      const next = state.prompt.prompts[index + 1];
+      state.prompt.prompts[index + 1] = state.prompt.prompts[index];
+      state.prompt.prompts[index] = next;
+      renderPromptList();
+      markPromptDirty('Prompt flyttet ned.');
+    });
+
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.textContent = 'Slett';
+    deleteButton.disabled = state.prompt.prompts.length === 1;
+    deleteButton.addEventListener('click', () => {
+      state.prompt.prompts.splice(index, 1);
+      renderPromptList();
+      markPromptDirty('Prompt slettet.');
+    });
+
+    actions.appendChild(moveUpButton);
+    actions.appendChild(moveDownButton);
+    actions.appendChild(deleteButton);
+    head.appendChild(label);
+    head.appendChild(actions);
+
+    const grid = document.createElement('div');
+    grid.className = 'cms-item-grid';
+
+    const idInput = document.createElement('input');
+    idInput.type = 'text';
+    idInput.value = prompt.id;
+    idInput.addEventListener('input', () => {
+      state.prompt.prompts[index].id = idInput.value.trim();
+      label.textContent = `Prompt ${index + 1} · ${state.prompt.prompts[index].id || 'uten id'}`;
+      markPromptDirty();
+    });
+    grid.appendChild(createField('ID', idInput));
+
+    const placementInput = document.createElement('input');
+    placementInput.type = 'text';
+    placementInput.value = prompt.placement;
+    placementInput.addEventListener('input', () => {
+      state.prompt.prompts[index].placement = placementInput.value;
+      markPromptDirty();
+    });
+    grid.appendChild(createField('Plassering', placementInput));
+
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.value = prompt.title;
+    titleInput.addEventListener('input', () => {
+      state.prompt.prompts[index].title = titleInput.value;
+      markPromptDirty();
+    });
+    grid.appendChild(createField('Tittel', titleInput));
+
+    const modelInput = document.createElement('input');
+    modelInput.type = 'text';
+    modelInput.value = prompt.model;
+    modelInput.addEventListener('input', () => {
+      state.prompt.prompts[index].model = modelInput.value;
+      markPromptDirty();
+    });
+    grid.appendChild(createField('Modell', modelInput));
+
+    const durationInput = document.createElement('input');
+    durationInput.type = 'number';
+    durationInput.min = '1';
+    durationInput.step = '1';
+    durationInput.value = String(prompt.duration_sec);
+    durationInput.addEventListener('input', () => {
+      const parsed = Number(durationInput.value);
+      state.prompt.prompts[index].duration_sec = Number.isFinite(parsed)
+        ? Math.max(1, Math.round(parsed))
+        : 1;
+      markPromptDirty();
+    });
+    grid.appendChild(createField('Varighet (sek)', durationInput));
+
+    const ratioInput = document.createElement('input');
+    ratioInput.type = 'text';
+    ratioInput.value = prompt.aspect_ratio;
+    ratioInput.addEventListener('input', () => {
+      state.prompt.prompts[index].aspect_ratio = ratioInput.value;
+      markPromptDirty();
+    });
+    grid.appendChild(createField('Aspect ratio', ratioInput));
+
+    const promptArea = document.createElement('textarea');
+    promptArea.value = prompt.prompt;
+    promptArea.addEventListener('input', () => {
+      state.prompt.prompts[index].prompt = promptArea.value;
+      markPromptDirty();
+    });
+    grid.appendChild(createField('Prompt', promptArea, true));
+
+    const negativeArea = document.createElement('textarea');
+    negativeArea.value = prompt.negative_prompt;
+    negativeArea.addEventListener('input', () => {
+      state.prompt.prompts[index].negative_prompt = negativeArea.value;
+      markPromptDirty();
+    });
+    grid.appendChild(createField('Negative prompt', negativeArea, true));
+
+    card.appendChild(head);
+    card.appendChild(grid);
+    promptListNode.appendChild(card);
+  });
+}
+
+async function loadPromptCms() {
+  if (!state.authenticated) return;
+
+  setStatus(promptStatusNode, 'Laster promptbank ...');
+  try {
+    const file = await apiRequest('GET', `/api/repo-file?path=${encodeURIComponent(PROMPT_PATH)}`);
+    const parsed = JSON.parse(file.content || '{}');
+    const prompts = Array.isArray(parsed.prompts)
+      ? parsed.prompts.map((item, index) => normalizePromptItem(item, index))
+      : [];
+
+    state.prompt.loaded = true;
+    state.prompt.sha = file.sha || '';
+    state.prompt.branch = file.branch || 'main';
+    state.prompt.updatedAt = parsed.updated_at || null;
+    state.prompt.model = String(parsed.model || PROMPT_DEFAULT_MODEL).trim() || PROMPT_DEFAULT_MODEL;
+    state.prompt.prompts = prompts.length ? prompts : [createEmptyPromptItem(0)];
+    state.prompt.dirty = false;
+
+    if (promptModelInput) promptModelInput.value = state.prompt.model;
+
+    renderPromptList();
+    updatePromptMeta();
+    updateCmsActionState();
+    setStatus(promptStatusNode, 'Promptbank lastet.', 'ok');
+  } catch (error) {
+    setStatus(promptStatusNode, `Kunne ikke laste promptbank: ${parseError(error)}`, 'error');
+  }
+}
+
+function buildPromptPayload() {
+  const cleanedPrompts = state.prompt.prompts.map((item, index) => normalizePromptItem(item, index));
+  const model = String(state.prompt.model || PROMPT_DEFAULT_MODEL).trim() || PROMPT_DEFAULT_MODEL;
+
+  return {
+    updated_at: new Date().toISOString(),
+    model,
+    prompts: cleanedPrompts.map((item) => ({
+      id: item.id,
+      placement: item.placement,
+      title: item.title,
+      model: item.model || model,
+      duration_sec: item.duration_sec,
+      aspect_ratio: item.aspect_ratio,
+      prompt: item.prompt,
+      negative_prompt: item.negative_prompt,
+    })),
+  };
+}
+
+async function savePromptCms() {
+  if (!state.authenticated || !state.prompt.loaded) return;
+  if (!state.prompt.sha) {
+    setStatus(promptStatusNode, 'Mangler SHA. Last promptbank på nytt før lagring.', 'error');
+    return;
+  }
+
+  const message = (promptCommitMessageInput && promptCommitMessageInput.value.trim())
+    || 'Admin CMS update: Kling promptbank';
+
+  setStatus(promptStatusNode, 'Lagrer promptbank til GitHub ...');
+
+  try {
+    const payload = buildPromptPayload();
+    const response = await apiRequest('PUT', '/api/repo-file', {
+      path: PROMPT_PATH,
+      content: JSON.stringify(payload, null, 2),
+      sha: state.prompt.sha,
+      message,
+    });
+
+    state.prompt.sha = response.sha || '';
+    state.prompt.branch = response.branch || 'main';
+    state.prompt.updatedAt = payload.updated_at;
+    state.prompt.model = payload.model;
+    state.prompt.prompts = payload.prompts;
+    state.prompt.dirty = false;
+    updatePromptMeta();
+    updateCmsActionState();
+
+    if (state.currentPath === PROMPT_PATH && fileEditor) {
+      fileEditor.value = JSON.stringify(payload, null, 2);
+      state.sha = response.sha || state.sha;
+      setStatus(fileMeta, `Fil: ${PROMPT_PATH} | SHA: ${String(state.sha || '').slice(0, 10)} | Branch: ${state.prompt.branch}`);
+    }
+
+    const commitNote = response.commit_url ? ` Commit: ${response.commit_url}` : '';
+    setStatus(promptStatusNode, `Promptbank lagret.${commitNote}`, 'ok');
+  } catch (error) {
+    setStatus(promptStatusNode, `Promptbank-lagring feilet: ${parseError(error)}`, 'error');
+  }
+}
+
+function addPromptItem() {
+  if (!state.prompt.loaded) return;
+  state.prompt.prompts.push(createEmptyPromptItem(state.prompt.prompts.length));
+  renderPromptList();
+  markPromptDirty('Ny prompt lagt til.');
 }
 
 function markStoryDirty(message = 'Ulagrede scrollytelling-endringer.') {
@@ -1159,6 +1521,7 @@ async function refreshAuthStatus() {
       await loadFile(state.currentPath);
       await loadCms();
       await loadStoryCms();
+      await loadPromptCms();
     } else {
       setStatus(authStatus, '');
     }
@@ -1327,9 +1690,14 @@ function initKeyboardShortcut() {
 
     const target = event.target instanceof Element ? event.target : null;
     const insideStoryCms = Boolean(target && target.closest('#story-cms'));
+    const insidePromptCms = Boolean(target && target.closest('#prompt-cms'));
     const insideCms = Boolean(target && target.closest('#cms'));
     if (insideStoryCms && state.story.loaded) {
       saveStoryCms();
+      return;
+    }
+    if (insidePromptCms && state.prompt.loaded) {
+      savePromptCms();
       return;
     }
     if (insideCms && state.cms.loaded) {
@@ -1387,6 +1755,16 @@ function init() {
     storyMetaInput.addEventListener('input', () => {
       state.story.sectionMeta = String(storyMetaInput.value || '').trim();
       markStoryDirty();
+    });
+  }
+
+  if (promptLoadButton) promptLoadButton.addEventListener('click', loadPromptCms);
+  if (promptAddButton) promptAddButton.addEventListener('click', addPromptItem);
+  if (promptSaveButton) promptSaveButton.addEventListener('click', savePromptCms);
+  if (promptModelInput) {
+    promptModelInput.addEventListener('input', () => {
+      state.prompt.model = String(promptModelInput.value || '').trim() || PROMPT_DEFAULT_MODEL;
+      markPromptDirty();
     });
   }
 

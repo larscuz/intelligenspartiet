@@ -2214,7 +2214,6 @@ async function bootstrapPage() {
   initScrollySeriesActions();
   initVideoModal();
   loadNews();
-  loadPrompts();
 }
 
 bootstrapPage();

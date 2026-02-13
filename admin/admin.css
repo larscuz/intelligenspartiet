@@ -129,7 +129,8 @@ button:focus-visible {
 }
 
 #save-file,
-#cms-save {
+#cms-save,
+#prompt-save {
   background: var(--red);
   border-color: var(--red);
   color: #fff;
@@ -138,7 +139,9 @@ button:focus-visible {
 #save-file:hover,
 #save-file:focus-visible,
 #cms-save:hover,
-#cms-save:focus-visible {
+#cms-save:focus-visible,
+#prompt-save:hover,
+#prompt-save:focus-visible {
   background: var(--red-dark);
   border-color: var(--red-dark);
 }
