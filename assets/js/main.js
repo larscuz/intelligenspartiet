@@ -1,5 +1,6 @@
 const body = document.body;
 const timestampNode = document.querySelector('#timestamp');
+const scrollCue = document.querySelector('#scroll-cue');
 const yearNode = document.querySelector('#year');
 const menuToggle = document.querySelector('.menu-toggle');
 const navNode = document.querySelector('#main-nav');
@@ -427,6 +428,31 @@ function formatPublished(value) {
 function setTopClock() {
   if (!timestampNode) return;
   timestampNode.textContent = formatNow();
+}
+
+function initScrollCue() {
+  if (!(scrollCue instanceof HTMLElement)) return;
+
+  const hideCue = () => {
+    scrollCue.classList.add('is-hidden');
+    scrollCue.setAttribute('aria-hidden', 'true');
+    window.removeEventListener('scroll', onScroll, scrollListenerOptions);
+  };
+
+  const onScroll = () => {
+    if (window.scrollY > 6) hideCue();
+  };
+
+  const scrollListenerOptions = { passive: true };
+
+  if (window.scrollY > 6) {
+    hideCue();
+    return;
+  }
+
+  scrollCue.classList.remove('is-hidden');
+  scrollCue.setAttribute('aria-hidden', 'false');
+  window.addEventListener('scroll', onScroll, scrollListenerOptions);
 }
 
 function toneLabel(tone) {
@@ -1886,6 +1912,7 @@ setTopClock();
 window.setInterval(setTopClock, 30_000);
 
 async function bootstrapPage() {
+  initScrollCue();
   syncScrollyNodes();
   await loadScrollyContent();
   initScrollytelling();
