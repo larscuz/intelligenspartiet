@@ -107,11 +107,11 @@ video {
 }
 
 .scroll-cue {
-  position: fixed;
+  position: absolute;
   left: 50%;
-  bottom: 1rem;
+  bottom: 0.95rem;
   transform: translateX(-50%);
-  z-index: 12;
+  z-index: 4;
   display: grid;
   justify-items: center;
   gap: 0.32rem;
