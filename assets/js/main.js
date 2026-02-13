@@ -13,6 +13,7 @@ const promptListNode = document.querySelector('#prompt-list');
 const promptTemplateNode = document.querySelector('#prompt-item-template');
 const promptMetaNode = document.querySelector('#prompt-meta');
 const scrollyStory = document.querySelector('#scrollytelling');
+const scrollyLayout = document.querySelector('.scrolly-layout');
 const scrollyMedia = document.querySelector('.scrolly-media');
 const scrollySectionTitle = document.querySelector('#scrollytelling .section-headline-row h2');
 const scrollySectionMeta = document.querySelector('#scrollytelling .section-headline-row .news-meta');
@@ -24,6 +25,9 @@ const scrollyCounter = document.querySelector('#scrolly-counter');
 const scrollyAudioToggle = document.querySelector('#scrolly-audio-toggle');
 const scrollyVolumeSlider = document.querySelector('#scrolly-volume');
 const scrollyAudioStatus = document.querySelector('#scrolly-audio-status');
+const scrollySceneNav = document.querySelector('.scrolly-scene-nav');
+const scrollySceneMenu = document.querySelector('#scrolly-scene-menu');
+const scrollySceneMenuToggle = document.querySelector('#scrolly-scene-menu-toggle');
 const seriesHeroProgress = document.querySelector('#series-hero-progress');
 const seriesStartLink = document.querySelector('#series-start-link');
 const seriesResumeButton = document.querySelector('#series-resume-button');
@@ -278,6 +282,100 @@ function syncScrollyNodes() {
   scrollySceneVideos = scrollyVideoLayers
     .map((layer) => layer.querySelector('.scrolly-scene-video'))
     .filter((videoNode) => videoNode instanceof HTMLVideoElement);
+}
+
+function syncScrollySceneMenuActive() {
+  if (!(scrollySceneMenu instanceof HTMLElement)) return;
+  const sceneButtons = Array.from(scrollySceneMenu.querySelectorAll('.scrolly-scene-thumb'));
+  sceneButtons.forEach((button, index) => {
+    const isActive = index === scrollyActiveIndex;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-current', isActive ? 'true' : 'false');
+  });
+}
+
+function closeScrollySceneMenuOnMobile() {
+  if (!(scrollySceneNav instanceof HTMLElement)) return;
+  if (!window.matchMedia('(max-width: 1000px)').matches) return;
+  scrollySceneNav.classList.remove('is-open');
+  if (scrollySceneMenuToggle instanceof HTMLButtonElement) {
+    scrollySceneMenuToggle.setAttribute('aria-expanded', 'false');
+  }
+}
+
+function renderScrollySceneMenu(scenes = []) {
+  if (!(scrollySceneMenu instanceof HTMLElement)) return;
+  scrollySceneMenu.innerHTML = '';
+
+  const fragment = document.createDocumentFragment();
+  scenes.forEach((scene, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'scrolly-scene-thumb';
+    button.dataset.sceneIndex = String(index);
+    button.setAttribute('role', 'listitem');
+    button.setAttribute('aria-label', `Gå til ${scene.kicker || `scene ${index + 1}`}`);
+
+    const image = document.createElement('img');
+    image.className = 'scrolly-scene-thumb-image';
+    image.src = scene.poster || '';
+    image.alt = '';
+    image.loading = 'lazy';
+
+    const copy = document.createElement('div');
+    copy.className = 'scrolly-scene-thumb-copy';
+
+    const kicker = document.createElement('p');
+    kicker.className = 'scrolly-scene-thumb-kicker';
+    kicker.textContent = scene.kicker || `Scene ${index + 1}`;
+
+    const title = document.createElement('p');
+    title.className = 'scrolly-scene-thumb-title';
+    title.textContent = scene.step_title || scene.title || `Scene ${index + 1}`;
+
+    copy.appendChild(kicker);
+    copy.appendChild(title);
+    button.appendChild(image);
+    button.appendChild(copy);
+
+    button.addEventListener('click', () => {
+      jumpToScrollyScene(index);
+      closeScrollySceneMenuOnMobile();
+    });
+
+    fragment.appendChild(button);
+  });
+
+  scrollySceneMenu.appendChild(fragment);
+  syncScrollySceneMenuActive();
+}
+
+function syncScrollyFrameHeight() {
+  if (!(scrollyLayout instanceof HTMLElement)) return;
+  if (!(scrollyMedia instanceof HTMLElement)) return;
+
+  const layoutWidth = scrollyLayout.getBoundingClientRect().width;
+  if (!Number.isFinite(layoutWidth) || layoutWidth <= 0) return;
+
+  const isMobile = window.matchMedia('(max-width: 1000px)').matches;
+  let frameWidth = layoutWidth;
+
+  if (!isMobile && scrollySceneNav instanceof HTMLElement) {
+    const navWidth = scrollySceneNav.getBoundingClientRect().width;
+    const style = window.getComputedStyle(scrollyLayout);
+    const rawGap = parseFloat(style.columnGap || style.gap || '0');
+    const gap = Number.isFinite(rawGap) ? rawGap : 0;
+    frameWidth = layoutWidth - navWidth - gap;
+  }
+
+  if (!Number.isFinite(frameWidth) || frameWidth < 240) return;
+
+  let frameHeight = frameWidth * 9 / 16;
+  const maxHeight = window.innerHeight * (isMobile ? 0.68 : 0.72);
+  const minHeight = isMobile ? 220 : 320;
+  frameHeight = clamp(frameHeight, minHeight, maxHeight);
+
+  scrollyLayout.style.setProperty('--scrolly-frame-h', `${Math.round(frameHeight)}px`);
 }
 
 function clamp(value, min, max) {
@@ -791,6 +889,8 @@ function renderScrollyFromPayload(payload) {
     stepsNode.appendChild(createScrollyStepNode(scene, index));
   });
 
+  renderScrollySceneMenu(normalized.scenes);
+
   if (scrollyCaption) {
     scrollyCaption.textContent = normalized.scenes[0].caption || '';
   }
@@ -1028,6 +1128,24 @@ function initScrollySeriesActions() {
   }
 }
 
+function initScrollySceneMenu() {
+  if (!(scrollySceneNav instanceof HTMLElement)) return;
+  if (!(scrollySceneMenuToggle instanceof HTMLButtonElement)) return;
+
+  scrollySceneMenuToggle.addEventListener('click', () => {
+    const isOpen = scrollySceneNav.classList.toggle('is-open');
+    scrollySceneMenuToggle.setAttribute('aria-expanded', String(isOpen));
+  });
+
+  window.addEventListener('resize', () => {
+    if (!window.matchMedia('(max-width: 1000px)').matches) {
+      scrollySceneNav.classList.remove('is-open');
+      scrollySceneMenuToggle.setAttribute('aria-expanded', 'false');
+    }
+    syncScrollyFrameHeight();
+  });
+}
+
 function applyScrollyStep(step) {
   if (!(step instanceof HTMLElement)) return;
 
@@ -1050,6 +1168,7 @@ function applyScrollyStep(step) {
   scrollySteps.forEach((entry) => {
     entry.classList.toggle('is-active', entry === step);
   });
+  syncScrollySceneMenuActive();
 
   storeScrollyIndex(scrollyActiveIndex);
   updateSeriesHeroProgress();
@@ -1058,6 +1177,22 @@ function applyScrollyStep(step) {
 
 function initScrollytelling() {
   if (!scrollySteps.length) return;
+  syncScrollyFrameHeight();
+  window.requestAnimationFrame(syncScrollyFrameHeight);
+  window.setTimeout(syncScrollyFrameHeight, 120);
+
+  if (scrollySceneMenu instanceof HTMLElement && !scrollySceneMenu.children.length) {
+    const fallbackScenes = scrollySteps.map((stepNode, index) => {
+      const posterNode = scrollyVideoLayers[index] && scrollyVideoLayers[index].querySelector('.scrolly-scene-poster');
+      return {
+        kicker: stepNode.dataset.kicker || `Scene ${index + 1}`,
+        step_title: stepNode.querySelector('h3') && stepNode.querySelector('h3').textContent || '',
+        title: stepNode.dataset.title || '',
+        poster: String(posterNode && posterNode.getAttribute('src') || '').trim(),
+      };
+    });
+    renderScrollySceneMenu(fallbackScenes);
+  }
 
   if (scrollyVolumeSlider instanceof HTMLInputElement) {
     const initialVolume = Number(scrollyVolumeSlider.value);
@@ -1139,7 +1274,10 @@ function initScrollytelling() {
 
   updateScrollyInView();
   window.addEventListener('scroll', updateScrollyInView, { passive: true });
-  window.addEventListener('resize', updateScrollyInView);
+  window.addEventListener('resize', () => {
+    syncScrollyFrameHeight();
+    updateScrollyInView();
+  });
 
   const initialIndex = getStoredScrollyIndex();
   applyScrollyStep(scrollySteps[initialIndex] || scrollySteps[0]);
@@ -1915,6 +2053,7 @@ async function bootstrapPage() {
   initScrollCue();
   syncScrollyNodes();
   await loadScrollyContent();
+  initScrollySceneMenu();
   initScrollytelling();
   initScrollySeriesActions();
   initVideoModal();
