@@ -1,5 +1,6 @@
 const body = document.body;
 const timestampNode = document.querySelector('#timestamp');
+const scrollCue = document.querySelector('#scroll-cue');
 const yearNode = document.querySelector('#year');
 const menuToggle = document.querySelector('.menu-toggle');
 const navNode = document.querySelector('#main-nav');
@@ -8,9 +9,14 @@ const templateNode = document.querySelector('#news-item-template');
 const metaNode = document.querySelector('#news-meta');
 const filterButtons = Array.from(document.querySelectorAll('.filter'));
 const categoryFiltersNode = document.querySelector('#category-filters');
+const promptListNode = document.querySelector('#prompt-list');
+const promptTemplateNode = document.querySelector('#prompt-item-template');
+const promptMetaNode = document.querySelector('#prompt-meta');
 const scrollyStory = document.querySelector('#scrollytelling');
-const scrollySteps = Array.from(document.querySelectorAll('.scrolly-step'));
+const scrollyLayout = document.querySelector('.scrolly-layout');
 const scrollyMedia = document.querySelector('.scrolly-media');
+const scrollySectionTitle = document.querySelector('#scrollytelling .section-headline-row h2');
+const scrollySectionMeta = document.querySelector('#scrollytelling .section-headline-row .news-meta');
 const scrollyKicker = document.querySelector('#scrolly-kicker');
 const scrollyTitle = document.querySelector('#scrolly-title');
 const scrollyBody = document.querySelector('#scrolly-body');
@@ -19,10 +25,10 @@ const scrollyCounter = document.querySelector('#scrolly-counter');
 const scrollyAudioToggle = document.querySelector('#scrolly-audio-toggle');
 const scrollyVolumeSlider = document.querySelector('#scrolly-volume');
 const scrollyAudioStatus = document.querySelector('#scrolly-audio-status');
-const scrollyVideoLayers = Array.from(document.querySelectorAll('.scrolly-video-layer'));
-const scrollySceneVideos = scrollyVideoLayers
-  .map((layer) => layer.querySelector('.scrolly-scene-video'))
-  .filter((videoNode) => videoNode instanceof HTMLVideoElement);
+const scrollySceneNav = document.querySelector('.scrolly-scene-nav');
+const scrollySceneMenu = document.querySelector('#scrolly-scene-menu');
+const scrollySceneMenuToggle = document.querySelector('#scrolly-scene-menu-toggle');
+const scrollyFullscreenToggle = document.querySelector('#scrolly-fullscreen-toggle');
 const seriesHeroProgress = document.querySelector('#series-hero-progress');
 const seriesStartLink = document.querySelector('#series-start-link');
 const seriesResumeButton = document.querySelector('#series-resume-button');
@@ -31,6 +37,26 @@ const videoModalTitle = document.querySelector('#video-modal-title');
 const videoModalPlayer = document.querySelector('#video-modal-player');
 const videoModalClose = document.querySelector('#video-modal-close');
 const videoModalBackdrop = document.querySelector('[data-close-video-modal]');
+const videoModalDialog = document.querySelector('.video-modal-dialog');
+const videoModalStory = document.querySelector('#video-modal-story');
+const videoStoryKicker = document.querySelector('#video-story-kicker');
+const videoStoryProgress = document.querySelector('#video-story-progress');
+const videoStoryPlayer = document.querySelector('#video-story-player');
+const videoStoryCaption = document.querySelector('#video-story-caption');
+const videoStoryScroll = document.querySelector('#video-story-scroll');
+const videoStoryStepTemplate = document.querySelector('#video-story-step-template');
+const videoStoryAudioToggle = document.querySelector('#video-story-audio-toggle');
+const videoStoryVolumeSlider = document.querySelector('#video-story-volume');
+const videoStoryAudioStatus = document.querySelector('#video-story-audio-status');
+
+const SCROLLY_CMS_PATH = 'assets/data/scrollytelling-welhaven-wergeland-cuzner.json';
+const SCROLLY_DEFAULT_TITLE = 'INTELLIGENSPARTIET';
+const SCROLLY_DEFAULT_META = 'Historiske strider, nåtidens arbeidsliv og et surrealistisk frampek';
+const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+
+let scrollySteps = [];
+let scrollyVideoLayers = [];
+let scrollySceneVideos = [];
 
 const IMAGE_POOL = [
   'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
@@ -57,9 +83,172 @@ const VIDEO_POOL = [
   'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
 ];
 
+const VIDEO_STORIES = {
+  'kontorjobber-under-ai-press': {
+    id: 'kontorjobber-under-ai-press',
+    title: 'Kontorjobber under AI-press',
+    kicker: 'Scrollytelling',
+    scenes: [
+      {
+        kicker: 'Scene 1',
+        title: 'Kontorarbeid er i frontlinjen',
+        body: 'IMF anslår at rundt 60 prosent av jobbene i avanserte økonomier er eksponert for AI. Kontor- og analysearbeid ligger ofte høyest fordi oppgavene er tekst- og datadrevne.',
+        caption: 'Første tegn er ofte ikke masseoppsigelser, men færre nyansettelser og omfordeling av oppgaver.',
+        video: 'https://larscuzner.com/static/Luddites.mp4',
+        links: [
+          { href: '/fakta/kontorjobber-ai-press.html', label: 'Faktaside: Kontorjobber' },
+          { href: '#wire', label: 'Se AI-jobbwire' },
+        ],
+      },
+      {
+        kicker: 'Scene 2',
+        title: 'Mest transformasjon, ikke ren erstatning',
+        body: 'ILO og NASK viser at omtrent en fjerdedel av jobber globalt er eksponert for generativ AI, men hovedbildet er oppgaveendring. Yrker med rutinepreget administrasjon påvirkes først.',
+        caption: 'Mange roller blir ikke borte over natten, men innholdet i jobben blir annerledes.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        links: [
+          { href: '/fakta/kontorjobber-ai-press.html#ilo', label: 'Kildepunkt: ILO 2025' },
+          { href: '/fakta/index.html', label: 'Åpne faktabibliotek' },
+        ],
+      },
+      {
+        kicker: 'Scene 3',
+        title: 'Bedrifter planlegger både kutt og opplæring',
+        body: 'WEFs Future of Jobs 2025 finner at 41 prosent av arbeidsgivere forventer mindre bemanning i enkelte roller på grunn av AI, samtidig som 77 prosent satser på oppkvalifisering.',
+        caption: 'Dobbel bevegelse: noen funksjoner krymper, nye oppgaver vokser.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+        links: [
+          { href: '/fakta/kontorjobber-ai-press.html#wef', label: 'Kildepunkt: WEF 2025' },
+          { href: '#plattform', label: 'Politisk respons' },
+        ],
+      },
+      {
+        kicker: 'Scene 4',
+        title: 'Hva betyr dette for trygghet',
+        body: 'Hvis gevinsten tas ut raskere enn omskoleringen bygges, øker erstatningsangsten. Derfor trengs forutsigbare overgangsløp, etter- og videreutdanning og innsyn i AI-beslutninger.',
+        caption: 'Malen for video 4: vis overgangen fra usikkerhet til konkret handlingsrom.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+        links: [
+          { href: '#plattform', label: 'Les overgangsfondet' },
+          { href: '/fakta/kontorjobber-ai-press.html#kilder', label: 'Alle kilder' },
+        ],
+      },
+    ],
+  },
+  'omstilling-i-offentlig-sektor': {
+    id: 'omstilling-i-offentlig-sektor',
+    title: 'Omstilling i offentlig sektor',
+    kicker: 'Live-desk',
+    scenes: [
+      {
+        kicker: 'Scene 1',
+        title: 'Fra pilot til tjeneste',
+        body: 'Offentlig sektor tester AI i saksflyt, veiledning og analyse. Utfordringen er å flytte fra enkeltpiloter til trygg drift med sporbarhet og ansvar.',
+        caption: 'Startscenen etablerer tempoet: forventninger om bedre tjenester, men strenge krav til tillit.',
+        video: 'https://larscuzner.com/static/statsvitenskap.mp4',
+        links: [
+          { href: '/fakta/offentlig-sektor-omstilling.html', label: 'Faktaside: Offentlig sektor' },
+          { href: '#wire', label: 'Se siste saker' },
+        ],
+      },
+      {
+        kicker: 'Scene 2',
+        title: 'Bruk er fortsatt ujevn',
+        body: 'Digdir peker på at KI-bruk i offentlig sektor fortsatt er begrenset, men med tydelig utvikling. I kartleggingen sank andelen virksomheter med svært liten bruk fra 55,4 prosent i 2021 til 35,5 prosent i 2023.',
+        caption: 'Omstilling handler ofte om kapasitet, innkjøp og kompetanse - ikke bare teknologi.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+        links: [
+          { href: '/fakta/offentlig-sektor-omstilling.html#digdir', label: 'Kildepunkt: Digdir' },
+          { href: '/fakta/index.html', label: 'Åpne faktabibliotek' },
+        ],
+      },
+      {
+        kicker: 'Scene 3',
+        title: 'Nasjonale mål styrer retningen',
+        body: 'Regjeringen har varslet et mål om at 80 prosent av offentlige virksomheter skal ta i bruk AI innen 2025, og 100 prosent innen 2030. Tempo krever samtidig styring, standarder og kompetanse.',
+        caption: 'Hurtig utrulling uten governance gir høy risiko for feil i tjenestene.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+        links: [
+          { href: '/fakta/offentlig-sektor-omstilling.html#regjeringen', label: 'Kildepunkt: Regjeringen' },
+          { href: '#plattform', label: 'Politisk retning' },
+        ],
+      },
+      {
+        kicker: 'Scene 4',
+        title: 'Tillit som infrastruktur',
+        body: 'Datatilsynet fremhever at personvern, etterprøvbarhet og klar rollefordeling må på plass når AI brukes i offentlige beslutninger. Uten dette blir gevinstene skjøre.',
+        caption: 'Malen for video 4: vis hvordan kontrollmekanismer beskytter innbyggere i praksis.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+        links: [
+          { href: '/fakta/offentlig-sektor-omstilling.html#datatilsynet', label: 'Kildepunkt: Datatilsynet' },
+          { href: '/fakta/offentlig-sektor-omstilling.html#kilder', label: 'Alle kilder' },
+        ],
+      },
+    ],
+  },
+  'hvem-baerer-risikoen-ai-skalerer': {
+    id: 'hvem-baerer-risikoen-ai-skalerer',
+    title: 'Hvem bærer risikoen når AI skalerer?',
+    kicker: 'Analyse',
+    scenes: [
+      {
+        kicker: 'Scene 1',
+        title: 'Produktivitet og sårbarhet øker samtidig',
+        body: 'IMF peker på at AI kan løfte produktivitet og inntekt, men også forsterke ulikhet dersom gevinster og omstilling fordeles skjevt mellom grupper.',
+        caption: 'Spørsmålet er ikke bare hva AI kan gjøre, men hvem som får trygghet i overgangen.',
+        video: 'https://larscuzner.com/static/KontorjobberPressureAI.mp4',
+        links: [
+          { href: '/fakta/risiko-nar-ai-skalerer.html', label: 'Faktaside: Risiko og fordeling' },
+          { href: '#plattform', label: 'Se fordelingsgrep' },
+        ],
+      },
+      {
+        kicker: 'Scene 2',
+        title: 'Eksponering treffer ulikt',
+        body: 'ILO finner at eksponering for generativ AI varierer med kjønn, yrke og inntektsnivå. Særlig kontorintensive roller i høyinntektsland peker seg ut som utsatte for stor oppgaveendring.',
+        caption: 'Risikoen ligger ofte i oppgaver, ikke i hele yrkestitler.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+        links: [
+          { href: '/fakta/risiko-nar-ai-skalerer.html#ilo', label: 'Kildepunkt: ILO 2025' },
+          { href: '/fakta/index.html', label: 'Åpne faktabibliotek' },
+        ],
+      },
+      {
+        kicker: 'Scene 3',
+        title: 'Geografi betyr mer enn vi tror',
+        body: 'OECD advarer om at generativ AI kan forsterke regionale forskjeller. Deres analyser viser større eksponering i urbane regioner enn i rurale områder, noe som flytter risiko mellom steder.',
+        caption: 'Når AI skalerer, må distrikts- og bypolitikk sees i sammenheng med arbeidsmarkedspolitikk.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        links: [
+          { href: '/fakta/risiko-nar-ai-skalerer.html#oecd', label: 'Kildepunkt: OECD' },
+          { href: '#wire', label: 'Saker om jobbtap/omstilling' },
+        ],
+      },
+      {
+        kicker: 'Scene 4',
+        title: 'Rettferdig skalering kan bygges',
+        body: 'WEF rapporterer at virksomheter planlegger intern overgang av ansatte fra fallende til voksende roller. Politikken må sikre at overgangen faktisk blir tilgjengelig for vanlige arbeidstakere.',
+        caption: 'Malen for video 4: vis hvordan folk flyttes fra risikosone til ny rolle med trygg inntekt underveis.',
+        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+        links: [
+          { href: '/fakta/risiko-nar-ai-skalerer.html#wef', label: 'Kildepunkt: WEF 2025' },
+          { href: '/fakta/risiko-nar-ai-skalerer.html#kilder', label: 'Alle kilder' },
+        ],
+      },
+    ],
+  },
+};
+
+const VIDEO_STORY_TITLE_ALIASES = {
+  'kontorjobber under ai-press': 'kontorjobber-under-ai-press',
+  'omstilling i offentlig sektor': 'omstilling-i-offentlig-sektor',
+  'hvem baerer risikoen nar ai skalerer?': 'hvem-baerer-risikoen-ai-skalerer',
+  'hvem bærer risikoen når ai skalerer?': 'hvem-baerer-risikoen-ai-skalerer',
+};
+
 const state = {
   items: [],
-  filter: 'replacement_anxiety',
+  filter: 'all',
   category: 'all',
   categories: [],
   generatedAt: null,
@@ -67,12 +256,217 @@ const state = {
 };
 
 let modalTriggerNode = null;
+let videoStoryActiveIndex = 0;
+let videoStoryMode = false;
+let videoStoryObserver = null;
+let videoStoryScenes = [];
+let videoStorySwapToken = 0;
+const videoStoryPreloaded = new Set();
+let videoStorySoundEnabled = false;
+let videoStoryVolume = 0.8;
 let scrollyActiveIndex = 0;
 let scrollySectionInView = true;
 let scrollySoundEnabled = false;
 let scrollyVolume = 0.8;
 
 const SCROLLY_PROGRESS_KEY = 'ip_scrolly_last_scene';
+
+function syncScrollyNodes() {
+  if (!scrollyStory) {
+    scrollySteps = [];
+    scrollyVideoLayers = [];
+    scrollySceneVideos = [];
+    return;
+  }
+
+  scrollySteps = Array.from(scrollyStory.querySelectorAll('.scrolly-step'));
+  scrollyVideoLayers = Array.from(scrollyStory.querySelectorAll('.scrolly-video-layer'));
+  scrollySceneVideos = scrollyVideoLayers
+    .map((layer) => layer.querySelector('.scrolly-scene-video'))
+    .filter((videoNode) => videoNode instanceof HTMLVideoElement);
+}
+
+function syncScrollyStickyOffsets() {
+  if (!(scrollyStory instanceof HTMLElement)) return;
+  const headlineNode = scrollyStory.querySelector('.section-headline-row');
+  if (!(headlineNode instanceof HTMLElement)) return;
+
+  const headlineHeight = Math.max(0, Math.round(headlineNode.getBoundingClientRect().height));
+  scrollyStory.style.setProperty('--scrolly-headline-h', `${headlineHeight}px`);
+}
+
+function syncScrollySceneMenuActive() {
+  if (!(scrollySceneMenu instanceof HTMLElement)) return;
+  const sceneButtons = Array.from(scrollySceneMenu.querySelectorAll('.scrolly-scene-thumb'));
+  sceneButtons.forEach((button, index) => {
+    const isActive = index === scrollyActiveIndex;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-current', isActive ? 'true' : 'false');
+  });
+}
+
+function closeScrollySceneMenuOnMobile() {
+  if (!(scrollySceneNav instanceof HTMLElement)) return;
+  if (!window.matchMedia('(max-width: 1000px)').matches) return;
+  scrollySceneNav.classList.remove('is-open');
+  if (scrollySceneMenuToggle instanceof HTMLButtonElement) {
+    scrollySceneMenuToggle.setAttribute('aria-expanded', 'false');
+  }
+}
+
+function renderScrollySceneMenu(scenes = []) {
+  if (!(scrollySceneMenu instanceof HTMLElement)) return;
+  scrollySceneMenu.innerHTML = '';
+
+  const fragment = document.createDocumentFragment();
+  scenes.forEach((scene, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'scrolly-scene-thumb';
+    button.dataset.sceneIndex = String(index);
+    button.setAttribute('role', 'listitem');
+    button.setAttribute('aria-label', `Gå til ${scene.kicker || `scene ${index + 1}`}`);
+
+    const image = document.createElement('img');
+    image.className = 'scrolly-scene-thumb-image';
+    image.src = scene.poster || TRANSPARENT_PIXEL;
+    image.alt = '';
+    image.loading = 'lazy';
+
+    const copy = document.createElement('div');
+    copy.className = 'scrolly-scene-thumb-copy';
+
+    const kicker = document.createElement('p');
+    kicker.className = 'scrolly-scene-thumb-kicker';
+    kicker.textContent = scene.kicker || `Scene ${index + 1}`;
+
+    const title = document.createElement('p');
+    title.className = 'scrolly-scene-thumb-title';
+    title.textContent = scene.step_title || scene.title || `Scene ${index + 1}`;
+
+    copy.appendChild(kicker);
+    copy.appendChild(title);
+    button.appendChild(image);
+    button.appendChild(copy);
+
+    button.addEventListener('click', () => {
+      jumpToScrollyScene(index);
+      closeScrollySceneMenuOnMobile();
+    });
+
+    fragment.appendChild(button);
+  });
+
+  scrollySceneMenu.appendChild(fragment);
+  syncScrollySceneMenuActive();
+}
+
+function syncScrollyFrameHeight() {
+  syncScrollyStickyOffsets();
+  if (!(scrollyLayout instanceof HTMLElement)) return;
+  if (!(scrollyMedia instanceof HTMLElement)) return;
+
+  const layoutWidth = scrollyLayout.getBoundingClientRect().width;
+  if (!Number.isFinite(layoutWidth) || layoutWidth <= 0) return;
+
+  const isMobile = window.matchMedia('(max-width: 1000px)').matches;
+  let frameWidth = layoutWidth;
+
+  if (!isMobile && scrollySceneNav instanceof HTMLElement) {
+    const navWidth = scrollySceneNav.getBoundingClientRect().width;
+    const style = window.getComputedStyle(scrollyLayout);
+    const rawGap = parseFloat(style.columnGap || style.gap || '0');
+    const gap = Number.isFinite(rawGap) ? rawGap : 0;
+    frameWidth = layoutWidth - navWidth - gap;
+  }
+
+  if (!Number.isFinite(frameWidth) || frameWidth < 240) return;
+
+  let frameHeight = frameWidth * 9 / 16;
+  const maxHeight = window.innerHeight * (isMobile ? 0.68 : 0.72);
+  const minHeight = isMobile ? 220 : 320;
+  frameHeight = clamp(frameHeight, minHeight, maxHeight);
+
+  scrollyLayout.style.setProperty('--scrolly-frame-h', `${Math.round(frameHeight)}px`);
+}
+
+function getScrollyFullscreenTarget() {
+  if (scrollyStory instanceof HTMLElement) return scrollyStory;
+  if (scrollyLayout instanceof HTMLElement) return scrollyLayout;
+  return null;
+}
+
+function getDocumentFullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function isScrollyFullscreenActive() {
+  const fullscreenNode = getDocumentFullscreenElement();
+  const scrollyTarget = getScrollyFullscreenTarget();
+  if (!(fullscreenNode instanceof Element)) return false;
+  if (!(scrollyTarget instanceof Element)) return false;
+  return fullscreenNode === scrollyTarget || scrollyTarget.contains(fullscreenNode);
+}
+
+function updateScrollyFullscreenToggle() {
+  if (!(scrollyFullscreenToggle instanceof HTMLButtonElement)) return;
+  const scrollyTarget = getScrollyFullscreenTarget();
+  const supported = Boolean(
+    scrollyTarget
+    && (typeof scrollyTarget.requestFullscreen === 'function'
+      || typeof scrollyTarget.webkitRequestFullscreen === 'function')
+  );
+
+  scrollyFullscreenToggle.hidden = !supported;
+  if (!supported) return;
+
+  const active = isScrollyFullscreenActive();
+  scrollyFullscreenToggle.textContent = active ? 'Lukk fullskjerm' : 'Fullskjerm';
+  scrollyFullscreenToggle.setAttribute('aria-pressed', String(active));
+}
+
+function toggleScrollyFullscreen() {
+  const scrollyTarget = getScrollyFullscreenTarget();
+  if (!(scrollyTarget instanceof HTMLElement)) return;
+
+  if (isScrollyFullscreenActive()) {
+    const exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen;
+    if (typeof exitFullscreen === 'function') {
+      const exitResult = exitFullscreen.call(document);
+      if (exitResult && typeof exitResult.catch === 'function') {
+        exitResult.catch(() => {});
+      }
+    }
+    return;
+  }
+
+  const requestFullscreen = scrollyTarget.requestFullscreen || scrollyTarget.webkitRequestFullscreen;
+  if (typeof requestFullscreen === 'function') {
+    const requestResult = requestFullscreen.call(scrollyTarget);
+    if (requestResult && typeof requestResult.catch === 'function') {
+      requestResult.catch(() => {});
+    }
+  }
+}
+
+function initScrollyFullscreen() {
+  if (!(scrollyFullscreenToggle instanceof HTMLButtonElement)) return;
+
+  updateScrollyFullscreenToggle();
+
+  scrollyFullscreenToggle.addEventListener('click', () => {
+    toggleScrollyFullscreen();
+  });
+
+  const onFullscreenChange = () => {
+    syncScrollyFrameHeight();
+    syncScrollyPlayback();
+    updateScrollyFullscreenToggle();
+  };
+
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+}
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -224,6 +618,31 @@ function setTopClock() {
   timestampNode.textContent = formatNow();
 }
 
+function initScrollCue() {
+  if (!(scrollCue instanceof HTMLElement)) return;
+
+  const hideCue = () => {
+    scrollCue.classList.add('is-hidden');
+    scrollCue.setAttribute('aria-hidden', 'true');
+    window.removeEventListener('scroll', onScroll, scrollListenerOptions);
+  };
+
+  const onScroll = () => {
+    if (window.scrollY > 6) hideCue();
+  };
+
+  const scrollListenerOptions = { passive: true };
+
+  if (window.scrollY > 6) {
+    hideCue();
+    return;
+  }
+
+  scrollCue.classList.remove('is-hidden');
+  scrollCue.setAttribute('aria-hidden', 'false');
+  window.addEventListener('scroll', onScroll, scrollListenerOptions);
+}
+
 function toneLabel(tone) {
   if (tone === 'replacement_anxiety') return 'Erstatningsangst';
   if (tone === 'reskilling') return 'Omskolering';
@@ -307,7 +726,7 @@ function visibleItems() {
   return state.items
     .filter((item) => item.published !== false)
     .filter((item) => state.category === 'all' || normalizeCategory(item.category) === state.category)
-    .filter((item) => item.tone === 'replacement_anxiety');
+    .filter((item) => state.filter === 'all' || item.tone === state.filter);
 }
 
 function renderNews() {
@@ -389,9 +808,9 @@ function renderNews() {
 }
 
 function setFilter(name) {
-  state.filter = 'replacement_anxiety';
+  state.filter = name;
   filterButtons.forEach((button) => {
-    const active = button.dataset.filter === state.filter;
+    const active = button.dataset.filter === name;
     button.classList.toggle('is-active', active);
     button.setAttribute('aria-selected', String(active));
   });
@@ -434,7 +853,162 @@ function updateMeta() {
   const published = state.items.filter((item) => item.published !== false).length;
   const visible = visibleItems().length;
   const category = state.category === 'all' ? 'Alle kategorier' : state.category;
-  metaNode.textContent = `Sist oppdatert: ${generated}. Viser ${visible} erstatningsangst-saker (${category}). Publisert totalt: ${published}. Registrert totalt: ${total}.`;
+  metaNode.textContent = `Sist oppdatert: ${generated}. Viser ${visible} av ${published} publiserte saker (${category}). Totalt registrert: ${total}.`;
+}
+
+function normalizeScrollyScene(rawScene, index) {
+  const sceneIndex = Number.isFinite(index) ? index : 0;
+  return {
+    kicker: String(rawScene && rawScene.kicker || `Scene ${sceneIndex + 1}`).trim() || `Scene ${sceneIndex + 1}`,
+    title: String(rawScene && rawScene.title || '').trim(),
+    body: String(rawScene && rawScene.body || '').trim(),
+    caption: String(rawScene && rawScene.caption || '').trim(),
+    video: String(rawScene && rawScene.video || '').trim(),
+    poster: String(rawScene && rawScene.poster || '').trim(),
+    step_title: String(rawScene && rawScene.step_title || '').trim(),
+    step_text: String(rawScene && rawScene.step_text || '').trim(),
+  };
+}
+
+function normalizeScrollyPayload(payload) {
+  const scenes = Array.isArray(payload && payload.scenes)
+    ? payload.scenes.map((scene, index) => normalizeScrollyScene(scene, index))
+    : [];
+
+  return {
+    section_title: String(payload && payload.section_title || SCROLLY_DEFAULT_TITLE).trim() || SCROLLY_DEFAULT_TITLE,
+    section_meta: String(payload && payload.section_meta || SCROLLY_DEFAULT_META).trim() || SCROLLY_DEFAULT_META,
+    scenes,
+  };
+}
+
+function createScrollyLayerNode(scene, index) {
+  const layerNode = document.createElement('div');
+  layerNode.className = 'scrolly-video-layer';
+  if (index === 0) layerNode.classList.add('is-active');
+  layerNode.dataset.sceneIndex = String(index);
+
+  const posterNode = document.createElement('img');
+  posterNode.className = 'scrolly-scene-poster';
+  if (scene.poster) {
+    posterNode.src = scene.poster;
+  } else {
+    posterNode.src = TRANSPARENT_PIXEL;
+  }
+  posterNode.alt = '';
+  posterNode.loading = 'lazy';
+
+  const videoNode = document.createElement('video');
+  videoNode.className = 'scrolly-scene-video';
+  if (scene.poster) {
+    videoNode.poster = scene.poster;
+  }
+  videoNode.muted = true;
+  videoNode.defaultMuted = true;
+  videoNode.loop = true;
+  videoNode.playsInline = true;
+  videoNode.preload = index === 0 ? 'auto' : 'metadata';
+  videoNode.dataset.popupDisabled = 'true';
+
+  const hasVideo = Boolean(scene.video);
+  videoNode.dataset.hasVideo = hasVideo ? 'true' : 'false';
+
+  if (hasVideo) {
+    layerNode.classList.add('is-fallback');
+    const sourceNode = document.createElement('source');
+    sourceNode.src = scene.video;
+    sourceNode.type = 'video/mp4';
+    videoNode.appendChild(sourceNode);
+  } else {
+    videoNode.preload = 'none';
+    layerNode.classList.add('is-fallback');
+  }
+
+  layerNode.appendChild(posterNode);
+  layerNode.appendChild(videoNode);
+  return layerNode;
+}
+
+function createScrollyStepNode(scene, index) {
+  const stepNode = document.createElement('article');
+  stepNode.className = 'scrolly-step';
+  if (index === 0) stepNode.classList.add('is-active');
+  stepNode.dataset.sceneIndex = String(index);
+  stepNode.dataset.kicker = scene.kicker;
+  stepNode.dataset.title = scene.title;
+  stepNode.dataset.body = scene.body;
+  stepNode.dataset.caption = scene.caption;
+  stepNode.dataset.video = scene.video;
+
+  const cardNode = document.createElement('div');
+  cardNode.className = 'scrolly-step-card';
+
+  const kickerNode = document.createElement('p');
+  kickerNode.className = 'scrolly-step-kicker';
+  kickerNode.textContent = scene.kicker;
+
+  const titleNode = document.createElement('h3');
+  titleNode.textContent = scene.step_title || scene.title || `Scene ${index + 1}`;
+
+  const bodyNode = document.createElement('p');
+  bodyNode.textContent = scene.step_text || scene.body || '';
+
+  cardNode.appendChild(kickerNode);
+  cardNode.appendChild(titleNode);
+  cardNode.appendChild(bodyNode);
+  stepNode.appendChild(cardNode);
+  return stepNode;
+}
+
+function renderScrollyFromPayload(payload) {
+  if (!scrollyStory) return;
+
+  const normalized = normalizeScrollyPayload(payload);
+  if (!normalized.scenes.length) return;
+
+  if (scrollySectionTitle) scrollySectionTitle.textContent = normalized.section_title;
+  if (scrollySectionMeta) scrollySectionMeta.textContent = normalized.section_meta;
+
+  const frameNode = scrollyStory.querySelector('.scrolly-frame');
+  const stepsNode = scrollyStory.querySelector('.scrolly-steps');
+  if (!(frameNode instanceof HTMLElement) || !(stepsNode instanceof HTMLElement)) return;
+
+  frameNode.querySelectorAll('.scrolly-video-layer').forEach((layerNode) => layerNode.remove());
+  const insertBeforeNode = frameNode.querySelector('.scrolly-frame-overlay') || null;
+
+  normalized.scenes.forEach((scene, index) => {
+    const layerNode = createScrollyLayerNode(scene, index);
+    frameNode.insertBefore(layerNode, insertBeforeNode);
+  });
+
+  stepsNode.innerHTML = '';
+  normalized.scenes.forEach((scene, index) => {
+    stepsNode.appendChild(createScrollyStepNode(scene, index));
+  });
+
+  renderScrollySceneMenu(normalized.scenes);
+
+  if (scrollyCaption) {
+    scrollyCaption.textContent = normalized.scenes[0].caption || '';
+  }
+  if (scrollyCounter) {
+    scrollyCounter.textContent = `Scene 1 / ${normalized.scenes.length}`;
+  }
+
+  scrollyActiveIndex = 0;
+  syncScrollyNodes();
+}
+
+async function loadScrollyContent() {
+  if (!scrollyStory) return;
+  try {
+    const response = await fetch(SCROLLY_CMS_PATH, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    renderScrollyFromPayload(payload);
+  } catch {
+    syncScrollyNodes();
+  }
 }
 
 function scrollyAutoplayAllowed() {
@@ -443,7 +1017,8 @@ function scrollyAutoplayAllowed() {
 
 function getActiveScrollyVideo() {
   const activeVideo = scrollySceneVideos[scrollyActiveIndex];
-  return activeVideo instanceof HTMLVideoElement ? activeVideo : null;
+  if (!(activeVideo instanceof HTMLVideoElement)) return null;
+  return activeVideo.dataset.hasVideo === 'false' ? null : activeVideo;
 }
 
 function videoLikelyHasAudio(videoNode) {
@@ -540,9 +1115,18 @@ function syncScrollyPlayback() {
 
   scrollySceneVideos.forEach((videoNode, idx) => {
     const distance = Math.abs(idx - scrollyActiveIndex);
+    const layerNode = scrollyVideoLayers[idx] || videoNode.closest('.scrolly-video-layer');
     videoNode.preload = distance <= 1 ? 'auto' : 'metadata';
 
+    const hasVideo = videoNode.dataset.hasVideo !== 'false';
+    if (!hasVideo) {
+      if (layerNode) layerNode.classList.add('is-fallback');
+      videoNode.pause();
+      return;
+    }
+
     if (!autoplay) {
+      if (layerNode) layerNode.classList.add('is-fallback');
       videoNode.pause();
       setVideoMutedState(videoNode, true);
       if (videoNode.currentTime > 0.01) {
@@ -561,16 +1145,31 @@ function syncScrollyPlayback() {
       videoNode.volume = shouldMute ? 0 : scrollyVolume;
       videoNode.autoplay = true;
       videoNode.playsInline = true;
+      videoNode.setAttribute('playsinline', '');
+      videoNode.setAttribute('webkit-playsinline', '');
+
+      if (layerNode && videoNode.readyState < 2) {
+        layerNode.classList.add('is-fallback');
+      }
+
       if (videoNode.readyState < 2) {
         videoNode.load();
       }
+
       const playback = videoNode.play();
       if (playback) {
-        playback.catch(() => {
-          if (scrollySoundEnabled) {
-            setScrollyAudioStatus('Trykk Lyd: På for å aktivere lyd i denne scenen.');
-          }
-        });
+        playback
+          .then(() => {
+            if (layerNode && videoNode.readyState >= 2) {
+              layerNode.classList.remove('is-fallback');
+            }
+          })
+          .catch(() => {
+            if (layerNode) layerNode.classList.add('is-fallback');
+            if (scrollySoundEnabled) {
+              setScrollyAudioStatus('Trykk Lyd: På for å aktivere lyd i denne scenen.');
+            }
+          });
       }
       return;
     }
@@ -644,6 +1243,24 @@ function initScrollySeriesActions() {
   }
 }
 
+function initScrollySceneMenu() {
+  if (!(scrollySceneNav instanceof HTMLElement)) return;
+  if (!(scrollySceneMenuToggle instanceof HTMLButtonElement)) return;
+
+  scrollySceneMenuToggle.addEventListener('click', () => {
+    const isOpen = scrollySceneNav.classList.toggle('is-open');
+    scrollySceneMenuToggle.setAttribute('aria-expanded', String(isOpen));
+  });
+
+  window.addEventListener('resize', () => {
+    if (!window.matchMedia('(max-width: 1000px)').matches) {
+      scrollySceneNav.classList.remove('is-open');
+      scrollySceneMenuToggle.setAttribute('aria-expanded', 'false');
+    }
+    syncScrollyFrameHeight();
+  });
+}
+
 function applyScrollyStep(step) {
   if (!(step instanceof HTMLElement)) return;
 
@@ -666,6 +1283,7 @@ function applyScrollyStep(step) {
   scrollySteps.forEach((entry) => {
     entry.classList.toggle('is-active', entry === step);
   });
+  syncScrollySceneMenuActive();
 
   storeScrollyIndex(scrollyActiveIndex);
   updateSeriesHeroProgress();
@@ -674,6 +1292,22 @@ function applyScrollyStep(step) {
 
 function initScrollytelling() {
   if (!scrollySteps.length) return;
+  syncScrollyFrameHeight();
+  window.requestAnimationFrame(syncScrollyFrameHeight);
+  window.setTimeout(syncScrollyFrameHeight, 120);
+
+  if (scrollySceneMenu instanceof HTMLElement && !scrollySceneMenu.children.length) {
+    const fallbackScenes = scrollySteps.map((stepNode, index) => {
+      const posterNode = scrollyVideoLayers[index] && scrollyVideoLayers[index].querySelector('.scrolly-scene-poster');
+      return {
+        kicker: stepNode.dataset.kicker || `Scene ${index + 1}`,
+        step_title: stepNode.querySelector('h3') && stepNode.querySelector('h3').textContent || '',
+        title: stepNode.dataset.title || '',
+        poster: String(posterNode && posterNode.getAttribute('src') || '').trim(),
+      };
+    });
+    renderScrollySceneMenu(fallbackScenes);
+  }
 
   if (scrollyVolumeSlider instanceof HTMLInputElement) {
     const initialVolume = Number(scrollyVolumeSlider.value);
@@ -714,14 +1348,29 @@ function initScrollytelling() {
   }
 
   scrollySceneVideos.forEach((videoNode) => {
+    const layerNode = videoNode.closest('.scrolly-video-layer');
     videoNode.addEventListener('canplay', () => {
+      if (layerNode) layerNode.classList.remove('is-fallback');
       syncScrollyPlayback();
+    });
+    videoNode.addEventListener('loadeddata', () => {
+      if (layerNode) layerNode.classList.remove('is-fallback');
     });
     videoNode.addEventListener('loadedmetadata', () => {
       updateScrollyAudioStatusFromActiveVideo();
     });
     videoNode.addEventListener('playing', () => {
+      if (layerNode) layerNode.classList.remove('is-fallback');
       updateScrollyAudioStatusFromActiveVideo();
+    });
+    videoNode.addEventListener('error', () => {
+      if (layerNode) layerNode.classList.add('is-fallback');
+    });
+    videoNode.addEventListener('stalled', () => {
+      if (layerNode) layerNode.classList.add('is-fallback');
+    });
+    videoNode.addEventListener('waiting', () => {
+      if (layerNode) layerNode.classList.add('is-fallback');
     });
   });
 
@@ -743,7 +1392,10 @@ function initScrollytelling() {
 
   updateScrollyInView();
   window.addEventListener('scroll', updateScrollyInView, { passive: true });
-  window.addEventListener('resize', updateScrollyInView);
+  window.addEventListener('resize', () => {
+    syncScrollyFrameHeight();
+    updateScrollyInView();
+  });
 
   const initialIndex = getStoredScrollyIndex();
   applyScrollyStep(scrollySteps[initialIndex] || scrollySteps[0]);
@@ -766,8 +1418,412 @@ function initScrollytelling() {
   scrollySteps.forEach((step) => stepObserver.observe(step));
 }
 
+function normalizeStoryLookup(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function resolveVideoStory(triggerNode, title = '') {
+  if (!(triggerNode instanceof Element)) return null;
+
+  let storyId = String(triggerNode.getAttribute('data-story-id') || '').trim();
+  if (!storyId) {
+    const owner = triggerNode.closest('[data-story-id]');
+    storyId = String(owner && owner.getAttribute('data-story-id') || '').trim();
+  }
+
+  if (!storyId) {
+    const inferred = VIDEO_STORY_TITLE_ALIASES[normalizeStoryLookup(title)];
+    if (inferred) storyId = inferred;
+  }
+
+  if (!storyId) {
+    const derivedTitle = deriveVideoTitle(triggerNode, '');
+    const inferred = VIDEO_STORY_TITLE_ALIASES[normalizeStoryLookup(derivedTitle)];
+    if (inferred) storyId = inferred;
+  }
+
+  return VIDEO_STORIES[storyId] || null;
+}
+
+function buildVideoStoryScenes(story, openingVideo = '') {
+  if (!story || !Array.isArray(story.scenes)) return [];
+
+  const scenes = story.scenes.map((scene) => ({
+    kicker: scene.kicker || '',
+    title: scene.title || '',
+    body: scene.body || '',
+    caption: scene.caption || '',
+    video: scene.video || '',
+    links: Array.isArray(scene.links)
+      ? scene.links.map((link) => ({
+        href: String(link && link.href || '').trim(),
+        label: String(link && link.label || '').trim(),
+      })).filter((link) => link.href && link.label)
+      : [],
+  }));
+
+  if (scenes[0] && openingVideo) {
+    scenes[0].video = openingVideo;
+  }
+
+  return scenes;
+}
+
+function setVideoModalMode(storyModeEnabled) {
+  if (videoModalDialog) {
+    videoModalDialog.classList.toggle('is-story-mode', Boolean(storyModeEnabled));
+  }
+  if (videoModalPlayer) {
+    videoModalPlayer.hidden = Boolean(storyModeEnabled);
+  }
+  if (videoModalStory) {
+    videoModalStory.hidden = !storyModeEnabled;
+  }
+}
+
+function preloadVideoStoryScene(index) {
+  const scene = videoStoryScenes[index];
+  if (!scene) return;
+
+  const source = String(scene.video || '').trim();
+  if (!source || videoStoryPreloaded.has(source)) return;
+
+  videoStoryPreloaded.add(source);
+  const probe = document.createElement('video');
+  probe.preload = 'metadata';
+  probe.src = source;
+  probe.load();
+}
+
+function setVideoStoryAudioStatus(message) {
+  if (!(videoStoryAudioStatus instanceof HTMLElement)) return;
+  videoStoryAudioStatus.textContent = message;
+}
+
+function updateVideoStoryAudioToggle() {
+  const volumePercent = Math.round(videoStoryVolume * 100);
+
+  if (videoStoryAudioToggle instanceof HTMLButtonElement) {
+    videoStoryAudioToggle.setAttribute('aria-pressed', String(videoStorySoundEnabled));
+    videoStoryAudioToggle.textContent = videoStorySoundEnabled ? 'Lyd: På' : 'Lyd: Av';
+  }
+
+  if (videoStoryVolumeSlider instanceof HTMLInputElement) {
+    videoStoryVolumeSlider.value = String(volumePercent);
+    videoStoryVolumeSlider.setAttribute('aria-valuetext', `${volumePercent} prosent`);
+  }
+}
+
+function updateVideoStoryAudioStatusFromPlayer() {
+  const volumePercent = Math.round(videoStoryVolume * 100);
+
+  if (!videoStorySoundEnabled) {
+    setVideoStoryAudioStatus('Lyd er av.');
+    return;
+  }
+
+  if (!(videoStoryPlayer instanceof HTMLVideoElement)) {
+    setVideoStoryAudioStatus(`Lyd klar (${volumePercent}%).`);
+    return;
+  }
+
+  if (document.hidden) {
+    setVideoStoryAudioStatus(`Lyd klar (${volumePercent}%).`);
+    return;
+  }
+
+  if (!videoLikelyHasAudio(videoStoryPlayer)) {
+    setVideoStoryAudioStatus('Lyd på, men aktiv video ser ut til å mangle lydspor.');
+    return;
+  }
+
+  setVideoStoryAudioStatus(`Lyd på (${volumePercent}%).`);
+}
+
+function syncVideoStoryAudioState() {
+  if (!(videoStoryPlayer instanceof HTMLVideoElement)) return;
+
+  const shouldMute = !videoStorySoundEnabled;
+  setVideoMutedState(videoStoryPlayer, shouldMute);
+  videoStoryPlayer.volume = shouldMute ? 0 : videoStoryVolume;
+  updateVideoStoryAudioStatusFromPlayer();
+}
+
+function attemptVideoStoryAudioStart({ userInitiated = false } = {}) {
+  if (!videoStorySoundEnabled) {
+    updateVideoStoryAudioStatusFromPlayer();
+    return;
+  }
+
+  if (!(videoStoryPlayer instanceof HTMLVideoElement)) {
+    updateVideoStoryAudioStatusFromPlayer();
+    return;
+  }
+
+  setVideoMutedState(videoStoryPlayer, false);
+  videoStoryPlayer.volume = videoStoryVolume;
+  if (videoStoryPlayer.readyState < 2) {
+    videoStoryPlayer.load();
+  }
+
+  const playback = videoStoryPlayer.play();
+  if (!playback) {
+    updateVideoStoryAudioStatusFromPlayer();
+    return;
+  }
+
+  playback
+    .then(() => {
+      updateVideoStoryAudioStatusFromPlayer();
+    })
+    .catch(() => {
+      if (userInitiated) {
+        videoStorySoundEnabled = false;
+        updateVideoStoryAudioToggle();
+        syncVideoStoryAudioState();
+        setVideoStoryAudioStatus('Nettleseren blokkerte lyd. Trykk Lyd: På igjen.');
+        return;
+      }
+      setVideoStoryAudioStatus('Lyd krever ny brukerklikk i denne scenen.');
+    });
+}
+
+function swapVideoStorySource(nextSource, shouldAutoplay = true) {
+  if (!videoStoryPlayer) return;
+
+  const targetSource = String(nextSource || '').trim();
+  if (!targetSource) return;
+
+  const activeSource = String(videoStoryPlayer.dataset.activeSrc || '').trim();
+  if (targetSource === activeSource) {
+    syncVideoStoryAudioState();
+    if (shouldAutoplay) {
+      videoStoryPlayer.play().catch(() => {});
+    }
+    return;
+  }
+
+  const token = videoStorySwapToken + 1;
+  videoStorySwapToken = token;
+  videoStoryPlayer.classList.add('is-transitioning');
+
+  const clearTransition = () => {
+    if (videoStorySwapToken !== token) return;
+    videoStoryPlayer.classList.remove('is-transitioning');
+  };
+
+  window.setTimeout(() => {
+    if (videoStorySwapToken !== token) return;
+    videoStoryPlayer.src = targetSource;
+    videoStoryPlayer.dataset.activeSrc = targetSource;
+    videoStoryPlayer.load();
+    syncVideoStoryAudioState();
+    if (shouldAutoplay) {
+      videoStoryPlayer.play().catch(() => {
+        if (!videoStorySoundEnabled) return;
+        videoStorySoundEnabled = false;
+        updateVideoStoryAudioToggle();
+        syncVideoStoryAudioState();
+        setVideoStoryAudioStatus('Nettleseren blokkerte lyd. Trykk Lyd: På igjen.');
+      });
+    }
+  }, 120);
+
+  videoStoryPlayer.addEventListener('loadeddata', () => {
+    window.setTimeout(clearTransition, 120);
+  }, { once: true });
+
+  window.setTimeout(clearTransition, 900);
+}
+
+function activateVideoStoryScene(index, options = {}) {
+  if (!videoStoryScenes.length) return;
+
+  const shouldAutoplay = options.autoplay !== false;
+  const safeIndex = clamp(index, 0, videoStoryScenes.length - 1);
+  videoStoryActiveIndex = safeIndex;
+  const scene = videoStoryScenes[safeIndex];
+  if (!scene) return;
+
+  if (videoStoryKicker) {
+    videoStoryKicker.textContent = scene.kicker || 'Scene';
+  }
+  if (videoStoryProgress) {
+    videoStoryProgress.textContent = `Scene ${safeIndex + 1} av ${videoStoryScenes.length}`;
+  }
+  if (videoStoryCaption) {
+    videoStoryCaption.textContent = scene.caption || '';
+  }
+
+  if (videoStoryPlayer) {
+    const nextSource = String(scene.video || '').trim();
+    swapVideoStorySource(nextSource, shouldAutoplay);
+  }
+
+  if (videoStoryScroll) {
+    const stepNodes = Array.from(videoStoryScroll.querySelectorAll('.video-story-step'));
+    stepNodes.forEach((stepNode, stepIndex) => {
+      stepNode.classList.toggle('is-active', stepIndex === safeIndex);
+      stepNode.setAttribute('aria-current', stepIndex === safeIndex ? 'step' : 'false');
+    });
+  }
+
+  preloadVideoStoryScene(safeIndex);
+  preloadVideoStoryScene(safeIndex + 1);
+}
+
+function renderVideoStorySteps() {
+  if (!videoStoryScroll) return;
+  videoStoryScroll.innerHTML = '';
+  if (!videoStoryScenes.length || !videoStoryStepTemplate) return;
+
+  const fragment = document.createDocumentFragment();
+
+  videoStoryScenes.forEach((scene, index) => {
+    const clone = videoStoryStepTemplate.content.cloneNode(true);
+    const stepNode = clone.querySelector('.video-story-step');
+    const kickerNode = clone.querySelector('.video-story-step-kicker');
+    const titleNode = clone.querySelector('.video-story-step-title');
+    const bodyNode = clone.querySelector('.video-story-step-body');
+    const linksNode = clone.querySelector('.video-story-links');
+
+    if (stepNode) {
+      stepNode.dataset.sceneIndex = String(index);
+      stepNode.dataset.video = scene.video || '';
+      stepNode.classList.toggle('is-active', index === 0);
+      stepNode.setAttribute('aria-current', index === 0 ? 'step' : 'false');
+    }
+    if (kickerNode) kickerNode.textContent = scene.kicker || `Scene ${index + 1}`;
+    if (titleNode) titleNode.textContent = scene.title || 'Uten tittel';
+    if (bodyNode) bodyNode.textContent = scene.body || '';
+
+    if (linksNode) {
+      if (!scene.links || !scene.links.length) {
+        linksNode.remove();
+      } else {
+        scene.links.forEach((link) => {
+          const anchor = document.createElement('a');
+          anchor.href = link.href;
+          anchor.textContent = link.label;
+          if (anchor.hostname && anchor.hostname !== window.location.hostname) {
+            anchor.target = '_blank';
+            anchor.rel = 'noopener noreferrer';
+          }
+          linksNode.appendChild(anchor);
+        });
+      }
+    }
+
+    fragment.appendChild(clone);
+  });
+
+  videoStoryScroll.appendChild(fragment);
+}
+
+function initVideoStoryObserver() {
+  if (!videoStoryScroll) return;
+
+  const steps = Array.from(videoStoryScroll.querySelectorAll('.video-story-step'));
+  if (!steps.length) return;
+
+  if (videoStoryObserver) {
+    videoStoryObserver.disconnect();
+  }
+
+  videoStoryObserver = new IntersectionObserver(
+    (entries) => {
+      const visibleSteps = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+
+      if (!visibleSteps.length) return;
+      const rawIndex = Number(visibleSteps[0].target.dataset.sceneIndex);
+      if (!Number.isFinite(rawIndex)) return;
+      activateVideoStoryScene(rawIndex, { autoplay: true });
+    },
+    {
+      root: videoStoryScroll,
+      threshold: [0.35, 0.55, 0.75],
+      rootMargin: '-18% 0px -32% 0px',
+    }
+  );
+
+  steps.forEach((stepNode) => videoStoryObserver.observe(stepNode));
+}
+
+function teardownVideoStory(clearMarkup = true) {
+  if (videoStoryObserver) {
+    videoStoryObserver.disconnect();
+    videoStoryObserver = null;
+  }
+
+  if (videoStoryPlayer) {
+    videoStoryPlayer.pause();
+    videoStoryPlayer.removeAttribute('src');
+    delete videoStoryPlayer.dataset.activeSrc;
+    videoStoryPlayer.classList.remove('is-transitioning');
+    videoStoryPlayer.load();
+  }
+
+  if (clearMarkup && videoStoryScroll) {
+    videoStoryScroll.innerHTML = '';
+  }
+
+  if (videoStoryCaption) videoStoryCaption.textContent = '';
+  if (videoStoryProgress) videoStoryProgress.textContent = '';
+
+  videoStoryScenes = [];
+  videoStoryActiveIndex = 0;
+  videoStorySwapToken = 0;
+  videoStoryPreloaded.clear();
+  videoStoryMode = false;
+  setVideoModalMode(false);
+}
+
+function openVideoStoryModal(story, openingVideo, triggerNode) {
+  if (!videoModal || !story || !videoStoryPlayer || !videoStoryScroll || !videoStoryStepTemplate) {
+    const fallbackSource = String(openingVideo || '').trim();
+    if (!fallbackSource) return;
+    openVideoModal(fallbackSource, story && story.title ? story.title : 'Video', triggerNode);
+    return;
+  }
+
+  teardownVideoStory(false);
+
+  modalTriggerNode = triggerNode || null;
+  videoModal.hidden = false;
+  videoModal.setAttribute('aria-hidden', 'false');
+  body.classList.add('modal-open');
+
+  setVideoModalMode(true);
+  videoStoryMode = true;
+  videoStoryScenes = buildVideoStoryScenes(story, openingVideo);
+  updateVideoStoryAudioToggle();
+  updateVideoStoryAudioStatusFromPlayer();
+
+  if (videoModalTitle) {
+    videoModalTitle.textContent = story.title || 'Scrollytelling';
+  }
+
+  if (!videoStoryScenes.length) {
+    const fallbackSource = String(openingVideo || '').trim();
+    if (!fallbackSource) return;
+    openVideoModal(fallbackSource, story.title || 'Video', triggerNode);
+    return;
+  }
+
+  renderVideoStorySteps();
+  activateVideoStoryScene(0, { autoplay: true });
+  if (videoStoryScroll) {
+    videoStoryScroll.scrollTop = 0;
+  }
+  initVideoStoryObserver();
+}
+
 function closeVideoModal() {
   if (!videoModal || videoModal.hidden) return;
+
+  teardownVideoStory(true);
 
   videoModal.hidden = true;
   videoModal.setAttribute('aria-hidden', 'true');
@@ -788,6 +1844,8 @@ function closeVideoModal() {
 function openVideoModal(source, title, triggerNode) {
   if (!videoModal || !videoModalPlayer || !source) return;
 
+  teardownVideoStory(true);
+
   modalTriggerNode = triggerNode || null;
   videoModal.hidden = false;
   videoModal.setAttribute('aria-hidden', 'false');
@@ -807,6 +1865,90 @@ function initVideoModal() {
 
   markVideoTriggers(document);
 
+  if (videoStoryVolumeSlider instanceof HTMLInputElement) {
+    const initialVolume = Number(videoStoryVolumeSlider.value);
+    if (Number.isFinite(initialVolume)) {
+      videoStoryVolume = clamp(initialVolume, 0, 100) / 100;
+    }
+  }
+
+  updateVideoStoryAudioToggle();
+  updateVideoStoryAudioStatusFromPlayer();
+
+  if (videoStoryAudioToggle instanceof HTMLButtonElement) {
+    videoStoryAudioToggle.addEventListener('click', () => {
+      videoStorySoundEnabled = !videoStorySoundEnabled;
+      updateVideoStoryAudioToggle();
+      syncVideoStoryAudioState();
+      if (videoStorySoundEnabled) {
+        attemptVideoStoryAudioStart({ userInitiated: true });
+      } else {
+        updateVideoStoryAudioStatusFromPlayer();
+      }
+    });
+  }
+
+  if (videoStoryVolumeSlider instanceof HTMLInputElement) {
+    videoStoryVolumeSlider.addEventListener('input', () => {
+      const nextVolume = clamp(Number(videoStoryVolumeSlider.value), 0, 100) / 100;
+      videoStoryVolume = nextVolume;
+      videoStorySoundEnabled = nextVolume > 0;
+      updateVideoStoryAudioToggle();
+      syncVideoStoryAudioState();
+      if (videoStorySoundEnabled) {
+        attemptVideoStoryAudioStart({ userInitiated: true });
+      } else {
+        updateVideoStoryAudioStatusFromPlayer();
+      }
+    });
+  }
+
+  if (videoStoryPlayer instanceof HTMLVideoElement) {
+    videoStoryPlayer.addEventListener('loadedmetadata', () => {
+      syncVideoStoryAudioState();
+    });
+    videoStoryPlayer.addEventListener('canplay', () => {
+      syncVideoStoryAudioState();
+    });
+    videoStoryPlayer.addEventListener('playing', () => {
+      updateVideoStoryAudioStatusFromPlayer();
+    });
+    videoStoryPlayer.addEventListener('pause', () => {
+      updateVideoStoryAudioStatusFromPlayer();
+    });
+  }
+
+  if (videoStoryScroll) {
+    const activateFromStepNode = (stepNode, shouldScroll = false) => {
+      if (!(stepNode instanceof HTMLElement)) return;
+      const rawIndex = Number(stepNode.dataset.sceneIndex);
+      if (!Number.isFinite(rawIndex)) return;
+      activateVideoStoryScene(rawIndex, { autoplay: true });
+      if (shouldScroll) {
+        stepNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
+
+    videoStoryScroll.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      if (target.closest('a')) return;
+      const stepNode = target.closest('.video-story-step');
+      if (!stepNode) return;
+      activateFromStepNode(stepNode, false);
+    });
+
+    videoStoryScroll.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      const stepNode = target.closest('.video-story-step');
+      if (!stepNode) return;
+      event.preventDefault();
+      activateFromStepNode(stepNode, true);
+    });
+  }
+
   const openFromTrigger = (triggerNode, event = null) => {
     if (!(triggerNode instanceof Element)) return;
 
@@ -825,6 +1967,12 @@ function initVideoModal() {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
+    }
+
+    const story = resolveVideoStory(triggerNode, title);
+    if (story) {
+      openVideoStoryModal(story, source, triggerNode);
+      return;
     }
 
     openVideoModal(source, title, triggerNode);
@@ -864,6 +2012,71 @@ function initVideoModal() {
   }
 }
 
+function renderPrompts(prompts, meta) {
+  if (!promptListNode || !promptTemplateNode) return;
+  promptListNode.innerHTML = '';
+
+  if (!Array.isArray(prompts) || !prompts.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = 'Ingen Kling-prompter tilgjengelig.';
+    promptListNode.appendChild(empty);
+    if (promptMetaNode) promptMetaNode.textContent = 'Ingen prompts funnet';
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  prompts.forEach((item) => {
+    const clone = promptTemplateNode.content.cloneNode(true);
+    const slot = clone.querySelector('.prompt-slot');
+    const title = clone.querySelector('.prompt-title');
+    const button = clone.querySelector('.copy-prompt');
+    const model = clone.querySelector('.prompt-model');
+    const duration = clone.querySelector('.prompt-duration');
+    const ratio = clone.querySelector('.prompt-ratio');
+    const text = clone.querySelector('.prompt-text');
+    const negative = clone.querySelector('.prompt-negative');
+
+    if (slot) slot.textContent = item.placement || 'Ukjent plassering';
+    if (title) title.textContent = item.title || 'Uten tittel';
+    if (model) model.textContent = item.model || 'Kling 3.0';
+    if (duration) duration.textContent = `${item.duration_sec || '?'} sek`; 
+    if (ratio) ratio.textContent = item.aspect_ratio || '16:9';
+    if (text) text.textContent = item.prompt || '';
+    if (negative) negative.textContent = item.negative_prompt || 'Ingen';
+
+    if (button) {
+      button.dataset.prompt = item.prompt || '';
+      button.dataset.defaultLabel = 'Kopier prompt';
+      button.addEventListener('click', async () => {
+        const payload = button.dataset.prompt || '';
+        if (!payload) return;
+        try {
+          await navigator.clipboard.writeText(payload);
+          button.textContent = 'Kopiert';
+          button.classList.add('copied');
+          window.setTimeout(() => {
+            button.textContent = button.dataset.defaultLabel || 'Kopier prompt';
+            button.classList.remove('copied');
+          }, 1200);
+        } catch {
+          button.textContent = 'Kunne ikke kopiere';
+        }
+      });
+    }
+
+    fragment.appendChild(clone);
+  });
+
+  promptListNode.appendChild(fragment);
+
+  if (promptMetaNode) {
+    const updated = meta && meta.updated_at ? formatPublished(meta.updated_at) : 'ukjent';
+    promptMetaNode.textContent = `${prompts.length} prompter. Oppdatert: ${updated}`;
+  }
+}
+
 async function loadNews() {
   const fallback = {
     generated_at: null,
@@ -874,7 +2087,7 @@ async function loadNews() {
         source: 'Lokal status',
         url: '#',
         published_at: new Date().toISOString(),
-        tone: 'replacement_anxiety',
+        tone: 'neutral',
         category: 'Norsk arbeidsmarked',
         published: true,
         snippet: 'Bruk scripts/crawl_ai_jobs_news.py for å oppdatere wire med ferske nyheter.',
@@ -912,6 +2125,20 @@ async function loadNews() {
   }
 }
 
+async function loadPrompts() {
+  try {
+    const response = await fetch('assets/data/kling3-prompts.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    renderPrompts(data.prompts || [], data);
+  } catch (error) {
+    renderPrompts([], {});
+    if (promptMetaNode) {
+      promptMetaNode.textContent = `Kunne ikke laste prompts (${String(error)})`;
+    }
+  }
+}
+
 if (menuToggle && navNode) {
   menuToggle.addEventListener('click', () => {
     const expanded = menuToggle.getAttribute('aria-expanded') === 'true';
@@ -928,7 +2155,7 @@ if (menuToggle && navNode) {
 
 filterButtons.forEach((button) => {
   button.addEventListener('click', () => {
-    const target = button.dataset.filter || 'replacement_anxiety';
+    const target = button.dataset.filter || 'all';
     setFilter(target);
   });
 });
@@ -939,7 +2166,18 @@ if (yearNode) {
 
 setTopClock();
 window.setInterval(setTopClock, 30_000);
-initScrollytelling();
-initScrollySeriesActions();
-initVideoModal();
-loadNews();
+
+async function bootstrapPage() {
+  initScrollCue();
+  syncScrollyNodes();
+  await loadScrollyContent();
+  initScrollySceneMenu();
+  initScrollytelling();
+  initScrollyFullscreen();
+  initScrollySeriesActions();
+  initVideoModal();
+  loadNews();
+  loadPrompts();
+}
+
+bootstrapPage();
