@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-02-18T11:57:45.146Z",
+  "updated_at": "2026-02-18T19:17:39.005Z",
   "section_title": "INTELLIGENSPARTIET",
   "section_meta": "Historiske strider, nåtidens arbeidsliv og et surrealistisk frampek",
   "scenes": [
@@ -52,6 +52,16 @@
       "caption": "",
       "video": "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/videos/1771415406784-886154de-CamillaStone.mp4",
       "poster": "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/posters/1771415863642-3227a9d0-camillaStill.jpg"
+    },
+    {
+      "kicker": "Scene 6",
+      "step_title": "Norske Intelligentssedler",
+      "step_text": "Intelligenspartiet ser inn i fremtiden.",
+      "title": "",
+      "body": "",
+      "caption": "",
+      "video": "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/videos/1771442235013-9c01df3d-FremtidensIntelligenssedler.mp4",
+      "poster": "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/posters/1771442255228-9181695a-freepik__keep-everything-in-img1-the-same-only-change-the-p__35543.png"
     }
   ]
 }
