@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Intelligenspartiet Admin CMS</title>
-  <link rel="icon" type="image/svg+xml" href="/assets/logo/intelligenspartiet-favicon.svg" />
-  <link rel="shortcut icon" href="/assets/logo/intelligenspartiet-favicon.svg" />
+  <link rel="icon" type="image/png" href="/assets/logo/logoIntelli.png" />
+  <link rel="shortcut icon" href="/assets/logo/logoIntelli.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -25,7 +25,7 @@
     <div class="masthead-inner">
       <p class="tagline">Kontrollsenter for publisering</p>
       <a href="/" class="brand" aria-label="Intelligenspartiet">
-        <img class="brand-mark" src="/assets/logo/intelligenspartiet-logo.svg" alt="" aria-hidden="true" />
+        <img class="brand-mark" src="/assets/logo/logoIntelli.png" alt="" aria-hidden="true" />
         <span class="brand-text">INTELLIGENSPARTIET</span>
       </a>
       <p class="admin-pill">VISUELL CMS</p>
@@ -33,6 +33,7 @@
   </header>
 
   <nav class="section-nav admin-nav" aria-label="Adminseksjoner">
+    <a href="#studio">Studio</a>
     <a href="#story-cms">Scrollytelling-CMS</a>
     <a href="#prompt-cms">Kling promptbank</a>
     <a href="#cms">Nyhets-CMS</a>
@@ -42,6 +43,61 @@
   </nav>
 
   <main class="admin-shell">
+    <section id="studio" class="card studio-card">
+      <div class="cms-head">
+        <h2>Studiooversikt</h2>
+        <p>Samlet visning av crawlede saker, foreslåtte prompts og opplasting av ferdig generert video.</p>
+      </div>
+
+      <div class="editor-toolbar">
+        <button id="studio-refresh" type="button" disabled>Oppdater studio</button>
+        <button id="studio-save-story" type="button" disabled>Lagre finale til scrollytelling</button>
+      </div>
+
+      <div class="cms-meta-row">
+        <p id="studio-meta" class="status">Logg inn for å laste studiooversikt.</p>
+        <p id="studio-status" class="status"></p>
+      </div>
+
+      <div class="studio-grid">
+        <article class="studio-panel">
+          <div class="studio-panel-head">
+            <h3>Crawlede historier</h3>
+            <p id="studio-news-meta" class="status">Ingen data lastet.</p>
+          </div>
+          <div id="studio-news-list" class="studio-list" aria-live="polite"></div>
+        </article>
+
+        <article class="studio-panel">
+          <div class="studio-panel-head">
+            <h3>Foreslåtte prompts</h3>
+            <p id="studio-prompt-meta" class="status">Ingen data lastet.</p>
+          </div>
+          <div id="studio-prompt-list" class="studio-list" aria-live="polite"></div>
+        </article>
+
+        <article class="studio-panel">
+          <div class="studio-panel-head">
+            <h3>Last opp ferdig video</h3>
+            <p class="status">Velg scene og knytt endelig generert klipp.</p>
+          </div>
+
+          <div class="studio-final-controls">
+            <label for="studio-scene-target">Målscene</label>
+            <select id="studio-scene-target" disabled></select>
+
+            <p id="studio-scene-info" class="status">Ingen scene valgt.</p>
+
+            <label for="studio-final-file">Videofil</label>
+            <input id="studio-final-file" type="file" accept="video/*" disabled />
+
+            <button id="studio-upload-final" type="button" disabled>Last opp video til valgt scene</button>
+            <p id="studio-final-status" class="status"></p>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section id="story-cms" class="card story-cms-card">
       <div class="cms-head">
         <h2>Scrollytelling-CMS</h2>
