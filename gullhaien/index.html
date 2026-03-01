@@ -319,20 +319,78 @@
     const playerStage = document.getElementById('player-stage');
     const fullscreenButton = document.getElementById('fullscreen-button');
     const downloadButton = document.getElementById('download-button');
-    const downloadStatus = document.getElementById('download-status');
+    const statusNode = document.getElementById('download-status');
+
+    function getFullscreenElement() {
+      return (
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.msFullscreenElement ||
+        null
+      );
+    }
+
+    async function startVideoPlayback() {
+      if (!video || !video.paused) return;
+
+      try {
+        await video.play();
+      } catch (error) {
+        // Ignore playback failures here; fullscreen fallback can still succeed.
+      }
+    }
 
     async function requestTrueFullscreen() {
       const target = playerStage || video;
       if (!target) return;
 
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
+      if (getFullscreenElement()) {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+          return;
+        }
+
+        if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+          return;
+        }
+
         return;
       }
 
       if (target.requestFullscreen) {
         await target.requestFullscreen();
+        return;
       }
+
+      if (video.requestFullscreen) {
+        await video.requestFullscreen();
+        return;
+      }
+
+      if (target.webkitRequestFullscreen) {
+        target.webkitRequestFullscreen();
+        return;
+      }
+
+      if (video.webkitRequestFullscreen) {
+        video.webkitRequestFullscreen();
+        return;
+      }
+
+      if (video.webkitEnterFullscreen) {
+        await startVideoPlayback();
+        video.webkitEnterFullscreen();
+        return;
+      }
+
+      if (video.webkitEnterFullScreen) {
+        await startVideoPlayback();
+        video.webkitEnterFullScreen();
+        return;
+      }
+
+      throw new Error('fullscreen unsupported');
     }
 
     async function handleDownload(event) {
@@ -340,7 +398,7 @@
       const href = downloadButton.href;
       const filename = downloadButton.getAttribute('download') || 'Intelligenspartiet2027.mp4';
 
-      downloadStatus.textContent = 'Forbereder nedlasting...';
+      statusNode.textContent = 'Forbereder nedlasting...';
 
       try {
         const response = await fetch(href, { mode: 'cors' });
@@ -357,15 +415,17 @@
         tempLink.click();
         tempLink.remove();
         URL.revokeObjectURL(blobUrl);
-        downloadStatus.textContent = 'Nedlasting startet.';
+        statusNode.textContent = 'Nedlasting startet.';
       } catch (error) {
         window.open(href, '_blank', 'noopener,noreferrer');
-        downloadStatus.textContent = 'Direktelenken ble åpnet i ny fane.';
+        statusNode.textContent = 'Direktelenken ble åpnet i ny fane.';
       }
     }
 
     fullscreenButton.addEventListener('click', () => {
+      statusNode.textContent = '';
       requestTrueFullscreen().catch(() => {
+        statusNode.textContent = 'Fullskjerm er ikke tilgjengelig i denne nettleseren.';
         video.focus();
       });
     });
