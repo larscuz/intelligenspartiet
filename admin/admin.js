@@ -2,8 +2,11 @@ const FILE_OPTIONS = [
   'assets/data/scrollytelling-welhaven-wergeland-cuzner.json',
   'assets/data/kling3-prompts.json',
   'assets/data/ai-jobs-news.json',
+  'assets/data/media-panels.json',
+  'assets/data/glyph-language-map.json',
   'index.html',
   'assets/css/style.css',
+  'assets/js/radar-language-runtime.js',
   'assets/js/main.js',
   'README.md',
   'scripts/crawl_ai_jobs_news.py',
@@ -20,6 +23,8 @@ const STORY_DEFAULT_TITLE = 'INTELLIGENSPARTIET - Welhaven, Wergeland og Cuzner'
 const STORY_DEFAULT_META = 'Historiske strider, nåtidens arbeidsliv og et surrealistisk frampek';
 const PROMPT_PATH = 'assets/data/kling3-prompts.json';
 const PROMPT_DEFAULT_MODEL = 'Kling 3.0';
+const MEDIA_PATH = 'assets/data/media-panels.json';
+const GLYPH_PATH = 'assets/data/glyph-language-map.json';
 
 const state = {
   currentPath: FILE_OPTIONS[0],
@@ -54,6 +59,30 @@ const state = {
     model: PROMPT_DEFAULT_MODEL,
     prompts: [],
     dirty: false,
+  },
+  media: {
+    loaded: false,
+    sha: '',
+    branch: 'main',
+    updatedAt: null,
+    panels: [],
+    dirty: false,
+  },
+  glyph: {
+    loaded: false,
+    sha: '',
+    branch: 'main',
+    updatedAt: null,
+    version: '0.1.0',
+    description: '',
+    items: [],
+    dirty: false,
+  },
+  publicGlyphPreview: {
+    loaded: false,
+    error: '',
+    panels: [],
+    items: [],
   },
 };
 
@@ -112,6 +141,23 @@ const promptModelInput = document.querySelector('#prompt-model');
 const promptListNode = document.querySelector('#prompt-cms-list');
 const promptMetaNode = document.querySelector('#prompt-cms-meta');
 const promptStatusNode = document.querySelector('#prompt-cms-status');
+
+const mediaLoadButton = document.querySelector('#media-load');
+const mediaSaveButton = document.querySelector('#media-save');
+const mediaCommitMessageInput = document.querySelector('#media-commit-message');
+const mediaListNode = document.querySelector('#media-cms-list');
+const mediaMetaNode = document.querySelector('#media-cms-meta');
+const mediaStatusNode = document.querySelector('#media-cms-status');
+
+const glyphLoadButton = document.querySelector('#glyph-load');
+const glyphAddButton = document.querySelector('#glyph-add');
+const glyphSaveButton = document.querySelector('#glyph-save');
+const glyphCommitMessageInput = document.querySelector('#glyph-commit-message');
+const glyphListNode = document.querySelector('#glyph-cms-list');
+const glyphMetaNode = document.querySelector('#glyph-cms-meta');
+const glyphStatusNode = document.querySelector('#glyph-cms-status');
+const glyphPanelIdsList = document.querySelector('#glyph-panel-ids-list');
+const glyphSpotOverviewNode = document.querySelector('#glyph-spot-overview');
 
 function setStatus(node, message, kind = '') {
   if (!node) return;
@@ -252,6 +298,181 @@ function createEmptyPromptItem(index = 0) {
   };
 }
 
+function normalizeMediaItem(item) {
+  return {
+    id: String(item && item.id ? item.id : '').trim(),
+    type: String(item && item.type ? item.type : 'image').trim(),
+    url: String(item && item.url ? item.url : '').trim(),
+    poster: String(item && item.poster ? item.poster : '').trim(),
+  };
+}
+
+function normalizeSpotPanel(item) {
+  return {
+    id: String(item && item.id ? item.id : '').trim(),
+    type: String(item && item.type ? item.type : 'spot').trim() || 'spot',
+  };
+}
+
+async function fetchLocalJson(path) {
+  const response = await fetch(path, { cache: 'no-store' });
+  const contentType = response.headers.get('content-type') || '';
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} fra ${path}`);
+  }
+  if (!contentType.toLowerCase().includes('application/json')) {
+    const body = await response.text();
+    throw new Error(`Forventet JSON fra ${path}, fikk '${contentType || 'unknown'}' (${body.slice(0, 100)})`);
+  }
+  return response.json();
+}
+
+function clearPublicGlyphPreview() {
+  state.publicGlyphPreview = {
+    loaded: false,
+    error: '',
+    panels: [],
+    items: [],
+  };
+}
+
+async function loadPublicGlyphPreview() {
+  clearPublicGlyphPreview();
+  try {
+    const [mediaPayload, glyphPayload] = await Promise.all([
+      fetchLocalJson('/assets/data/media-panels.json'),
+      fetchLocalJson('/assets/data/glyph-language-map.json'),
+    ]);
+
+    const panels = Array.isArray(mediaPayload && mediaPayload.panels)
+      ? mediaPayload.panels.map(normalizeSpotPanel).filter((panel) => panel.id)
+      : [];
+    const items = Array.isArray(glyphPayload && glyphPayload.items)
+      ? glyphPayload.items.map((item, index) => normalizeGlyphItem(item, index))
+      : [];
+
+    state.publicGlyphPreview = {
+      loaded: true,
+      error: '',
+      panels,
+      items,
+    };
+  } catch (error) {
+    state.publicGlyphPreview = {
+      loaded: false,
+      error: parseError(error),
+      panels: [],
+      items: [],
+    };
+  }
+
+  renderGlyphSpotOverview();
+}
+
+function getRadarRuntime() {
+  return window.RadarLanguageRuntime || null;
+}
+
+function parseCanonicalSafe(canonical) {
+  const runtime = getRadarRuntime();
+  if (!runtime || typeof runtime.parseCanonicalSentence !== 'function') {
+    const tokenCount = String(canonical || '')
+      .split('.')
+      .map((token) => token.trim())
+      .filter(Boolean).length;
+    if (tokenCount !== 6) {
+      throw new Error('Canonical må ha 6 tokens: SUBJECT.DOMAIN.VERB.MAGNITUDE.TIME.CERTAINTY');
+    }
+    return true;
+  }
+  return runtime.parseCanonicalSentence(canonical);
+}
+
+function drawGlyphPreview(canvas, canonical) {
+  if (!(canvas instanceof HTMLCanvasElement)) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const runtime = getRadarRuntime();
+  if (!runtime || typeof runtime.drawCanonicalGlyphToContext !== 'function') {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#0c1420';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#9ec5de';
+    ctx.font = "12px 'Source Sans 3', sans-serif";
+    ctx.fillText('RL runtime', 18, 56);
+    ctx.fillText('mangler', 34, 74);
+    return;
+  }
+
+  runtime.drawCanonicalGlyphToContext(ctx, canonical, {
+    backgroundColor: 'rgba(6,14,24,0.74)',
+    lineColor: 'rgba(102,221,255,0.96)',
+    gridColor: 'rgba(102,221,255,0.58)',
+  });
+}
+
+function drawGlyphPlaceholder(canvas, label = 'INGEN') {
+  if (!(canvas instanceof HTMLCanvasElement)) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const width = canvas.width;
+  const height = canvas.height;
+  const cx = width * 0.5;
+  const cy = height * 0.5;
+  const radius = Math.min(width, height) * 0.38;
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = 'rgba(6,14,24,0.74)';
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(102,221,255,0.38)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius * 0.9, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(255,143,143,0.9)';
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(cx - radius * 0.34, cy - radius * 0.34);
+  ctx.lineTo(cx + radius * 0.34, cy + radius * 0.34);
+  ctx.moveTo(cx + radius * 0.34, cy - radius * 0.34);
+  ctx.lineTo(cx - radius * 0.34, cy + radius * 0.34);
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(202,225,240,0.86)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.font = "600 11px 'Source Sans 3', sans-serif";
+  ctx.fillText(String(label || 'INGEN').slice(0, 18), cx, cy + radius * 0.7);
+}
+
+function normalizeGlyphItem(item, index = 0) {
+  return {
+    id: String(item && item.id ? item.id : `glyph-${String(index + 1).padStart(2, '0')}`).trim(),
+    label: String(item && item.label ? item.label : '').trim(),
+    panel_id: String(item && item.panel_id ? item.panel_id : '').trim(),
+    canonical: String(item && item.canonical ? item.canonical : '').trim().toUpperCase(),
+    enabled: item && item.enabled !== false,
+    note: String(item && item.note ? item.note : '').trim(),
+  };
+}
+
+function createEmptyGlyphItem(index = 0) {
+  return {
+    id: `glyph-${String(index + 1).padStart(2, '0')}`,
+    label: '',
+    panel_id: '',
+    canonical: 'IDEA.TECHNOLOGY.GROWS.MEDIUM.LT1Y.INDICATION',
+    enabled: true,
+    note: '',
+  };
+}
+
 async function apiRequest(method, path, payload) {
   const options = {
     method,
@@ -315,6 +536,7 @@ function updateCmsActionState() {
   const cmsLoaded = loggedIn && state.cms.loaded;
   const storyLoaded = loggedIn && state.story.loaded;
   const promptLoaded = loggedIn && state.prompt.loaded;
+  const glyphLoaded = loggedIn && state.glyph.loaded;
 
   if (cmsLoadButton) cmsLoadButton.disabled = !loggedIn;
   if (cmsCommitMessageInput) cmsCommitMessageInput.disabled = !loggedIn;
@@ -335,6 +557,16 @@ function updateCmsActionState() {
   if (promptModelInput) promptModelInput.disabled = !promptLoaded;
   if (promptAddButton) promptAddButton.disabled = !promptLoaded;
   if (promptSaveButton) promptSaveButton.disabled = !promptLoaded || !state.prompt.dirty;
+
+  const mediaLoaded = loggedIn && state.media.loaded;
+  if (mediaLoadButton) mediaLoadButton.disabled = !loggedIn;
+  if (mediaCommitMessageInput) mediaCommitMessageInput.disabled = !loggedIn;
+  if (mediaSaveButton) mediaSaveButton.disabled = !mediaLoaded || !state.media.dirty;
+
+  if (glyphLoadButton) glyphLoadButton.disabled = !loggedIn;
+  if (glyphCommitMessageInput) glyphCommitMessageInput.disabled = !loggedIn;
+  if (glyphAddButton) glyphAddButton.disabled = !glyphLoaded;
+  if (glyphSaveButton) glyphSaveButton.disabled = !glyphLoaded || !state.glyph.dirty;
 }
 
 function resetCmsState() {
@@ -391,6 +623,40 @@ function resetPromptState() {
   updateCmsActionState();
 }
 
+function resetMediaState() {
+  state.media = {
+    loaded: false,
+    sha: '',
+    branch: 'main',
+    updatedAt: null,
+    panels: [],
+    dirty: false,
+  };
+  if (mediaListNode) mediaListNode.innerHTML = '';
+  setStatus(mediaMetaNode, 'Logg inn for å laste mediepaneler-CMS.');
+  setStatus(mediaStatusNode, '');
+  updateCmsActionState();
+}
+
+function resetGlyphState() {
+  state.glyph = {
+    loaded: false,
+    sha: '',
+    branch: 'main',
+    updatedAt: null,
+    version: '0.1.0',
+    description: '',
+    items: [],
+    dirty: false,
+  };
+  if (glyphListNode) glyphListNode.innerHTML = '';
+  if (glyphSpotOverviewNode) glyphSpotOverviewNode.innerHTML = '';
+  if (glyphPanelIdsList) glyphPanelIdsList.innerHTML = '';
+  setStatus(glyphMetaNode, 'Logg inn for å laste glyph language-CMS.');
+  setStatus(glyphStatusNode, '');
+  updateCmsActionState();
+}
+
 function setEditorEnabled(enabled) {
   state.authenticated = enabled;
 
@@ -407,12 +673,18 @@ function setEditorEnabled(enabled) {
 
   updateCmsActionState();
 
+  if (enabled) {
+    clearPublicGlyphPreview();
+  }
+
   if (!enabled) {
     setStatus(fileMeta, 'Logg inn for å laste/redigere filer.');
     setStatus(saveStatus, '');
     resetCmsState();
     resetStoryState();
     resetPromptState();
+    resetMediaState();
+    resetGlyphState();
   }
 }
 
@@ -801,6 +1073,793 @@ function markPromptDirty(message = 'Ulagrede prompt-endringer.') {
   setStatus(promptStatusNode, message);
   updatePromptMeta();
   updateCmsActionState();
+}
+
+function markMediaDirty(message = 'Ulagrede medie-endringer.') {
+  state.media.dirty = true;
+  setStatus(mediaStatusNode, message);
+  updateMediaMeta();
+  updateCmsActionState();
+}
+
+function updateMediaMeta() {
+  if (!mediaMetaNode) return;
+
+  if (!state.media.loaded) {
+    setStatus(mediaMetaNode, 'Logg inn for å laste mediepaneler-CMS.');
+    return;
+  }
+
+  const total = state.media.panels.length;
+  const updated = formatNorwegianDate(state.media.updatedAt);
+  const dirtyNote = state.media.dirty ? ' Ulagrede endringer.' : '';
+  setStatus(mediaMetaNode, `Paneler: ${total}. Sist oppdatert: ${updated}.${dirtyNote}`);
+}
+
+function renderMediaList() {
+  if (!mediaListNode) return;
+  mediaListNode.innerHTML = '';
+
+  if (!state.media.loaded) {
+    const placeholder = document.createElement('p');
+    placeholder.className = 'empty-state small';
+    placeholder.textContent = 'Logg inn og trykk "Last mediepaneler" for visuell redigering.';
+    mediaListNode.appendChild(placeholder);
+    return;
+  }
+
+  if (!state.media.panels.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty-state small';
+    empty.textContent = 'Ingen mediepaneler definert i filen.';
+    mediaListNode.appendChild(empty);
+    return;
+  }
+
+  state.media.panels.forEach((rawPanel, index) => {
+    const panel = normalizeMediaItem(rawPanel);
+    state.media.panels[index] = panel;
+
+    const card = document.createElement('article');
+    card.className = 'cms-item';
+
+    const head = document.createElement('div');
+    head.className = 'cms-item-head';
+
+    const label = document.createElement('p');
+    label.className = 'cms-item-label';
+    label.textContent = `Panel ${index + 1} (${panel.type}): ${panel.id || 'uten id'}`;
+
+    head.appendChild(label);
+
+    const grid = document.createElement('div');
+    grid.className = 'cms-item-grid';
+
+    const urlInput = document.createElement('input');
+    urlInput.type = 'url';
+    urlInput.value = panel.url;
+    urlInput.addEventListener('input', () => {
+      state.media.panels[index].url = urlInput.value;
+      markMediaDirty();
+    });
+    grid.appendChild(createField('Media URL', urlInput, true));
+
+    const mediaUploadInput = document.createElement('input');
+    mediaUploadInput.type = 'file';
+    mediaUploadInput.accept = panel.type === 'video' ? 'video/*' : 'image/*';
+    mediaUploadInput.className = 'story-file-input';
+
+    const mediaUploadButton = document.createElement('button');
+    mediaUploadButton.type = 'button';
+    mediaUploadButton.textContent = `Last opp ny ${panel.type} til R2`;
+
+    const mediaUploadStatus = document.createElement('p');
+    mediaUploadStatus.className = 'status';
+
+    const mediaUploadRow = document.createElement('div');
+    mediaUploadRow.className = 'story-upload-row';
+    mediaUploadRow.appendChild(mediaUploadInput);
+    mediaUploadRow.appendChild(mediaUploadButton);
+
+    const mediaUploadField = document.createElement('div');
+    mediaUploadField.className = 'cms-field is-wide';
+    const mediaUploadLabel = document.createElement('span');
+    mediaUploadLabel.textContent = 'Direkte opplasting ' + panel.type;
+    mediaUploadField.appendChild(mediaUploadLabel);
+    mediaUploadField.appendChild(mediaUploadRow);
+    mediaUploadField.appendChild(mediaUploadStatus);
+    grid.appendChild(mediaUploadField);
+
+    mediaUploadButton.addEventListener('click', async () => {
+      const file = mediaUploadInput.files && mediaUploadInput.files[0];
+      if (!file) {
+        setStatus(mediaUploadStatus, 'Velg en fil først.', 'error');
+        return;
+      }
+
+      mediaUploadButton.disabled = true;
+      setStatus(mediaUploadStatus, `Laster opp ${panel.type} til R2 ...`);
+      try {
+        const uploaded = await uploadFileToR2(file, `media-panels/${panel.type}s`);
+        state.media.panels[index].url = uploaded.public_url;
+        urlInput.value = uploaded.public_url;
+        markMediaDirty('Media lastet opp til R2.');
+        setStatus(mediaUploadStatus, `Lastet opp: ${uploaded.public_url}`, 'ok');
+      } catch (error) {
+        setStatus(mediaUploadStatus, `Upload feilet: ${parseError(error)}`, 'error');
+      } finally {
+        mediaUploadButton.disabled = false;
+      }
+    });
+
+    if (panel.type === 'video') {
+      const posterInput = document.createElement('input');
+      posterInput.type = 'url';
+      posterInput.value = panel.poster || '';
+      posterInput.addEventListener('input', () => {
+        state.media.panels[index].poster = posterInput.value;
+        markMediaDirty();
+      });
+      grid.appendChild(createField('Poster URL', posterInput, true));
+
+      const posterUploadInput = document.createElement('input');
+      posterUploadInput.type = 'file';
+      posterUploadInput.accept = 'image/*';
+      posterUploadInput.className = 'story-file-input';
+
+      const posterUploadButton = document.createElement('button');
+      posterUploadButton.type = 'button';
+      posterUploadButton.textContent = 'Last opp ny poster til R2';
+
+      const posterUploadStatus = document.createElement('p');
+      posterUploadStatus.className = 'status';
+
+      const posterUploadRow = document.createElement('div');
+      posterUploadRow.className = 'story-upload-row';
+      posterUploadRow.appendChild(posterUploadInput);
+      posterUploadRow.appendChild(posterUploadButton);
+
+      const posterUploadField = document.createElement('div');
+      posterUploadField.className = 'cms-field is-wide';
+      const posterUploadLabel = document.createElement('span');
+      posterUploadLabel.textContent = 'Direkte opplasting poster';
+      posterUploadField.appendChild(posterUploadLabel);
+      posterUploadField.appendChild(posterUploadRow);
+      posterUploadField.appendChild(posterUploadStatus);
+      grid.appendChild(posterUploadField);
+
+      posterUploadButton.addEventListener('click', async () => {
+        const file = posterUploadInput.files && posterUploadInput.files[0];
+        if (!file) {
+          setStatus(posterUploadStatus, 'Velg et bilde først.', 'error');
+          return;
+        }
+
+        posterUploadButton.disabled = true;
+        setStatus(posterUploadStatus, 'Laster opp poster til R2 ...');
+        try {
+          const uploaded = await uploadFileToR2(file, 'media-panels/posters');
+          state.media.panels[index].poster = uploaded.public_url;
+          posterInput.value = uploaded.public_url;
+          markMediaDirty('Poster lastet opp til R2.');
+          setStatus(posterUploadStatus, `Lastet opp: ${uploaded.public_url}`, 'ok');
+        } catch (error) {
+          setStatus(posterUploadStatus, `Upload feilet: ${parseError(error)}`, 'error');
+        } finally {
+          posterUploadButton.disabled = false;
+        }
+      });
+    }
+
+    card.appendChild(head);
+    card.appendChild(grid);
+    mediaListNode.appendChild(card);
+  });
+
+  if (state.glyph.loaded) {
+    renderGlyphSpotOverview();
+  }
+}
+
+async function loadMediaCms() {
+  if (!state.authenticated) return;
+
+  setStatus(mediaStatusNode, 'Laster mediepaneler ...');
+  try {
+    const file = await apiRequest('GET', `/api/repo-file?path=${encodeURIComponent(MEDIA_PATH)}`);
+    const parsed = JSON.parse(file.content || '{}');
+    const panels = Array.isArray(parsed.panels)
+      ? parsed.panels.map(normalizeMediaItem)
+      : [];
+
+    state.media.loaded = true;
+    state.media.sha = file.sha || '';
+    state.media.branch = file.branch || 'main';
+    state.media.updatedAt = parsed.updated_at || null;
+    state.media.panels = panels;
+    state.media.dirty = false;
+
+    renderMediaList();
+    if (state.glyph.loaded) renderGlyphList();
+    updateMediaMeta();
+    updateCmsActionState();
+    setStatus(mediaStatusNode, 'Mediepaneler lastet.', 'ok');
+  } catch (error) {
+    if (error.message && error.message.includes('404')) {
+      setStatus(mediaStatusNode, `Filen eksisterer ikke ennå på GitHub. Fortsett for å pushe standard JSON filen under Phase 7.`, 'error');
+    } else {
+      setStatus(mediaStatusNode, `Kunne ikke laste mediepaneler: ${parseError(error)}`, 'error');
+    }
+  }
+}
+
+function buildMediaPayload() {
+  const cleanedPanels = state.media.panels.map(normalizeMediaItem);
+
+  return {
+    updated_at: new Date().toISOString(),
+    panels: cleanedPanels,
+  };
+}
+
+async function saveMediaCms() {
+  if (!state.authenticated || !state.media.loaded) return;
+  if (!state.media.sha) {
+    setStatus(mediaStatusNode, 'Advarsel: Mangler SHA, prøver å opprette ny fil (forventer 404/Not Found feil hvis fil allerede finnes under panseret).', '');
+  }
+
+  const message = (mediaCommitMessageInput && mediaCommitMessageInput.value.trim())
+    || 'Admin CMS update: Media Panels';
+
+  setStatus(mediaStatusNode, 'Lagrer mediepaneler til GitHub ...');
+
+  try {
+    const payload = buildMediaPayload();
+    const response = await apiRequest('PUT', '/api/repo-file', {
+      path: MEDIA_PATH,
+      content: JSON.stringify(payload, null, 2),
+      sha: state.media.sha, // Might be empty if it's the first ever save
+      message,
+    });
+
+    state.media.sha = response.sha || '';
+    state.media.branch = response.branch || 'main';
+    state.media.updatedAt = payload.updated_at;
+    state.media.panels = payload.panels;
+    state.media.dirty = false;
+    updateMediaMeta();
+    updateCmsActionState();
+
+    if (state.currentPath === MEDIA_PATH && fileEditor) {
+      fileEditor.value = JSON.stringify(payload, null, 2);
+      state.sha = response.sha || state.sha;
+      setStatus(fileMeta, `Fil: ${MEDIA_PATH} | SHA: ${String(state.sha || '').slice(0, 10)} | Branch: ${state.media.branch}`);
+    }
+
+    const commitNote = response.commit_url ? ` Commit: ${response.commit_url}` : '';
+    setStatus(mediaStatusNode, `Mediepaneler lagret.${commitNote}`, 'ok');
+  } catch (error) {
+    setStatus(mediaStatusNode, `Lagring feilet: ${parseError(error)}`, 'error');
+  }
+}
+
+function markGlyphDirty(message = 'Ulagrede glyph-endringer.') {
+  state.glyph.dirty = true;
+  setStatus(glyphStatusNode, message);
+  renderGlyphSpotOverview();
+  updateGlyphMeta();
+  updateCmsActionState();
+}
+
+function updateGlyphMeta() {
+  if (!glyphMetaNode) return;
+
+  if (!state.glyph.loaded) {
+    setStatus(glyphMetaNode, 'Logg inn for å laste glyph language-CMS.');
+    return;
+  }
+
+  const total = state.glyph.items.length;
+  const active = state.glyph.items.filter((item) => item.enabled !== false).length;
+  const assigned = state.glyph.items.filter((item) => item.enabled !== false && item.panel_id).length;
+  const updated = formatNorwegianDate(state.glyph.updatedAt);
+  const dirtyNote = state.glyph.dirty ? ' Ulagrede endringer.' : '';
+  setStatus(glyphMetaNode, `Glyphs: ${total}. Aktive: ${active}. Tildelt spot: ${assigned}. Sist oppdatert: ${updated}.${dirtyNote}`);
+}
+
+function getKnownPanelIds() {
+  const ids = new Set();
+  state.media.panels.forEach((panel) => {
+    const panelId = String(panel && panel.id ? panel.id : '').trim();
+    if (panelId) ids.add(panelId);
+  });
+  state.glyph.items.forEach((item) => {
+    const panelId = String(item && item.panel_id ? item.panel_id : '').trim();
+    if (panelId) ids.add(panelId);
+  });
+  return Array.from(ids).sort((a, b) => a.localeCompare(b, 'nb-NO'));
+}
+
+function renderGlyphSpotOverview() {
+  if (!glyphSpotOverviewNode) return;
+  glyphSpotOverviewNode.innerHTML = '';
+
+  const editorMode = state.authenticated && state.glyph.loaded;
+  const previewMode = !editorMode && state.publicGlyphPreview.loaded;
+
+  if (!editorMode && !previewMode) {
+    const placeholder = document.createElement('p');
+    placeholder.className = 'empty-state small';
+    placeholder.textContent = state.publicGlyphPreview.error
+      ? `Kunne ikke laste lokal visning: ${state.publicGlyphPreview.error}`
+      : 'Logg inn eller last lokal data for å se visuell spot-oversikt.';
+    glyphSpotOverviewNode.appendChild(placeholder);
+    return;
+  }
+
+  const spotPanels = editorMode ? state.media.panels : state.publicGlyphPreview.panels;
+  const glyphItems = editorMode ? state.glyph.items : state.publicGlyphPreview.items;
+
+  const panelIds = new Set();
+  spotPanels.forEach((panel) => {
+    const panelId = String(panel && panel.id ? panel.id : '').trim();
+    if (panelId) panelIds.add(panelId);
+  });
+  glyphItems.forEach((item) => {
+    const panelId = String(item && item.panel_id ? item.panel_id : '').trim();
+    if (panelId) panelIds.add(panelId);
+  });
+
+  const sortedPanelIds = Array.from(panelIds).sort((a, b) => a.localeCompare(b, 'nb-NO'));
+  if (!sortedPanelIds.length) {
+    const placeholder = document.createElement('p');
+    placeholder.className = 'empty-state small';
+    placeholder.textContent = 'Ingen tunnel-spots funnet ennå.';
+    glyphSpotOverviewNode.appendChild(placeholder);
+    return;
+  }
+
+  const activeByPanelId = new Map();
+  glyphItems.forEach((rawItem, index) => {
+    const item = normalizeGlyphItem(rawItem, index);
+    if (editorMode) state.glyph.items[index] = item;
+    if (item.enabled === false || !item.panel_id || activeByPanelId.has(item.panel_id)) return;
+    activeByPanelId.set(item.panel_id, { item, index });
+  });
+
+  sortedPanelIds.forEach((panelId) => {
+    const assigned = activeByPanelId.get(panelId) || null;
+    const panel = spotPanels.find((entry) => String(entry && entry.id ? entry.id : '').trim() === panelId);
+
+    const card = document.createElement('article');
+    card.className = 'glyph-spot-card';
+
+    const head = document.createElement('div');
+    head.className = 'glyph-spot-card-head';
+
+    const idNode = document.createElement('p');
+    idNode.className = 'glyph-spot-card-id';
+    idNode.textContent = panelId;
+
+    const typeNode = document.createElement('p');
+    typeNode.className = 'glyph-spot-card-type';
+    typeNode.textContent = panel && panel.type ? panel.type : 'spot';
+
+    head.appendChild(idNode);
+    head.appendChild(typeNode);
+    card.appendChild(head);
+
+    const previewCanvas = document.createElement('canvas');
+    previewCanvas.className = 'glyph-preview-canvas glyph-spot-preview';
+    previewCanvas.width = 124;
+    previewCanvas.height = 124;
+
+    const assignmentNode = document.createElement('p');
+    assignmentNode.className = 'glyph-spot-assignment';
+
+    const canonicalNode = document.createElement('p');
+    canonicalNode.className = 'glyph-spot-canonical';
+
+    if (assigned && assigned.item.canonical) {
+      try {
+        parseCanonicalSafe(assigned.item.canonical);
+        drawGlyphPreview(previewCanvas, assigned.item.canonical);
+        assignmentNode.textContent = assigned.item.label
+          ? `${assigned.item.label} (${assigned.item.id || 'uten id'})`
+          : assigned.item.id || 'Glyph uten label';
+        canonicalNode.textContent = assigned.item.canonical;
+      } catch (error) {
+        drawGlyphPlaceholder(previewCanvas, 'Ugyldig');
+        assignmentNode.textContent = 'Tildelt, men canonical er ugyldig.';
+        canonicalNode.textContent = parseError(error);
+        canonicalNode.classList.add('status', 'error');
+      }
+    } else {
+      drawGlyphPlaceholder(previewCanvas, 'Ingen');
+      assignmentNode.textContent = 'Ingen aktiv glyph tildelt denne spoten.';
+      canonicalNode.textContent = 'Tunnel viser fallback-symbol til spoten får en canonical setning.';
+    }
+
+    card.appendChild(previewCanvas);
+    card.appendChild(assignmentNode);
+    card.appendChild(canonicalNode);
+
+    if (assigned && editorMode) {
+      const actionWrap = document.createElement('div');
+      actionWrap.className = 'glyph-spot-actions';
+      const focusButton = document.createElement('button');
+      focusButton.type = 'button';
+      focusButton.textContent = 'Rediger binding';
+      focusButton.addEventListener('click', () => {
+        if (!glyphListNode) return;
+        const node = glyphListNode.querySelector(`[data-glyph-index="${assigned.index}"]`);
+        if (node && typeof node.scrollIntoView === 'function') {
+          node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+      actionWrap.appendChild(focusButton);
+      card.appendChild(actionWrap);
+    }
+
+    glyphSpotOverviewNode.appendChild(card);
+  });
+}
+
+function syncGlyphPanelIdDatalist() {
+  if (!glyphPanelIdsList) return;
+  glyphPanelIdsList.innerHTML = '';
+  getKnownPanelIds().forEach((panelId) => {
+    const option = document.createElement('option');
+    option.value = panelId;
+    glyphPanelIdsList.appendChild(option);
+  });
+}
+
+function renderGlyphList() {
+  if (!glyphListNode) return;
+  glyphListNode.innerHTML = '';
+  syncGlyphPanelIdDatalist();
+  renderGlyphSpotOverview();
+
+  if (!state.glyph.loaded) {
+    const placeholder = document.createElement('p');
+    placeholder.className = 'empty-state small';
+    placeholder.textContent = 'Logg inn og trykk "Last glyph map" for semantisk glyph-redigering.';
+    glyphListNode.appendChild(placeholder);
+    return;
+  }
+
+  if (!state.glyph.items.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty-state small';
+    empty.textContent = 'Ingen glyph bindings i filen ennå. Legg til ny binding.';
+    glyphListNode.appendChild(empty);
+    return;
+  }
+
+  state.glyph.items.forEach((rawItem, index) => {
+    const item = normalizeGlyphItem(rawItem, index);
+    state.glyph.items[index] = item;
+
+    const card = document.createElement('article');
+    card.className = 'cms-item';
+    card.dataset.glyphIndex = String(index);
+
+    const head = document.createElement('div');
+    head.className = 'cms-item-head';
+
+    const label = document.createElement('p');
+    label.className = 'cms-item-label';
+    const assignedLabel = item.panel_id ? `spot: ${item.panel_id}` : 'spot: (ikke tildelt)';
+    label.textContent = `Glyph ${index + 1} · ${item.id || 'uten id'} · ${assignedLabel}`;
+
+    const actions = document.createElement('div');
+    actions.className = 'cms-actions';
+
+    const moveUpButton = document.createElement('button');
+    moveUpButton.type = 'button';
+    moveUpButton.textContent = 'Flytt opp';
+    moveUpButton.disabled = index === 0;
+    moveUpButton.addEventListener('click', () => {
+      const previous = state.glyph.items[index - 1];
+      state.glyph.items[index - 1] = state.glyph.items[index];
+      state.glyph.items[index] = previous;
+      renderGlyphList();
+      markGlyphDirty('Glyph flyttet opp.');
+    });
+
+    const moveDownButton = document.createElement('button');
+    moveDownButton.type = 'button';
+    moveDownButton.textContent = 'Flytt ned';
+    moveDownButton.disabled = index === state.glyph.items.length - 1;
+    moveDownButton.addEventListener('click', () => {
+      const next = state.glyph.items[index + 1];
+      state.glyph.items[index + 1] = state.glyph.items[index];
+      state.glyph.items[index] = next;
+      renderGlyphList();
+      markGlyphDirty('Glyph flyttet ned.');
+    });
+
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.textContent = 'Slett';
+    deleteButton.addEventListener('click', () => {
+      state.glyph.items.splice(index, 1);
+      renderGlyphList();
+      markGlyphDirty('Glyph slettet.');
+    });
+
+    actions.appendChild(moveUpButton);
+    actions.appendChild(moveDownButton);
+    actions.appendChild(deleteButton);
+    head.appendChild(label);
+    head.appendChild(actions);
+
+    const grid = document.createElement('div');
+    grid.className = 'cms-item-grid';
+
+    const idInput = document.createElement('input');
+    idInput.type = 'text';
+    idInput.value = item.id;
+    idInput.addEventListener('input', () => {
+      state.glyph.items[index].id = idInput.value.trim();
+      label.textContent = `Glyph ${index + 1} · ${state.glyph.items[index].id || 'uten id'} · ${state.glyph.items[index].panel_id || '(ikke tildelt)'}`;
+      markGlyphDirty();
+    });
+    grid.appendChild(createField('ID', idInput));
+
+    const glyphLabelInput = document.createElement('input');
+    glyphLabelInput.type = 'text';
+    glyphLabelInput.value = item.label;
+    glyphLabelInput.placeholder = 'AI Fatigue';
+    glyphLabelInput.addEventListener('input', () => {
+      state.glyph.items[index].label = glyphLabelInput.value;
+      markGlyphDirty();
+    });
+    grid.appendChild(createField('Label', glyphLabelInput));
+
+    const panelInput = document.createElement('input');
+    panelInput.type = 'text';
+    panelInput.value = item.panel_id;
+    panelInput.placeholder = 'halfwall-01';
+    panelInput.setAttribute('list', 'glyph-panel-ids-list');
+    panelInput.addEventListener('input', () => {
+      state.glyph.items[index].panel_id = panelInput.value.trim();
+      const panelText = state.glyph.items[index].panel_id || '(ikke tildelt)';
+      label.textContent = `Glyph ${index + 1} · ${state.glyph.items[index].id || 'uten id'} · spot: ${panelText}`;
+      syncGlyphPanelIdDatalist();
+      markGlyphDirty();
+    });
+    grid.appendChild(createField('Panel ID / tunnel-spot', panelInput));
+
+    const enabledWrap = document.createElement('label');
+    enabledWrap.className = 'cms-switch';
+    const enabledCheckbox = document.createElement('input');
+    enabledCheckbox.type = 'checkbox';
+    enabledCheckbox.checked = item.enabled !== false;
+    enabledCheckbox.addEventListener('change', () => {
+      state.glyph.items[index].enabled = enabledCheckbox.checked;
+      markGlyphDirty();
+    });
+    const enabledText = document.createElement('span');
+    enabledText.textContent = 'Aktiv glyph';
+    enabledWrap.appendChild(enabledCheckbox);
+    enabledWrap.appendChild(enabledText);
+
+    const enabledField = document.createElement('div');
+    enabledField.className = 'cms-field';
+    const enabledLabel = document.createElement('span');
+    enabledLabel.textContent = 'Status';
+    enabledField.appendChild(enabledLabel);
+    enabledField.appendChild(enabledWrap);
+    grid.appendChild(enabledField);
+
+    const canonicalInput = document.createElement('input');
+    canonicalInput.type = 'text';
+    canonicalInput.value = item.canonical;
+    canonicalInput.placeholder = 'SUBJECT.DOMAIN.VERB.MAGNITUDE.TIME.CERTAINTY';
+
+    const previewCanvas = document.createElement('canvas');
+    previewCanvas.className = 'glyph-preview-canvas';
+    previewCanvas.width = 124;
+    previewCanvas.height = 124;
+
+    const previewMeta = document.createElement('p');
+    previewMeta.className = 'glyph-preview-meta status';
+
+    const updatePreview = () => {
+      try {
+        const canonical = String(canonicalInput.value || '').trim().toUpperCase();
+        if (!canonical) {
+          previewMeta.textContent = 'Skriv canonical for preview.';
+          previewMeta.classList.remove('ok', 'error');
+          return;
+        }
+        parseCanonicalSafe(canonical);
+        drawGlyphPreview(previewCanvas, canonical);
+        previewMeta.textContent = 'Gyldig canonical.';
+        previewMeta.classList.remove('error');
+        previewMeta.classList.add('ok');
+      } catch (error) {
+        const ctx = previewCanvas.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+          ctx.fillStyle = '#0c1420';
+          ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+          ctx.strokeStyle = '#ff8f8f';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(24, 24);
+          ctx.lineTo(100, 100);
+          ctx.moveTo(100, 24);
+          ctx.lineTo(24, 100);
+          ctx.stroke();
+        }
+        previewMeta.textContent = `Ugyldig canonical: ${parseError(error)}`;
+        previewMeta.classList.remove('ok');
+        previewMeta.classList.add('error');
+      }
+    };
+
+    canonicalInput.addEventListener('input', () => {
+      state.glyph.items[index].canonical = canonicalInput.value.trim().toUpperCase();
+      updatePreview();
+      markGlyphDirty();
+    });
+
+    grid.appendChild(createField('Canonical', canonicalInput, true));
+
+    const previewField = document.createElement('div');
+    previewField.className = 'cms-field is-wide';
+    const previewLabel = document.createElement('span');
+    previewLabel.textContent = 'Semantisk glyph preview';
+    const previewWrap = document.createElement('div');
+    previewWrap.className = 'glyph-preview-wrap';
+    previewWrap.appendChild(previewCanvas);
+    previewWrap.appendChild(previewMeta);
+    previewField.appendChild(previewLabel);
+    previewField.appendChild(previewWrap);
+    grid.appendChild(previewField);
+
+    const noteArea = document.createElement('textarea');
+    noteArea.value = item.note || '';
+    noteArea.placeholder = 'Kort redaksjonell note';
+    noteArea.addEventListener('input', () => {
+      state.glyph.items[index].note = noteArea.value;
+      markGlyphDirty();
+    });
+    grid.appendChild(createField('Note', noteArea, true));
+
+    card.appendChild(head);
+    card.appendChild(grid);
+    glyphListNode.appendChild(card);
+
+    updatePreview();
+  });
+}
+
+async function loadGlyphCms() {
+  if (!state.authenticated) return;
+
+  setStatus(glyphStatusNode, 'Laster glyph language map ...');
+  try {
+    const file = await apiRequest('GET', `/api/repo-file?path=${encodeURIComponent(GLYPH_PATH)}`);
+    const parsed = JSON.parse(file.content || '{}');
+    const items = Array.isArray(parsed.items)
+      ? parsed.items.map((item, index) => normalizeGlyphItem(item, index))
+      : [];
+
+    state.glyph.loaded = true;
+    state.glyph.sha = file.sha || '';
+    state.glyph.branch = file.branch || 'main';
+    state.glyph.updatedAt = parsed.updated_at || null;
+    state.glyph.version = String(parsed.version || '0.1.0').trim() || '0.1.0';
+    state.glyph.description = String(parsed.description || '').trim();
+    state.glyph.items = items;
+    state.glyph.dirty = false;
+
+    renderGlyphList();
+    updateGlyphMeta();
+    updateCmsActionState();
+    setStatus(glyphStatusNode, 'Glyph map lastet.', 'ok');
+  } catch (error) {
+    if (error.message && error.message.includes('404')) {
+      state.glyph.loaded = true;
+      state.glyph.sha = '';
+      state.glyph.branch = 'main';
+      state.glyph.updatedAt = null;
+      state.glyph.version = '0.1.0';
+      state.glyph.description = '';
+      state.glyph.items = [];
+      state.glyph.dirty = false;
+      renderGlyphList();
+      updateGlyphMeta();
+      updateCmsActionState();
+      setStatus(glyphStatusNode, 'Glyph map finnes ikke ennå. Legg til bindings og lagre som ny fil.', 'error');
+      return;
+    }
+    setStatus(glyphStatusNode, `Kunne ikke laste glyph map: ${parseError(error)}`, 'error');
+  }
+}
+
+function validateGlyphPayloadItems(items) {
+  const occupiedSpots = new Map();
+  items.forEach((item, index) => {
+    const label = item.label || item.id || `item ${index + 1}`;
+    if (item.enabled !== false) {
+      if (!item.canonical) {
+        throw new Error(`Mangler canonical for ${label}.`);
+      }
+      parseCanonicalSafe(item.canonical);
+
+      if (item.panel_id) {
+        if (occupiedSpots.has(item.panel_id)) {
+          throw new Error(`Panel ID '${item.panel_id}' brukes av flere aktive glyphs.`);
+        }
+        occupiedSpots.set(item.panel_id, true);
+      }
+    }
+  });
+}
+
+function buildGlyphPayload() {
+  const cleanedItems = state.glyph.items.map((item, index) => normalizeGlyphItem(item, index));
+  validateGlyphPayloadItems(cleanedItems);
+
+  return {
+    version: state.glyph.version || '0.1.0',
+    updated_at: new Date().toISOString(),
+    description: state.glyph.description || 'Semantic glyph bindings for tunnel panel spots.',
+    items: cleanedItems,
+  };
+}
+
+async function saveGlyphCms() {
+  if (!state.authenticated || !state.glyph.loaded) return;
+  if (!state.glyph.sha) {
+    setStatus(glyphStatusNode, 'Advarsel: Mangler SHA, prøver å opprette ny fil.', '');
+  }
+
+  const message = (glyphCommitMessageInput && glyphCommitMessageInput.value.trim())
+    || 'Admin CMS update: Glyph Language Map';
+  setStatus(glyphStatusNode, 'Lagrer glyph map til GitHub ...');
+
+  try {
+    const payload = buildGlyphPayload();
+    const response = await apiRequest('PUT', '/api/repo-file', {
+      path: GLYPH_PATH,
+      content: JSON.stringify(payload, null, 2),
+      sha: state.glyph.sha,
+      message,
+    });
+
+    state.glyph.sha = response.sha || '';
+    state.glyph.branch = response.branch || 'main';
+    state.glyph.updatedAt = payload.updated_at;
+    state.glyph.items = payload.items;
+    state.glyph.dirty = false;
+    updateGlyphMeta();
+    updateCmsActionState();
+
+    if (state.currentPath === GLYPH_PATH && fileEditor) {
+      fileEditor.value = JSON.stringify(payload, null, 2);
+      state.sha = response.sha || state.sha;
+      setStatus(fileMeta, `Fil: ${GLYPH_PATH} | SHA: ${String(state.sha || '').slice(0, 10)} | Branch: ${state.glyph.branch}`);
+    }
+
+    const commitNote = response.commit_url ? ` Commit: ${response.commit_url}` : '';
+    setStatus(glyphStatusNode, `Glyph map lagret.${commitNote}`, 'ok');
+    renderGlyphList();
+  } catch (error) {
+    setStatus(glyphStatusNode, `Glyph map-lagring feilet: ${parseError(error)}`, 'error');
+  }
+}
+
+function addGlyphItem() {
+  if (!state.glyph.loaded) return;
+  state.glyph.items.push(createEmptyGlyphItem(state.glyph.items.length));
+  renderGlyphList();
+  markGlyphDirty('Ny glyph binding lagt til.');
 }
 
 function updatePromptMeta() {
@@ -1522,12 +2581,16 @@ async function refreshAuthStatus() {
       await loadCms();
       await loadStoryCms();
       await loadPromptCms();
+      await loadMediaCms();
+      await loadGlyphCms();
     } else {
       setStatus(authStatus, '');
+      await loadPublicGlyphPreview();
     }
   } catch (error) {
     setEditorEnabled(false);
-    setStatus(authStatus, `Auth-feil: ${parseError(error)}`, 'error');
+    setStatus(authStatus, `Auth-feil: ${parseError(error)}. Viser lokal, read-only glyph-oversikt.`, 'error');
+    await loadPublicGlyphPreview();
   }
 }
 
@@ -1692,12 +2755,22 @@ function initKeyboardShortcut() {
     const insideStoryCms = Boolean(target && target.closest('#story-cms'));
     const insidePromptCms = Boolean(target && target.closest('#prompt-cms'));
     const insideCms = Boolean(target && target.closest('#cms'));
+    const insideMediaCms = Boolean(target && target.closest('#media-cms'));
+    const insideGlyphCms = Boolean(target && target.closest('#glyph-cms'));
     if (insideStoryCms && state.story.loaded) {
       saveStoryCms();
       return;
     }
     if (insidePromptCms && state.prompt.loaded) {
       savePromptCms();
+      return;
+    }
+    if (insideMediaCms && state.media.loaded) {
+      saveMediaCms();
+      return;
+    }
+    if (insideGlyphCms && state.glyph.loaded) {
+      saveGlyphCms();
       return;
     }
     if (insideCms && state.cms.loaded) {
@@ -1767,6 +2840,13 @@ function init() {
       markPromptDirty();
     });
   }
+
+  if (mediaLoadButton) mediaLoadButton.addEventListener('click', loadMediaCms);
+  if (mediaSaveButton) mediaSaveButton.addEventListener('click', saveMediaCms);
+
+  if (glyphLoadButton) glyphLoadButton.addEventListener('click', loadGlyphCms);
+  if (glyphAddButton) glyphAddButton.addEventListener('click', addGlyphItem);
+  if (glyphSaveButton) glyphSaveButton.addEventListener('click', saveGlyphCms);
 
   setEditorEnabled(false);
   refreshAuthStatus();
