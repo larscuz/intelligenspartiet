@@ -51,6 +51,10 @@ type UiPanel = TunnelPanel & {
   kind: PanelKind;
   title: string;
   body: string;
+  title_en?: string;
+  title_nb?: string;
+  body_en?: string;
+  body_nb?: string;
   image?: string;
   video?: string;
   cta?: string;
@@ -65,6 +69,13 @@ type GlyphLanguageItem = {
   enabled?: boolean;
   note?: string;
   note_nb?: string;
+};
+
+type GlyphCopy = {
+  label: string;
+  note: string;
+  labelNb: string;
+  noteNb: string;
 };
 
 type RuntimePanel = {
@@ -175,20 +186,26 @@ const DEFAULT_PANEL_SHADING: PanelShadingReaction = {
 
 const makeFallbackPanel = (
   id: string,
-  title: string,
-  description: string,
+  titleNb: string,
+  descriptionNb: string,
   side: "left" | "right",
   placementT: number,
+  titleEn: string,
+  descriptionEn: string,
 ): UiPanel => ({
   id,
   type: "text",
   kind: "text",
   content: {
-    title,
-    description,
+    title: titleNb,
+    description: descriptionNb,
   },
-  title,
-  body: description,
+  title: titleNb,
+  body: descriptionNb,
+  title_nb: titleNb,
+  body_nb: descriptionNb,
+  title_en: titleEn,
+  body_en: descriptionEn,
   installation: {
     mount_type: "vinyl_flush",
     placement_t: placementT,
@@ -207,6 +224,8 @@ const FALLBACK_PANELS: UiPanel[] = [
     "Politisk KI-kapasitet for et samfunn i rask omforming.",
     "right",
     0.1,
+    "INTELLIGENSPARTIET",
+    "Political AI capacity for a society in rapid transformation.",
   ),
   makeFallbackPanel(
     "fallback-02",
@@ -214,6 +233,8 @@ const FALLBACK_PANELS: UiPanel[] = [
     "Kartlegg effekt, risiko og styringsbehov før beslutninger låses.",
     "left",
     0.42,
+    "UNDERSTAND THE SHIFT",
+    "Map impact, risk, and governance needs before decisions are locked in.",
   ),
   makeFallbackPanel(
     "fallback-03",
@@ -221,6 +242,8 @@ const FALLBACK_PANELS: UiPanel[] = [
     "Tilsyn, standarder og ansvar som faktisk kan håndheves.",
     "right",
     0.74,
+    "BUILD INSTITUTIONS",
+    "Oversight, standards, and accountability that can actually be enforced.",
   ),
 ];
 
@@ -682,7 +705,14 @@ const autoTranslateEnglishToBokmal = (text: string) => {
   return working;
 };
 
-const forceKiTerminology = (text: string) => String(text || "").replace(/\bai(?=\b|-)/gi, "KI");
+const pickFirstText = (...values: Array<string | undefined>) => {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
+  }
+  return "";
+};
 
 const TWO_PI = Math.PI * 2;
 
@@ -1037,7 +1067,7 @@ export function IntelligensTunnelSite() {
   }, [glyphByPanelIdInUiOrder]);
 
   const glyphCopyByPanelId = useMemo(() => {
-    const byPanelId = new Map<string, { label: string; note: string; labelNb: string; noteNb: string }>();
+    const byPanelId = new Map<string, GlyphCopy>();
     glyphByPanelIdInUiOrder.forEach((item, panelId) => {
       byPanelId.set(panelId, {
         label: item.label || "",
@@ -1095,14 +1125,25 @@ export function IntelligensTunnelSite() {
           const posterRawUrl = poster ? (mediaRoot ? `${mediaRoot}/${poster}` : `/${poster}`) : undefined;
           const posterUrl = posterRawUrl ? toProxyIfRemote(posterRawUrl) : undefined;
           const kind: PanelKind = p?.type === "image" || p?.type === "video" ? p.type : "text";
+          const content = p?.content ?? {};
+          const title = String(content?.title ?? "Untitled").trim() || "Untitled";
+          const body = String(content?.description ?? "").trim();
+          const titleNb = String(content?.title_nb ?? content?.title_no ?? "").trim();
+          const bodyNb = String(content?.description_nb ?? content?.description_no ?? "").trim();
+          const titleEn = String(content?.title_en ?? "").trim();
+          const bodyEn = String(content?.description_en ?? "").trim();
 
           return {
             ...p,
             kind,
             type: kind,
-            title: p?.content?.title ?? "Uten tittel",
-            body: p?.content?.description ?? "",
-            cta: p?.content?.cta,
+            title,
+            body,
+            title_nb: titleNb || title,
+            body_nb: bodyNb || body,
+            title_en: titleEn,
+            body_en: bodyEn,
+            cta: content?.cta,
             poster: posterUrl,
             image: kind === "image" ? sourceUrl : undefined,
             video: kind === "video" ? sourceUrl : undefined,
@@ -1137,13 +1178,40 @@ export function IntelligensTunnelSite() {
     () => panelData.find((panel) => panel.id === activePanelId) ?? panelData[0] ?? { title: "", body: "" } as UiPanel,
     [activePanelId, panelData],
   );
+  const resolveLocalizedGlyphCopy = useMemo(
+    () => (panel: UiPanel): { title: string; body: string } => {
+      const glyphCopy = glyphCopyByPanelId.get(panel.id);
+      if (language === "nb") {
+        const title = pickFirstText(
+          glyphCopy?.labelNb,
+          panel.title_nb,
+          localizeDynamicText(glyphCopy?.label || ""),
+          localizeDynamicText(panel.title || ""),
+        );
+        const body = pickFirstText(
+          glyphCopy?.noteNb,
+          panel.body_nb,
+          localizeDynamicText(glyphCopy?.note || ""),
+          localizeDynamicText(panel.body || ""),
+        );
+        return {
+          title: title || "Mangler norsk tittel",
+          body: body || "Mangler norsk tekst.",
+        };
+      }
+
+      const title = pickFirstText(glyphCopy?.label, panel.title_en);
+      const body = pickFirstText(glyphCopy?.note, panel.body_en);
+      return {
+        title: title || "Missing English title",
+        body: body || "Missing English text.",
+      };
+    },
+    [glyphCopyByPanelId, language, localizeDynamicText],
+  );
   const activeInstallationText = useMemo(() => {
-    const glyphCopy = glyphCopyByPanelId.get(activePanel.id);
-    if (language === "nb") {
-      return glyphCopy?.labelNb || forceKiTerminology(glyphCopy?.label || activePanel.title || "");
-    }
-    return glyphCopy?.label || activePanel.title || "";
-  }, [activePanel.id, activePanel.title, glyphCopyByPanelId, language]);
+    return resolveLocalizedGlyphCopy(activePanel).title;
+  }, [activePanel, resolveLocalizedGlyphCopy]);
 
   useEffect(() => {
     if (panelData.length === 0) return;
@@ -1205,6 +1273,7 @@ export function IntelligensTunnelSite() {
           const inst = panel.installation;
           return inst?.mount_type === "continuous_led_wall" && inst.side === side;
         });
+      void hasContinuousLedOn;
       // Force white plaster walls on — glyph system replaced video panels,
       // so LED backdrop cutouts are no longer needed.
       const renderLeftBaseWall = true;
@@ -1957,6 +2026,10 @@ export function IntelligensTunnelSite() {
         group.scale.setScalar(isMobile ? 1.06 : 1.36);
         return group;
       };
+      void makeVinylTexture;
+      void makeLabelTexture;
+      void makeJuttingCardLayers;
+      void makeCarouselNumber;
 
       const createGlyphTexture = (index: number, panelId: string): THREE.CanvasTexture => {
         const size = 512;
@@ -2293,6 +2366,10 @@ export function IntelligensTunnelSite() {
 
         return spans;
       };
+      void routeDistanceFromStart;
+      void MAX_FLAT_SPAN_WORLD;
+      void applyCoverUvToPlane;
+      void collectStraightSpansInRange;
 
       // ======= GLYPH/RUNE SYMBOL SYSTEM =======
       const glyphRunes: GlyphRune[] = [];
@@ -2338,13 +2415,9 @@ export function IntelligensTunnelSite() {
         scene.add(glyphMesh);
 
         // Card texture: glyph semantic copy overrides panel copy when assigned.
-        const glyphCopy = glyphCopyByPanelId.get(panel.id);
-        const cardTitle = language === "nb"
-          ? (glyphCopy?.labelNb || forceKiTerminology(glyphCopy?.label || panel.title || ""))
-          : (glyphCopy?.label || panel.title || "");
-        const cardBody = language === "nb"
-          ? (glyphCopy?.noteNb || forceKiTerminology(glyphCopy?.note || panel.body || ""))
-          : (glyphCopy?.note || panel.body || "");
+        const localizedCopy = resolveLocalizedGlyphCopy(panel);
+        const cardTitle = localizedCopy.title;
+        const cardBody = localizedCopy.body;
         const cardTex = createCardTexture(cardTitle, cardBody);
         dynamicTextures.push(cardTex);
 
@@ -3085,7 +3158,7 @@ export function IntelligensTunnelSite() {
       isDisposed = true;
       cleanup();
     };
-  }, [panelData, glyphCanonicalByPanelId, glyphCopyByPanelId, language]);
+  }, [panelData, glyphCanonicalByPanelId, resolveLocalizedGlyphCopy]);
 
   return (
     <div className="relative h-[100svh] w-full overflow-hidden overscroll-none touch-none bg-[#f7f7f4] text-[#141414]">

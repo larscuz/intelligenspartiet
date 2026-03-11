@@ -1,87 +1,107 @@
 {
   "version": "0.1.0",
-  "updated_at": "2026-03-11T07:58:17.106Z",
+  "updated_at": "2026-03-11T11:45:00.000Z",
   "description": "Semantic glyph bindings for tunnel panel spots. One canonical RL sentence per glyph.",
   "items": [
     {
       "id": "v1-ai-fatigue",
       "label": "AI Fatigue",
+      "label_nb": "KI-tretthet",
       "panel_id": "right-led-continuous-main",
       "canonical": "SYSTEM.ORGANIZATIONS.GROWS.HIGH.LT1Y.PROBABLE",
       "enabled": true,
-      "note": "Meaning (bold) (new line)\nMental exhaustion caused by continuous interaction with AI systems: prompting, reviewing, correcting, switching context, and supervising outputs.\n(new paragraph)\nWhy it happens (bold) (new line)\nAI does not remove work - it multiplies cognitive checkpoints."
+      "note": "Cognitive checkpoints increase in short horizon.",
+      "note_nb": "(bold)Betydning(new line)Mental utmattelse fra kontinuerlig arbeid med KI-systemer: prompting, vurdering, korrigering, kontekstbytte og kvalitetssikring.(new paragraph)(bold)Hvorfor det skjer(new line)KI fjerner ikke arbeid; den multipliserer kognitive kontrollpunkter."
     },
     {
       "id": "v1-brain-fry",
       "label": "Brain Fry",
+      "label_nb": "Hjernekok",
       "panel_id": "left-led-continuous-main",
       "canonical": "INDIVIDUAL.INDIVIDUALS.DECLINES.HIGH.LT1Y.PROBABLE",
       "enabled": true,
-      "note": "The physiological feeling of AI fatigue.(bold) (new line)\n(new paragraph)\nMeaning(bold) (new line)\nA short-term cognitive overload where the brain becomes unable to evaluate more information."
+      "note": "Overload reduces evaluative sharpness.",
+      "note_nb": "(bold)Betydning(new line)Kortvarig kognitiv overbelastning der hjernen mister evnen til å evaluere mer informasjon.(new paragraph)(bold)Kjennetegn(new line)Beslutningslammelse, gjentatt lesing og redusert kritisk vurderingsevne."
     },
     {
       "id": "v1-threaded-work",
       "label": "Threaded Work",
+      "label_nb": "Trådet arbeid",
       "panel_id": "halfwall-01",
       "canonical": "SYSTEM.ORGANIZATIONS.TRANSFORMS.HIGH.NOW.CONFIRMED",
       "enabled": true,
-      "note": "AI work is no longer linear. (bold) (new line)\n(new paragraph)\nWorkers operate in parallel cognitive threads\n(new paragraph)\nLinear workflows shift to parallel supervision."
+      "note": "Linear workflows shift to parallel supervision.",
+      "note_nb": "(bold)Betydning(new line)Arbeid går fra lineære løp til parallelle kognitive tråder.(new paragraph)(bold)Konsekvens(new line)Man overvåker flere prosesser samtidig i stedet for å fullføre én oppgave av gangen."
     },
     {
       "id": "v1-cognitive-orchestration",
       "label": "Cognitive Orchestration",
+      "label_nb": "Kognitiv orkestrering",
       "panel_id": "halfwall-02",
       "canonical": "IDEA.EDUCATION.GROWS.MEDIUM.Y1_3.PROBABLE",
       "enabled": true,
-      "note": "New skill: coordinating AI outputs.(bold) (new line)\nWorkers become conductors of machine thinking.\n(new paragraph)\nThey are not producing content directly"
+      "note": "New skill: coordinating AI outputs.",
+      "note_nb": "(bold)Betydning(new line)En ny ferdighet der mennesker dirigerer maskinell tenkning ved å styre, validere og sammenflette output.(new paragraph)(bold)Rolleendring(new line)Mennesker blir i større grad KI-supervisorer enn rene innholdsprodusenter."
     },
     {
       "id": "v1-output-inflation",
       "label": "Output Inflation",
+      "label_nb": "Outputinflasjon",
       "panel_id": "halfwall-03",
       "canonical": "SYSTEM.ORGANIZATIONS.GROWS.EXTREME.NOW.CONFIRMED",
       "enabled": true,
-      "note": "Output volume spikes immediately. (bold) (new line)\n(new paragraph)\nAI dramatically increases the volume of material that must be evaluated."
+      "note": "Output volume spikes immediately.",
+      "note_nb": "(bold)Betydning(new line)KI øker mengden utkast, varianter og data som må vurderes.(new paragraph)(bold)Konsekvens(new line)Produksjon går raskere, men evalueringsarbeidet vokser enda raskere."
     },
     {
       "id": "v1-prompt-looping",
       "label": "Prompt Looping",
+      "label_nb": "Promptsløyfer",
       "panel_id": "halfwall-04",
       "canonical": "SYSTEM.TECHNOLOGY.INFLUENCES.HIGH.NOW.PROBABLE",
       "enabled": true,
-      "note": "A repetitive cognitive cycle:(bold) (new line)\n(new paragraph)\nprompt → output → correction → re-prompt → refinement\n(new paragraph)\nInstead of solving problems, workers orbit around solutions.(new line)\nPrompt-output loops shape behavior now."
+      "note": "Prompt-output loops shape behavior now.",
+      "note_nb": "(bold)Betydning(new line)En repetitiv syklus: prompt, svar, korrigering, ny prompt og raffinering.(new paragraph)(bold)Risiko(new line)Arbeidet kan låses i mikroiterasjoner uten tydelig fremdrift."
     },
     {
       "id": "v1-decision-density",
       "label": "Decision Density",
+      "label_nb": "Beslutningstetthet",
       "panel_id": "halfwall-05",
       "canonical": "INDIVIDUAL.INDIVIDUALS.GROWS.HIGH.NOW.CONFIRMED",
       "enabled": true,
-      "note": "Micro-decisions per hour increase. (bold) (new line)\n(new paragraph)\nAI tools create more decision points."
+      "note": "Micro-decisions per hour increase.",
+      "note_nb": "(bold)Betydning(new line)Antallet mikrobeslutninger per time øker kraftig i KI-verktøy.(new paragraph)(bold)Konsekvens(new line)Mange små valg akkumuleres til høy mental belastning."
     },
     {
       "id": "v1-cognitive-overproduction",
       "label": "Cognitive Overproduction",
+      "label_nb": "Kognitiv overproduksjon",
       "panel_id": "halfwall-06",
       "canonical": "SYSTEM.TECHNOLOGY.GROWS.EXTREME.LT1Y.PROBABLE",
       "enabled": true,
-      "note": "Input load scales faster than cognition.(bold) (new line)\n(new paragraph)\nThe brain must process more information than before."
+      "note": "Input load scales faster than cognition.",
+      "note_nb": "(bold)Betydning(new line)Hjernen må behandle mer tekst, flere alternativer og mer data enn før.(new paragraph)(bold)Konsekvens(new line)Menneskelig kognisjon skalerer ikke i samme tempo som KI-output."
     },
     {
       "id": "v1-continuous-partial-attention",
       "label": "Continuous Partial Attention",
+      "label_nb": "Kontinuerlig delt oppmerksomhet",
       "panel_id": "",
       "canonical": "INDIVIDUAL.INDIVIDUALS.DECLINES.MEDIUM.NOW.PROBABLE",
       "enabled": true,
-      "note": "Prepared concept, not assigned to a tunnel slot yet."
+      "note": "Prepared concept, not assigned to a tunnel slot yet.",
+      "note_nb": "(bold)Betydning(new line)Vedvarende halvt fokus på tvers av chat, dokumenter, bildeverktøy, research og verifisering.(new paragraph)(bold)Konsekvens(new line)Mindre dyp konsentrasjon og mindre mental restitusjon."
     },
     {
       "id": "v1-ai-work-rhythm",
       "label": "AI Work Rhythm",
+      "label_nb": "KI-arbeidsrytmen",
       "panel_id": "",
       "canonical": "SYSTEM.ORGANIZATIONS.TRANSFORMS.EXTREME.Y1_3.CONFIRMED",
       "enabled": true,
-      "note": "Prepared concept, not assigned to a tunnel slot yet."
+      "note": "Prepared concept, not assigned to a tunnel slot yet.",
+      "note_nb": "(bold)Betydning(new line)Arbeidsrytmen skifter fra sekvensiell oppgavegjennomføring til samtidig overvåking av flere prosesser.(new paragraph)(bold)Konsekvens(new line)Mennesker jobber mer som prosessledere enn som tradisjonelle utførere."
     }
   ]
 }
