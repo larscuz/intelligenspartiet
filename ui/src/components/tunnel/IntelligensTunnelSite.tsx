@@ -592,9 +592,13 @@ export function IntelligensTunnelSite() {
 
         const mediaRoot =
           typeof data.media_root === "string" ? data.media_root.replace(/\/+$/, "") : "";
+        const shouldProxyRemoteMedia =
+          window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
         const toProxyIfRemote = (url: string) => {
           if (/^https?:\/\//i.test(url)) {
-            return `/proxy?url=${encodeURIComponent(url)}`;
+            return shouldProxyRemoteMedia
+              ? `/proxy?url=${encodeURIComponent(url)}`
+              : url;
           }
           return url;
         };
