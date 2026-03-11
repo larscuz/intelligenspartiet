@@ -3014,6 +3014,7 @@ export function IntelligensTunnelSite() {
       // ======= EXIT GLYPH =======
       let isOutside = false;
       let outsideT = 0; // 0 = inside tunnel, 1 = fully outside
+      let outsideScrollImpulse = 0; // subtle orbit/dolly impulse driven by wheel/touch while outside
       const exitCameraTarget = new THREE.Vector3(); // computed once on transition start
       const exitLookTarget = new THREE.Vector3();   // center of tunnel
 
@@ -3215,7 +3216,14 @@ export function IntelligensTunnelSite() {
 
       const onWheel = (event: WheelEvent) => {
         event.preventDefault();
-        if (isOutside) return; // no scrolling when outside tunnel
+        if (isOutside) {
+          outsideScrollImpulse = THREE.MathUtils.clamp(
+            outsideScrollImpulse + event.deltaY * 0.0012,
+            -1.15,
+            1.15,
+          );
+          return;
+        }
         runtimeVideos.forEach(requestVideoPlay);
         targetProgressRef.current = wrap01(
           targetProgressRef.current + ROUTE_PROGRESS_DIRECTION * event.deltaY * 0.000075,
@@ -3238,9 +3246,17 @@ export function IntelligensTunnelSite() {
       };
       const onTouchMove = (event: TouchEvent) => {
         event.preventDefault();
-        if (isOutside) return; // no scrolling when outside tunnel
         const currentY = event.touches[0]?.clientY ?? touchStartY;
         const deltaY = touchStartY - currentY;
+        if (isOutside) {
+          outsideScrollImpulse = THREE.MathUtils.clamp(
+            outsideScrollImpulse + deltaY * 0.0017,
+            -1.15,
+            1.15,
+          );
+          touchStartY = currentY;
+          return;
+        }
         targetProgressRef.current = wrap01(
           targetProgressRef.current + ROUTE_PROGRESS_DIRECTION * deltaY * 0.00011,
         );
@@ -3315,31 +3331,47 @@ export function IntelligensTunnelSite() {
         const easeOut = outsideT < 0.5
           ? 4 * outsideT * outsideT * outsideT
           : 1 - Math.pow(-2 * outsideT + 2, 3) / 2;
+        outsideScrollImpulse = THREE.MathUtils.damp(outsideScrollImpulse, 0, 3.8, dt);
         const outsideMotionWeight = THREE.MathUtils.smoothstep(easeOut, 0.18, 1);
-        const outsideMotionX = mouseCurrent.x * (isMobile ? 0 : 9.5) * outsideMotionWeight;
-        const outsideMotionY = mouseCurrent.y * (isMobile ? 0 : 5.2) * outsideMotionWeight;
+        const outsideMotionX = mouseCurrent.x * (isMobile ? 0 : 12.0) * outsideMotionWeight;
+        const outsideMotionY = mouseCurrent.y * (isMobile ? 0 : 6.8) * outsideMotionWeight;
+        const outsideScrollMotion = outsideScrollImpulse * outsideMotionWeight;
+        const outsideOrbitYaw = outsideScrollMotion * 0.12;
+        const outsideDolly = outsideScrollMotion * 16.5;
 
         // ---- Dynamically adjust fog, lighting, background for exterior view ----
-        exteriorKeyTarget.position.copy(tunnelCenter);
-        exteriorFillTarget.position.copy(tunnelCenter);
+        exteriorKeyTarget.position
+          .copy(tunnelCenter)
+          .add(new THREE.Vector3(outsideScrollMotion * 4.2, outsideScrollMotion * 1.15, -outsideScrollMotion * 2.5));
+        exteriorFillTarget.position
+          .copy(tunnelCenter)
+          .add(new THREE.Vector3(-outsideScrollMotion * 1.8, outsideScrollMotion * 0.65, outsideScrollMotion * 1.4));
         // Sun key with subtle pointer-responsive shift for a slight "object reacts to movement" feel.
         exteriorKey.position.set(
-          tunnelCenter.x + 560 + outsideMotionX * 1.9,
-          tunnelCenter.y + 430 + outsideMotionY * 1.2,
-          tunnelCenter.z - 260 - outsideMotionX * 0.95,
+          tunnelCenter.x + 590 + outsideMotionX * 2.1 + outsideScrollMotion * 13,
+          tunnelCenter.y + 410 + outsideMotionY * 1.5 + outsideScrollMotion * 5.4,
+          tunnelCenter.z - 230 - outsideMotionX * 1.05 - outsideScrollMotion * 8.2,
         );
         // Opposite fill stays weak to preserve contrast.
         exteriorFill.position.set(
-          tunnelCenter.x - 420 - outsideMotionX * 0.7,
-          tunnelCenter.y + 90 + outsideMotionY * 0.35,
-          tunnelCenter.z + 330 + outsideMotionX * 0.55,
+          tunnelCenter.x - 440 - outsideMotionX * 0.72 - outsideScrollMotion * 4.8,
+          tunnelCenter.y + 60 + outsideMotionY * 0.3 + outsideScrollMotion * 1.8,
+          tunnelCenter.z + 340 + outsideMotionX * 0.55 + outsideScrollMotion * 3.2,
         );
-        const outsideCameraPos = exitCameraTarget
+        const outsideBaseOffset = exitCameraTarget
           .clone()
-          .add(new THREE.Vector3(outsideMotionX, outsideMotionY * 0.82, outsideMotionX * 0.52));
+          .sub(tunnelCenter)
+          .applyAxisAngle(new THREE.Vector3(0, 1, 0), outsideOrbitYaw);
+        const outsideDepthDir = outsideBaseOffset.clone().normalize();
+        const outsideCameraPos = tunnelCenter
+          .clone()
+          .add(outsideBaseOffset)
+          .add(outsideDepthDir.multiplyScalar(outsideDolly))
+          .add(new THREE.Vector3(outsideMotionX, outsideMotionY * 0.84, outsideMotionX * 0.58));
         const outsideLook = exitLookTarget
           .clone()
-          .add(new THREE.Vector3(outsideMotionX * 0.12, outsideMotionY * 0.1, outsideMotionX * 0.08));
+          .add(new THREE.Vector3(outsideMotionX * 0.13, outsideMotionY * 0.11, outsideMotionX * 0.09))
+          .add(new THREE.Vector3(outsideScrollMotion * 1.35, outsideScrollMotion * 0.95, outsideScrollMotion * 0.88));
 
         if (easeOut > 0.01) {
           // Push fog far away when outside
@@ -3348,24 +3380,24 @@ export function IntelligensTunnelSite() {
             scene.fog.far = THREE.MathUtils.lerp(230, 10000, easeOut);
           }
           const insideBg = new THREE.Color(0x0f1217);
-          const outsideBg = new THREE.Color(0x04070e);
+          const outsideBg = new THREE.Color(0x03050b);
           (scene.background as THREE.Color).copy(insideBg).lerp(outsideBg, easeOut);
 
-          // Stronger contrast: lower ambient/fill, stronger key.
-          ambient.intensity = THREE.MathUtils.lerp(0.05, 0.028, easeOut);
-          hemi.intensity = THREE.MathUtils.lerp(0.08, 0.05, easeOut);
-          exteriorKey.intensity = THREE.MathUtils.lerp(0, isMobile ? 2.9 : 4.9, easeOut);
-          exteriorFill.intensity = THREE.MathUtils.lerp(0, isMobile ? 0.14 : 0.22, easeOut);
+          // Further contrast: darker base, stronger sun, weaker fill.
+          ambient.intensity = THREE.MathUtils.lerp(0.05, 0.018, easeOut);
+          hemi.intensity = THREE.MathUtils.lerp(0.08, 0.032, easeOut);
+          exteriorKey.intensity = THREE.MathUtils.lerp(0, isMobile ? 3.3 : 5.6, easeOut);
+          exteriorFill.intensity = THREE.MathUtils.lerp(0, isMobile ? 0.1 : 0.15, easeOut);
           renderer.toneMappingExposure = THREE.MathUtils.lerp(
             isMobile ? 0.76 : 0.72,
-            isMobile ? 0.9 : 0.95,
+            isMobile ? 0.86 : 0.89,
             easeOut,
           );
 
           // Keep emissive low to avoid flattening shadow contrast.
           [floorMat, wallMat].forEach((mat) => {
             mat.emissive.set(0x334455);
-            mat.emissiveIntensity = 0.045 * easeOut;
+            mat.emissiveIntensity = 0.022 * easeOut;
           });
           // Ceiling: transition from pure emissive soft-box (inside) to
           // PBR-lit white (outside) so sun shadows are visible on it
