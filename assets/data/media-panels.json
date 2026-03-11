@@ -1,0 +1,276 @@
+{
+  "version": "1.0",
+  "media_root": "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling",
+  "panels": [
+    {
+      "id": "right-led-continuous-main",
+      "type": "video",
+      "source": "videos/1770978482749-c088b297-1ChristTheater.mp4",
+      "poster": "posters/Skjermbilde 2026-03-01 kl. 15.09.35.png",
+      "content": {
+        "title": "NÅR ARBEID FORSVINNER, RYSTES ALT",
+        "description": "Intelligente og kreative mennesker kan miste levebrødet sitt raskere enn samfunnet klarer å bygge nye trygghetsnett.",
+        "cta": "Forstå alvoret"
+      },
+      "installation": {
+        "mount_type": "continuous_led_wall",
+        "placement_t": 0.52,
+        "side": "right",
+        "physical_size": [
+          1.0,
+          8.7
+        ],
+        "wall_offset": 0.08,
+        "vertical_offset": 0.0
+      },
+      "shading_and_reaction": {
+        "material": {
+          "emissive_base": 1.45,
+          "roughness": 0.16,
+          "metalness": 0.04
+        },
+        "lighting": {
+          "cast_environment_light": true,
+          "light_color": "#f4f7ff",
+          "light_distance": 28.0,
+          "flicker_sync": true
+        },
+        "movement_reaction": {
+          "type": "viewing_angle_fade",
+          "cone_angle_degrees": 60
+        }
+      }
+    },
+    {
+      "id": "left-led-continuous-main",
+      "type": "video",
+      "source": "videos/177145406784-886154de-CamillaStone.mp4",
+      "poster": "posters/Skjermbilde 2026-03-01 kl. 15.09.35.png",
+      "content": {
+        "title": "SIVIL URO ER EN REELL TRUSSEL",
+        "description": "Når mange mister inntekt, status og retning samtidig, vokser mistillit, polarisering og uro i gatene.",
+        "cta": "Velg stabilitet"
+      },
+      "installation": {
+        "mount_type": "continuous_led_wall",
+        "placement_t": 0.86,
+        "side": "left",
+        "physical_size": [
+          1.0,
+          8.7
+        ],
+        "wall_offset": 0.08,
+        "vertical_offset": 0.0
+      },
+      "shading_and_reaction": {
+        "material": {
+          "emissive_base": 1.38,
+          "roughness": 0.16,
+          "metalness": 0.04
+        },
+        "lighting": {
+          "cast_environment_light": true,
+          "light_color": "#dce9ff",
+          "light_distance": 26.0,
+          "flicker_sync": true
+        },
+        "movement_reaction": {
+          "type": "viewing_angle_fade",
+          "cone_angle_degrees": 60
+        }
+      }
+    },
+    {
+      "id": "halfwall-01",
+      "type": "text",
+      "content": {
+        "title": "ERSTATNINGSANGST ER LIK FOR ALLE",
+        "description": "Frykten for å miste evnen til å forsørge seg selv treffer likt, uansett klasse, utdanning eller identitet."
+      },
+      "installation": {
+        "mount_type": "jutting_half_wall",
+        "placement_t": 0.105,
+        "side": "right",
+        "physical_size": [
+          3.0,
+          2.8
+        ],
+        "wall_offset": 0.13,
+        "vertical_offset": -0.35
+      },
+      "shading_and_reaction": {
+        "material": {
+          "emissive_base": 0.0,
+          "roughness": 0.82,
+          "metalness": 0.02
+        },
+        "lighting": {
+          "cast_environment_light": false
+        },
+        "movement_reaction": {
+          "type": "none"
+        }
+      }
+    },
+    {
+      "id": "halfwall-02",
+      "type": "text",
+      "content": {
+        "title": "DE TRYGGE ER IKKE TRYGGE LENGER",
+        "description": "Yrker som før virket sikre kan forsvinne på få år. Det endrer hvordan hele samfunnet tenker om fremtid."
+      },
+      "installation": {
+        "mount_type": "jutting_half_wall",
+        "placement_t": 0.965,
+        "side": "right",
+        "physical_size": [
+          3.1,
+          2.9
+        ],
+        "wall_offset": 0.13,
+        "vertical_offset": -0.35
+      },
+      "shading_and_reaction": {
+        "material": {
+          "emissive_base": 0.0,
+          "roughness": 0.82,
+          "metalness": 0.02
+        },
+        "lighting": {
+          "cast_environment_light": false
+        },
+        "movement_reaction": {
+          "type": "none"
+        }
+      }
+    },
+    {
+      "id": "halfwall-03",
+      "type": "text",
+      "content": {
+        "title": "NÅR LEVEBRØDET RYKER, RYKER VERDIGHET",
+        "description": "Tap av arbeid handler ikke bare om penger. Det handler om rolle, stolthet, tilhørighet og håp."
+      },
+      "installation": {
+        "mount_type": "jutting_half_wall",
+        "placement_t": 0.825,
+        "side": "right",
+        "physical_size": [
+          3.1,
+          2.9
+        ],
+        "wall_offset": 0.13,
+        "vertical_offset": -0.35
+      },
+      "shading_and_reaction": {
+        "material": {
+          "emissive_base": 0.0,
+          "roughness": 0.82,
+          "metalness": 0.02
+        },
+        "lighting": {
+          "cast_environment_light": false
+        },
+        "movement_reaction": {
+          "type": "none"
+        }
+      }
+    },
+    {
+      "id": "halfwall-04",
+      "type": "text",
+      "content": {
+        "title": "FRYKT KAN BLI VREDE",
+        "description": "Hvis vi ikke møter denne frykten med forståelse og retning, kan den bli til konflikt mellom grupper som egentlig deler samme uro."
+      },
+      "installation": {
+        "mount_type": "jutting_half_wall",
+        "placement_t": 0.685,
+        "side": "right",
+        "physical_size": [
+          3.0,
+          2.8
+        ],
+        "wall_offset": 0.13,
+        "vertical_offset": -0.35
+      },
+      "shading_and_reaction": {
+        "material": {
+          "emissive_base": 0.0,
+          "roughness": 0.82,
+          "metalness": 0.02
+        },
+        "lighting": {
+          "cast_environment_light": false
+        },
+        "movement_reaction": {
+          "type": "none"
+        }
+      }
+    },
+    {
+      "id": "halfwall-05",
+      "type": "text",
+      "content": {
+        "title": "DE DU TRODDE DU HATET",
+        "description": "Når du forstår erstatningsangst, ser du at menneskene du dømte ofte bare stod der du står nå."
+      },
+      "installation": {
+        "mount_type": "jutting_half_wall",
+        "placement_t": 0.545,
+        "side": "right",
+        "physical_size": [
+          3.1,
+          2.9
+        ],
+        "wall_offset": 0.13,
+        "vertical_offset": -0.35
+      },
+      "shading_and_reaction": {
+        "material": {
+          "emissive_base": 0.0,
+          "roughness": 0.82,
+          "metalness": 0.02
+        },
+        "lighting": {
+          "cast_environment_light": false
+        },
+        "movement_reaction": {
+          "type": "none"
+        }
+      }
+    },
+    {
+      "id": "halfwall-06",
+      "type": "text",
+      "content": {
+        "title": "STØTT EN VERDIG OVERGANG",
+        "description": "Støtt Intelligenspartiet hvis du vil ha en trygg, rettferdig og menneskelig overgang før frykt blir permanent splittelse."
+      },
+      "installation": {
+        "mount_type": "jutting_half_wall",
+        "placement_t": 0.405,
+        "side": "right",
+        "physical_size": [
+          3.0,
+          2.8
+        ],
+        "wall_offset": 0.13,
+        "vertical_offset": -0.35
+      },
+      "shading_and_reaction": {
+        "material": {
+          "emissive_base": 0.0,
+          "roughness": 0.82,
+          "metalness": 0.02
+        },
+        "lighting": {
+          "cast_environment_light": false
+        },
+        "movement_reaction": {
+          "type": "none"
+        }
+      }
+    }
+  ]
+}
