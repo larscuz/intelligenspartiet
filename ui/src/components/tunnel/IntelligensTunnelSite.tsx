@@ -1803,6 +1803,14 @@ export function IntelligensTunnelSite() {
       renderer.shadowMap.enabled = !isMobile;
       renderer.shadowMap.type = THREE.PCFShadowMap;
       mountNode.appendChild(renderer.domElement);
+      let outsideHardShadowEnabled = false;
+      const setOutsideHardShadow = (enabled: boolean) => {
+        if (outsideHardShadowEnabled === enabled) return;
+        outsideHardShadowEnabled = enabled;
+        // Keep interior softer; switch to hard-edged filtering for outside object view.
+        renderer.shadowMap.type = enabled ? THREE.BasicShadowMap : THREE.PCFShadowMap;
+        renderer.shadowMap.needsUpdate = true;
+      };
 
       const pmremGenerator = new THREE.PMREMGenerator(renderer);
       const environmentRT = pmremGenerator.fromScene(new RoomEnvironment(), 0.06);
@@ -3411,9 +3419,9 @@ export function IntelligensTunnelSite() {
           );
         // Sun key with subtle pointer-responsive shift for a slight "object reacts to movement" feel.
         exteriorKey.position.set(
-          tunnelCenter.x + 640 + outsideMotionX * 2.6 + Math.sin(outsideOrbitYaw) * 44,
-          tunnelCenter.y + 380 + outsideMotionY * 1.8 + outsideOrbitPitch * 36,
-          tunnelCenter.z - 170 - outsideMotionX * 1.25 + Math.cos(outsideOrbitYaw) * 26,
+          tunnelCenter.x + 700 + outsideMotionX * 2.8 + Math.sin(outsideOrbitYaw) * 52,
+          tunnelCenter.y + 290 + outsideMotionY * 1.35 + outsideOrbitPitch * 28,
+          tunnelCenter.z - 130 - outsideMotionX * 1.3 + Math.cos(outsideOrbitYaw) * 30,
         );
         // Opposite fill stays weak to preserve contrast.
         exteriorFill.position.set(
@@ -3445,6 +3453,7 @@ export function IntelligensTunnelSite() {
         const outsideRollQuat = new THREE.Quaternion();
 
         if (easeOut > 0.01) {
+          setOutsideHardShadow(easeOut > 0.26);
           // Push fog far away when outside
           if (scene.fog instanceof THREE.Fog) {
             scene.fog.near = THREE.MathUtils.lerp(38, 9999, easeOut);
@@ -3455,30 +3464,33 @@ export function IntelligensTunnelSite() {
           (scene.background as THREE.Color).copy(insideBg).lerp(outsideBg, easeOut);
 
           // Further contrast: darker base, stronger sun, weaker fill.
-          ambient.intensity = THREE.MathUtils.lerp(0.05, 0.011, easeOut);
-          hemi.intensity = THREE.MathUtils.lerp(0.08, 0.022, easeOut);
-          exteriorKey.intensity = THREE.MathUtils.lerp(0, isMobile ? 3.9 : 6.8, easeOut);
-          exteriorFill.intensity = THREE.MathUtils.lerp(0, isMobile ? 0.06 : 0.09, easeOut);
+          ambient.intensity = THREE.MathUtils.lerp(0.05, 0.002, easeOut);
+          hemi.intensity = THREE.MathUtils.lerp(0.08, 0.007, easeOut);
+          exteriorKey.intensity = THREE.MathUtils.lerp(0, isMobile ? 4.6 : 8.6, easeOut);
+          exteriorFill.intensity = THREE.MathUtils.lerp(0, isMobile ? 0.02 : 0.03, easeOut);
           renderer.toneMappingExposure = THREE.MathUtils.lerp(
             isMobile ? 0.76 : 0.72,
-            isMobile ? 0.8 : 0.82,
+            isMobile ? 0.75 : 0.76,
             easeOut,
           );
 
           // Keep emissive low to avoid flattening shadow contrast.
           [floorMat, wallMat].forEach((mat) => {
             mat.emissive.set(0x334455);
-            mat.emissiveIntensity = 0.01 * easeOut;
+            mat.emissiveIntensity = 0;
           });
+          floorMat.envMapIntensity = THREE.MathUtils.lerp(0.74, 0.04, easeOut);
+          wallMat.envMapIntensity = THREE.MathUtils.lerp(0.08, 0.01, easeOut);
           // Ceiling: transition from pure emissive soft-box (inside) to
           // PBR-lit white (outside) so sun shadows are visible on it
           ceilingMat.color.set(0x000000).lerp(new THREE.Color(0xffffff), easeOut);
           ceilingMat.toneMapped = easeOut > 0.5;      // let tone mapper handle it when outside
           ceilingMat.fog = easeOut > 0.5;              // re-enable fog outside (pushed to 9999 anyway)
           ceilingMat.emissive.set(0xffffff);
-          ceilingMat.emissiveIntensity = THREE.MathUtils.lerp(1.0, 0.08, easeOut);
-          ceilingMat.envMapIntensity = THREE.MathUtils.lerp(0.0, 0.1, easeOut);
+          ceilingMat.emissiveIntensity = THREE.MathUtils.lerp(1.0, 0.02, easeOut);
+          ceilingMat.envMapIntensity = THREE.MathUtils.lerp(0.0, 0.03, easeOut);
         } else {
+          setOutsideHardShadow(false);
           ambient.intensity = 0.05;
           hemi.intensity = 0.08;
           exteriorKey.intensity = 0;
@@ -3491,6 +3503,8 @@ export function IntelligensTunnelSite() {
             mat.emissive.set(0x000000);
             mat.emissiveIntensity = 0;
           });
+          floorMat.envMapIntensity = 0.74;
+          wallMat.envMapIntensity = 0.08;
           // Ceiling: pure soft-box glow when inside
           ceilingMat.color.set(0x000000);
           ceilingMat.toneMapped = false;
