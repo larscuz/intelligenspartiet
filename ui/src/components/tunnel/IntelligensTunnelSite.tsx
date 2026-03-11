@@ -13,6 +13,8 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import {
   canonicalizeCanonicalSentence,
   drawCanonicalGlyphToContext,
+  serializeCanonicalSentence,
+  type RlStatement,
 } from "@/lib/radarLanguageGlyph";
 
 type PanelKind = "text" | "image" | "video";
@@ -201,16 +203,15 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     loadingPanels: "Laster mediepaneler ...",
     panelsFallback: "Kunne ikke laste media-paneler. Viser lokal fallback.",
     activeInstallation: "Aktiv installasjon",
-    outsideVideos: "Videoer",
+    outsideVideos: "Film",
     outsideSignatures: "Signaturer",
     outsideAiNews: "KI-nyheter",
     outsideGlyphWall: "Glyff",
     outsideBack: "Tilbake",
-    outsideVideosTitle: "Videoer",
+    outsideVideosTitle: "Film",
     outsideSignaturesTitle: "Signaturer",
     outsideGlyphWallTitle: "Glyff",
-    outsideGlyphWallBody:
-      "Dette er historien om erstatningsangst, som alltid har sett lik ut og alltid vil gjøre det. Gjenkjenn symptomet, ikke hat den som er redd.",
+    outsideGlyphWallBody: "",
     outsideNewsTitle: "KI-nyheter",
     outsideNewsBody: "Direkte feed fra eksisterende nyhetsgrunnlag.",
     outsideNewsLoading: "Laster KI-nyheter ...",
@@ -222,16 +223,15 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     loadingPanels: "Loading media panels ...",
     panelsFallback: "Could not load media panels. Showing local fallback.",
     activeInstallation: "Active installation",
-    outsideVideos: "Videos",
+    outsideVideos: "Film",
     outsideSignatures: "Signatures",
     outsideAiNews: "AI news",
     outsideGlyphWall: "Glyff",
     outsideBack: "Back",
-    outsideVideosTitle: "Videos",
+    outsideVideosTitle: "Film",
     outsideSignaturesTitle: "Signatures",
     outsideGlyphWallTitle: "Glyff",
-    outsideGlyphWallBody:
-      "This is the story of replacement anxiety, which always looked the same and always will. Recognize the symptom, do not hate the fearful.",
+    outsideGlyphWallBody: "",
     outsideNewsTitle: "AI news",
     outsideNewsBody: "Live feed from the existing news dataset.",
     outsideNewsLoading: "Loading AI news ...",
@@ -242,108 +242,301 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
 
 type GlyphWallStoryItem = {
   id: string;
-  sourceId: string;
-  fallbackCanonical: string;
-  titleNb: string;
-  titleEn: string;
-  bodyNb: string;
-  bodyEn: string;
+  canonical: string;
+  phase: string;
 };
 
-const GLYPH_WALL_STORY: GlyphWallStoryItem[] = [
+const GLYPH_WALL_RENDER_COUNT = 100;
+
+type ReplacementAnxietyAct = {
+  phase: string;
+  subjects: RlStatement["subject"][];
+  domains: RlStatement["domain"][];
+  verbs: RlStatement["verb"][];
+  magnitudes: RlStatement["magnitude"][];
+  times: RlStatement["time"][];
+  certainties: RlStatement["certainty"][];
+};
+
+const RL_SUBJECT_VALUES: RlStatement["subject"][] = [
+  "TECHNOLOGY",
+  "IDEA",
+  "INSTITUTION",
+  "EVENT",
+  "BREAKTHROUGH",
+  "SYSTEM",
+  "INDIVIDUAL",
+];
+
+const RL_DOMAIN_VALUES: RlStatement["domain"][] = [
+  "SOCIETY",
+  "POLITICS",
+  "ECONOMY",
+  "TECHNOLOGY",
+  "MEDIA",
+  "CULTURE",
+  "SCIENCE",
+  "EDUCATION",
+  "ENVIRONMENT",
+  "INFRASTRUCTURE",
+  "ORGANIZATIONS",
+  "INDIVIDUALS",
+];
+
+const RL_MAGNITUDE_VALUES: RlStatement["magnitude"][] = ["LOW", "MEDIUM", "HIGH", "EXTREME"];
+const RL_TIME_VALUES: RlStatement["time"][] = ["NOW", "LT1Y", "Y1_3", "Y3_10", "GT10Y"];
+const RL_CERTAINTY_VALUES: RlStatement["certainty"][] = [
+  "HYPOTHESIS",
+  "INDICATION",
+  "PROBABLE",
+  "CONFIRMED",
+];
+
+const REPLACEMENT_ANXIETY_ACTS: ReplacementAnxietyAct[] = [
   {
-    id: "output-inflation",
-    sourceId: "v1-output-inflation",
-    fallbackCanonical: "SYSTEM.ORGANIZATIONS.GROWS.EXTREME.NOW.CONFIRMED",
-    titleNb: "Outputinflasjon",
-    titleEn: "Output Inflation",
-    bodyNb: "Mengden utdata eksploderer, og evalueringsarbeidet flyttes til mennesker.",
-    bodyEn: "Output volume explodes, and evaluation workload shifts to humans.",
+    phase: "signal-whisper",
+    subjects: ["IDEA", "TECHNOLOGY", "INSTITUTION"],
+    domains: ["MEDIA", "CULTURE", "TECHNOLOGY", "EDUCATION", "INDIVIDUALS"],
+    verbs: ["EXISTS", "INFLUENCES", "GROWS"],
+    magnitudes: ["LOW", "MEDIUM"],
+    times: ["NOW", "LT1Y"],
+    certainties: ["INDICATION", "PROBABLE"],
   },
   {
-    id: "prompt-looping",
-    sourceId: "v1-prompt-looping",
-    fallbackCanonical: "SYSTEM.TECHNOLOGY.INFLUENCES.HIGH.NOW.PROBABLE",
-    titleNb: "Prompt-løkker",
-    titleEn: "Prompt Looping",
-    bodyNb: "Arbeid går i raske mikroløkker av prompting, korreksjon og ny prompting.",
-    bodyEn: "Work shifts into rapid micro-loops of prompting, correction, and re-prompting.",
+    phase: "attention-displacement",
+    subjects: ["INDIVIDUAL", "IDEA", "SYSTEM"],
+    domains: ["INDIVIDUALS", "MEDIA", "ORGANIZATIONS", "TECHNOLOGY"],
+    verbs: ["INFLUENCES", "GROWS", "DECLINES"],
+    magnitudes: ["MEDIUM", "HIGH"],
+    times: ["NOW", "LT1Y"],
+    certainties: ["PROBABLE", "CONFIRMED"],
   },
   {
-    id: "decision-density",
-    sourceId: "v1-decision-density",
-    fallbackCanonical: "INDIVIDUAL.INDIVIDUALS.GROWS.HIGH.NOW.CONFIRMED",
-    titleNb: "Beslutningstetthet",
-    titleEn: "Decision Density",
-    bodyNb: "Antallet små beslutninger per time øker og tærer på konsentrasjonen.",
-    bodyEn: "Micro-decisions per hour increase and erode concentration.",
+    phase: "output-surge",
+    subjects: ["SYSTEM", "TECHNOLOGY", "INSTITUTION"],
+    domains: ["TECHNOLOGY", "ORGANIZATIONS", "ECONOMY", "INFRASTRUCTURE"],
+    verbs: ["GROWS", "TRANSFORMS", "INFLUENCES"],
+    magnitudes: ["HIGH", "EXTREME"],
+    times: ["LT1Y", "Y1_3"],
+    certainties: ["PROBABLE", "CONFIRMED"],
   },
   {
-    id: "cognitive-overproduction",
-    sourceId: "v1-cognitive-overproduction",
-    fallbackCanonical: "SYSTEM.TECHNOLOGY.GROWS.EXTREME.LT1Y.PROBABLE",
-    titleNb: "Kognitiv overproduksjon",
-    titleEn: "Cognitive Overproduction",
-    bodyNb: "Informasjonsmengden skalerer raskere enn menneskelig bearbeidingskapasitet.",
-    bodyEn: "Information volume scales faster than human processing capacity.",
+    phase: "cognitive-strain",
+    subjects: ["INDIVIDUAL", "SYSTEM", "TECHNOLOGY"],
+    domains: ["INDIVIDUALS", "ORGANIZATIONS", "EDUCATION", "SCIENCE"],
+    verbs: ["DECLINES", "INFLUENCES", "TRANSFORMS"],
+    magnitudes: ["HIGH", "EXTREME"],
+    times: ["NOW", "LT1Y", "Y1_3"],
+    certainties: ["PROBABLE", "CONFIRMED"],
   },
   {
-    id: "continuous-partial-attention",
-    sourceId: "v1-continuous-partial-attention",
-    fallbackCanonical: "INDIVIDUAL.INDIVIDUALS.DECLINES.MEDIUM.NOW.PROBABLE",
-    titleNb: "Kontinuerlig delt oppmerksomhet",
-    titleEn: "Continuous Partial Attention",
-    bodyNb: "Oppmerksomheten fragmenteres på tvers av verktøy, faner og arbeidsflyter.",
-    bodyEn: "Attention fragments across tools, tabs, and workflows.",
+    phase: "blame-cycle",
+    subjects: ["INSTITUTION", "EVENT", "SYSTEM"],
+    domains: ["POLITICS", "SOCIETY", "MEDIA", "ECONOMY"],
+    verbs: ["INFLUENCES", "TRANSFORMS", "EXISTS"],
+    magnitudes: ["MEDIUM", "HIGH"],
+    times: ["NOW", "LT1Y"],
+    certainties: ["INDICATION", "PROBABLE"],
   },
   {
-    id: "brain-fry",
-    sourceId: "v1-brain-fry",
-    fallbackCanonical: "INDIVIDUAL.INDIVIDUALS.DECLINES.HIGH.LT1Y.PROBABLE",
-    titleNb: "Hjernekok",
-    titleEn: "Brain Fry",
-    bodyNb: "Kognitiv overbelastning svekker evnen til å vurdere kvalitet.",
-    bodyEn: "Cognitive overload weakens quality judgment.",
+    phase: "resistance-ritual",
+    subjects: ["INSTITUTION", "INDIVIDUAL", "EVENT"],
+    domains: ["CULTURE", "POLITICS", "ORGANIZATIONS", "SOCIETY"],
+    verbs: ["DECLINES", "INFLUENCES", "TRANSFORMS"],
+    magnitudes: ["MEDIUM", "HIGH"],
+    times: ["LT1Y", "Y1_3"],
+    certainties: ["PROBABLE", "CONFIRMED"],
   },
   {
-    id: "ai-fatigue",
-    sourceId: "v1-ai-fatigue",
-    fallbackCanonical: "SYSTEM.ORGANIZATIONS.GROWS.HIGH.LT1Y.PROBABLE",
-    titleNb: "KI-tretthet",
-    titleEn: "AI Fatigue",
-    bodyNb: "Vedvarende tilsynsarbeid gir mental utmattelse over tid.",
-    bodyEn: "Continuous supervision work creates sustained mental exhaustion.",
+    phase: "reskilling-wave",
+    subjects: ["IDEA", "INSTITUTION", "SYSTEM"],
+    domains: ["EDUCATION", "SCIENCE", "ORGANIZATIONS", "TECHNOLOGY"],
+    verbs: ["GROWS", "TRANSFORMS", "INFLUENCES"],
+    magnitudes: ["MEDIUM", "HIGH"],
+    times: ["Y1_3", "Y3_10"],
+    certainties: ["PROBABLE", "CONFIRMED"],
   },
   {
-    id: "threaded-work",
-    sourceId: "v1-threaded-work",
-    fallbackCanonical: "SYSTEM.ORGANIZATIONS.TRANSFORMS.HIGH.NOW.CONFIRMED",
-    titleNb: "Trådet arbeid",
-    titleEn: "Threaded Work",
-    bodyNb: "Rollen skifter fra utfører til orkestrator av parallelle maskinprosesser.",
-    bodyEn: "Roles shift from maker to orchestrator of parallel machine processes.",
+    phase: "institutional-memory",
+    subjects: ["INSTITUTION", "SYSTEM", "BREAKTHROUGH"],
+    domains: ["INFRASTRUCTURE", "ORGANIZATIONS", "ECONOMY", "SCIENCE"],
+    verbs: ["EXISTS", "TRANSFORMS", "GROWS"],
+    magnitudes: ["MEDIUM", "HIGH"],
+    times: ["Y1_3", "Y3_10"],
+    certainties: ["INDICATION", "PROBABLE", "CONFIRMED"],
   },
   {
-    id: "cognitive-orchestration",
-    sourceId: "v1-cognitive-orchestration",
-    fallbackCanonical: "IDEA.EDUCATION.GROWS.MEDIUM.Y1_3.PROBABLE",
-    titleNb: "Kognitiv orkestrering",
-    titleEn: "Cognitive Orchestration",
-    bodyNb: "Mennesker dirigerer maskinell tenkning i stedet for å produsere alt direkte.",
-    bodyEn: "Humans conduct machine reasoning instead of producing every output directly.",
+    phase: "myth-afterimage",
+    subjects: ["EVENT", "IDEA", "INDIVIDUAL"],
+    domains: ["CULTURE", "MEDIA", "SOCIETY", "EDUCATION"],
+    verbs: ["EXISTS", "INFLUENCES", "DECLINES"],
+    magnitudes: ["LOW", "MEDIUM", "HIGH"],
+    times: ["Y3_10", "GT10Y"],
+    certainties: ["INDICATION", "PROBABLE"],
   },
   {
-    id: "ai-work-rhythm",
-    sourceId: "v1-ai-work-rhythm",
-    fallbackCanonical: "SYSTEM.ORGANIZATIONS.TRANSFORMS.EXTREME.Y1_3.CONFIRMED",
-    titleNb: "KI-arbeidsrytmen",
-    titleEn: "AI Work Rhythm",
-    bodyNb: "Arbeid flyttes fra sekvensiell utførelse til kontinuerlig prosessovervåking.",
-    bodyEn: "Work shifts from sequential execution to continuous process supervision.",
+    phase: "recurrence",
+    subjects: ["SYSTEM", "INSTITUTION", "INDIVIDUAL"],
+    domains: ["SOCIETY", "POLITICS", "ORGANIZATIONS", "INDIVIDUALS"],
+    verbs: ["TRANSFORMS", "INFLUENCES", "EXISTS"],
+    magnitudes: ["MEDIUM", "HIGH"],
+    times: ["GT10Y", "NOW"],
+    certainties: ["PROBABLE", "CONFIRMED"],
   },
 ];
 
-const GLYPH_WALL_RENDER_COUNT = 100;
+const rotatePick = <T,>(values: readonly T[], index: number, salt = 0): T =>
+  values[(index + salt) % values.length];
+
+const shiftToken = <T,>(values: readonly T[], value: T, offset: number): T => {
+  const startIndex = values.indexOf(value);
+  const safeStartIndex = startIndex >= 0 ? startIndex : 0;
+  return values[(safeStartIndex + offset + values.length * 32) % values.length];
+};
+
+const buildReplacementAnxietyStoryGlyphs = (count: number): GlyphWallStoryItem[] => {
+  const glyphs: GlyphWallStoryItem[] = [];
+  const usedCanonicals = new Set<string>();
+  const glyphsPerAct = Math.ceil(count / REPLACEMENT_ANXIETY_ACTS.length);
+
+  for (let actIndex = 0; actIndex < REPLACEMENT_ANXIETY_ACTS.length; actIndex += 1) {
+    const act = REPLACEMENT_ANXIETY_ACTS[actIndex];
+    for (let step = 0; step < glyphsPerAct && glyphs.length < count; step += 1) {
+      let statement: RlStatement = {
+        subject: rotatePick(act.subjects, step, actIndex),
+        domain: rotatePick(act.domains, step, actIndex * 2),
+        verb: rotatePick(act.verbs, step, actIndex + (step % 3)),
+        magnitude: rotatePick(act.magnitudes, step, Math.floor(step / 2)),
+        time: rotatePick(act.times, step, Math.floor(step / 3)),
+        certainty: rotatePick(act.certainties, step, step % 2),
+      };
+
+      let canonical = canonicalizeCanonicalSentence(serializeCanonicalSentence(statement));
+
+      if (usedCanonicals.has(canonical)) {
+        let uniqueFound = false;
+        for (let tweak = 1; tweak <= RL_DOMAIN_VALUES.length * RL_TIME_VALUES.length; tweak += 1) {
+          const candidateStatement: RlStatement = {
+            ...statement,
+            subject: shiftToken(RL_SUBJECT_VALUES, statement.subject, Math.floor(tweak / 7)),
+            domain: shiftToken(RL_DOMAIN_VALUES, statement.domain, tweak),
+            magnitude: shiftToken(RL_MAGNITUDE_VALUES, statement.magnitude, Math.floor(tweak / 4)),
+            time: shiftToken(RL_TIME_VALUES, statement.time, Math.floor(tweak / 2)),
+            certainty: shiftToken(RL_CERTAINTY_VALUES, statement.certainty, Math.floor(tweak / 3)),
+          };
+          const candidateCanonical = canonicalizeCanonicalSentence(
+            serializeCanonicalSentence(candidateStatement),
+          );
+          if (!usedCanonicals.has(candidateCanonical)) {
+            statement = candidateStatement;
+            canonical = candidateCanonical;
+            uniqueFound = true;
+            break;
+          }
+        }
+
+        if (!uniqueFound) {
+          for (const subject of RL_SUBJECT_VALUES) {
+            for (const domain of RL_DOMAIN_VALUES) {
+              for (const magnitude of RL_MAGNITUDE_VALUES) {
+                for (const time of RL_TIME_VALUES) {
+                  for (const certainty of RL_CERTAINTY_VALUES) {
+                    const candidateCanonical = canonicalizeCanonicalSentence(
+                      serializeCanonicalSentence({
+                        subject,
+                        domain,
+                        verb: statement.verb,
+                        magnitude,
+                        time,
+                        certainty,
+                      }),
+                    );
+                    if (!usedCanonicals.has(candidateCanonical)) {
+                      statement = {
+                        subject,
+                        domain,
+                        verb: statement.verb,
+                        magnitude,
+                        time,
+                        certainty,
+                      };
+                      canonical = candidateCanonical;
+                      uniqueFound = true;
+                      break;
+                    }
+                  }
+                  if (uniqueFound) break;
+                }
+                if (uniqueFound) break;
+              }
+              if (uniqueFound) break;
+            }
+            if (uniqueFound) break;
+          }
+        }
+      }
+
+      if (usedCanonicals.has(canonical)) {
+        const emergencySearchSpace =
+          RL_SUBJECT_VALUES.length *
+          RL_DOMAIN_VALUES.length *
+          RL_MAGNITUDE_VALUES.length *
+          RL_TIME_VALUES.length *
+          RL_CERTAINTY_VALUES.length;
+
+        for (let offset = 0; offset < emergencySearchSpace; offset += 1) {
+          const emergencyIndex = glyphs.length + offset;
+          const mixedRadixSubject = emergencyIndex % RL_SUBJECT_VALUES.length;
+          const mixedRadixDomain =
+            Math.floor(emergencyIndex / RL_SUBJECT_VALUES.length) % RL_DOMAIN_VALUES.length;
+          const mixedRadixMagnitude =
+            Math.floor(emergencyIndex / (RL_SUBJECT_VALUES.length * RL_DOMAIN_VALUES.length)) %
+            RL_MAGNITUDE_VALUES.length;
+          const mixedRadixTime =
+            Math.floor(
+              emergencyIndex /
+                (RL_SUBJECT_VALUES.length * RL_DOMAIN_VALUES.length * RL_MAGNITUDE_VALUES.length),
+            ) % RL_TIME_VALUES.length;
+          const mixedRadixCertainty =
+            Math.floor(
+              emergencyIndex /
+                (RL_SUBJECT_VALUES.length *
+                  RL_DOMAIN_VALUES.length *
+                  RL_MAGNITUDE_VALUES.length *
+                  RL_TIME_VALUES.length),
+            ) % RL_CERTAINTY_VALUES.length;
+
+          const emergencyStatement: RlStatement = {
+            subject: RL_SUBJECT_VALUES[mixedRadixSubject],
+            domain: RL_DOMAIN_VALUES[mixedRadixDomain],
+            verb: statement.verb,
+            magnitude: RL_MAGNITUDE_VALUES[mixedRadixMagnitude],
+            time: RL_TIME_VALUES[mixedRadixTime],
+            certainty: RL_CERTAINTY_VALUES[mixedRadixCertainty],
+          };
+          const emergencyCanonical = canonicalizeCanonicalSentence(
+            serializeCanonicalSentence(emergencyStatement),
+          );
+          if (!usedCanonicals.has(emergencyCanonical)) {
+            canonical = emergencyCanonical;
+            break;
+          }
+        }
+      }
+
+      usedCanonicals.add(canonical);
+      glyphs.push({
+        id: `ra-${String(glyphs.length + 1).padStart(3, "0")}`,
+        canonical,
+        phase: act.phase,
+      });
+    }
+  }
+
+  return glyphs;
+};
+
+const GLYPH_WALL_STORY = buildReplacementAnxietyStoryGlyphs(GLYPH_WALL_RENDER_COUNT);
 
 const DEFAULT_PANEL_SHADING: PanelShadingReaction = {
   material: {
@@ -507,6 +700,13 @@ const HEX_VIDEO_ROOM_SOURCES = [
       "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/posters/1771442255228-9181695a-freepik__keep-everything-in-img1-the-same-only-change-the-p__35543.png",
   },
 ];
+
+const DEFAULT_VIDEO_ROOM_URL =
+  "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/videos/1771442235013-9c01df3d-FremtidensIntelligenssedler.mp4";
+const DEFAULT_VIDEO_ROOM_INDEX = Math.max(
+  0,
+  HEX_VIDEO_ROOM_SOURCES.findIndex((item) => item.video === DEFAULT_VIDEO_ROOM_URL),
+);
 
 const HEX_VIDEO_WALL_HEIGHT_REM = 17.6;
 const HEX_VIDEO_WALL_WIDTH_REM = HEX_VIDEO_WALL_HEIGHT_REM * (16 / 9);
@@ -688,13 +888,6 @@ const drawFormattedCardText = (
 
   ctx.font = regularFont;
 };
-
-const plainTextFromFormattedCardText = (text: string) =>
-  parseFormattedCardText(text)
-    .map((segment) => segment.text)
-    .join(" ")
-    .replace(/\s{2,}/g, " ")
-    .trim();
 
 const FORMAT_DIRECTIVE_TOKEN_PATTERN = /\(\s*(?:bold|new\s*line|new\s*paragraph)\s*\)/gi;
 
@@ -1469,7 +1662,7 @@ export function IntelligensTunnelSite() {
   const [outsideNewsItems, setOutsideNewsItems] = useState<AiNewsItem[]>([]);
   const [outsideNewsLoading, setOutsideNewsLoading] = useState(false);
   const [outsideNewsError, setOutsideNewsError] = useState("");
-  const [videoRoomIndex, setVideoRoomIndex] = useState(0);
+  const [videoRoomIndex, setVideoRoomIndex] = useState(() => DEFAULT_VIDEO_ROOM_INDEX);
   const [signatureContactName, setSignatureContactName] = useState("");
   const [signatureContactEmail, setSignatureContactEmail] = useState("");
   const [signatureContactMessage, setSignatureContactMessage] = useState("");
@@ -1497,42 +1690,9 @@ export function IntelligensTunnelSite() {
     () => (text: string) => (language === "nb" ? autoTranslateEnglishToBokmal(text) : text),
     [language],
   );
-  const glyphLanguageById = useMemo(() => {
-    const byId = new Map<string, GlyphLanguageItem>();
-    glyphLanguageItems.forEach((item) => {
-      if (item?.id) byId.set(item.id, item);
-    });
-    return byId;
-  }, [glyphLanguageItems]);
   const glyphWallItems = useMemo(
-    () => {
-      const expandedStory = Array.from({ length: GLYPH_WALL_RENDER_COUNT }, (_, expandedIndex) => {
-        const sourceIndex = expandedIndex % GLYPH_WALL_STORY.length;
-        const sequence = Math.floor(expandedIndex / GLYPH_WALL_STORY.length) + 1;
-        const baseItem = GLYPH_WALL_STORY[sourceIndex];
-        return {
-          ...baseItem,
-          id: `${baseItem.id}-${String(sequence).padStart(2, "0")}-${String(sourceIndex + 1).padStart(2, "0")}`,
-        };
-      });
-
-      return expandedStory.map((item, index) => {
-        const source = glyphLanguageById.get(item.sourceId);
-        const canonical = pickFirstText(source?.canonical, item.fallbackCanonical).toUpperCase();
-
-        const titleNbResolved = pickFirstText(source?.label_nb, source?.label, item.titleNb);
-        const titleEnResolved = pickFirstText(source?.label, item.titleEn, item.titleNb);
-
-        const sourceNoteNb = pickFirstText(source?.note_nb);
-        const sourceNoteEn = pickFirstText(source?.note);
-        const bodyNbResolved = pickFirstText(sourceNoteNb, item.bodyNb);
-        const bodyEnResolved = pickFirstText(sourceNoteEn, item.bodyEn);
-        const bodyNbPlain = plainTextFromFormattedCardText(bodyNbResolved);
-        const bodyEnPlain = plainTextFromFormattedCardText(bodyEnResolved);
-        const bodyRich = language === "nb" ? bodyNbResolved : bodyEnResolved;
-        const body = language === "nb" ? bodyNbPlain : bodyEnPlain;
-        const bodySegments = parseFormattedCardText(bodyRich);
-
+    () =>
+      GLYPH_WALL_STORY.map((item, index) => {
         let previewDataUrl = "";
         if (typeof document !== "undefined") {
           const canvas = document.createElement("canvas");
@@ -1541,7 +1701,7 @@ export function IntelligensTunnelSite() {
           const ctx = canvas.getContext("2d");
           if (ctx) {
             try {
-              drawCanonicalGlyphToContext(ctx, canonical, {
+              drawCanonicalGlyphToContext(ctx, item.canonical, {
                 backgroundColor: "rgba(0,0,0,0)",
                 lineColor: "rgba(46,39,33,0.94)",
                 gridColor: "rgba(69,60,53,0.48)",
@@ -1556,31 +1716,32 @@ export function IntelligensTunnelSite() {
         return {
           ...item,
           index,
-          canonical,
-          titleNbResolved,
-          titleEnResolved,
-          bodyNbResolved,
-          bodyEnResolved,
-          title: language === "nb" ? titleNbResolved : titleEnResolved,
-          body,
-          bodyRich,
-          bodySegments,
           previewDataUrl,
         };
-      });
-    },
-    [glyphLanguageById, language],
+      }),
+    [],
   );
+  useEffect(() => {
+    const uniqueCanonicals = new Set(glyphWallItems.map((item) => item.canonical));
+    if (uniqueCanonicals.size !== glyphWallItems.length) {
+      console.warn(
+        `Glyff wall uniqueness violation: ${glyphWallItems.length - uniqueCanonicals.size} duplicates detected.`,
+      );
+    }
+  }, [glyphWallItems]);
   const glyphWallPayloadJson = useMemo(
     () =>
       JSON.stringify(
         {
           version: "rl-story-v1",
           name: "replacement-anxiety-pattern",
+          protocol: "ra-sequence-v1",
+          read_order: "left_to_right_top_to_bottom",
+          count: glyphWallItems.length,
           items: glyphWallItems.map((item) => ({
             order: item.index + 1,
             id: item.id,
-            source_id: item.sourceId,
+            phase: item.phase,
             canonical: item.canonical,
           })),
         },
@@ -4218,6 +4379,18 @@ export function IntelligensTunnelSite() {
                 0% { transform: translate(-50%, -50%) rotateY(0deg); }
                 100% { transform: translate(-50%, -50%) rotateY(0deg); }
               }
+              @keyframes glyffFloatA {
+                0%, 100% { transform: translate3d(0px, 0px, 0px); }
+                50% { transform: translate3d(0px, -8px, 0px); }
+              }
+              @keyframes glyffFloatB {
+                0%, 100% { transform: translate3d(0px, 0px, 0px); }
+                50% { transform: translate3d(0px, -11px, 0px); }
+              }
+              @keyframes glyffFloatC {
+                0%, 100% { transform: translate3d(0px, 0px, 0px); }
+                50% { transform: translate3d(0px, -6px, 0px); }
+              }
             `}
           </style>
 
@@ -4254,19 +4427,8 @@ export function IntelligensTunnelSite() {
 
               <button
                 type="button"
-                onClick={() => setOutsideSection("news")}
-                className="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-[3.2rem] translate-y-[5.4rem] text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:-translate-x-[4.4rem] md:translate-y-[8.2rem] md:text-base"
-                style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
-              >
-                <span className="inline-block" style={{ animation: "outsideLinkFloatC 6.9s ease-in-out infinite" }}>
-                  {uiCopy.outsideAiNews}
-                </span>
-              </button>
-
-              <button
-                type="button"
                 onClick={() => setOutsideSection("glyphwall")}
-                className="pointer-events-auto absolute left-1/2 top-1/2 translate-x-[1.5rem] -translate-y-[7.9rem] text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:translate-x-[4.8rem] md:-translate-y-[10.8rem] md:text-base"
+                className="pointer-events-auto absolute left-1/2 top-1/2 translate-x-[1.5rem] translate-y-[5.4rem] text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:translate-x-[4.8rem] md:translate-y-[8.2rem] md:text-base"
                 style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
               >
                 <span className="inline-block" style={{ animation: "outsideLinkFloatD 8.1s ease-in-out infinite" }}>
@@ -4430,60 +4592,49 @@ export function IntelligensTunnelSite() {
               {outsideSection === "glyphwall" ? (
                 <div className="absolute inset-x-4 bottom-8 top-[15.5rem] mx-auto w-full max-w-6xl md:inset-x-8 md:top-64">
                   <section
-                    className="relative h-full overflow-hidden rounded-[1.35rem] border border-[#5d5650]/90 p-3 md:p-4"
-                    style={{
-                      background:
-                        "linear-gradient(160deg,#958d85 0%,#847d76 38%,#756f68 64%,#68625c 100%)",
-                      boxShadow:
-                        "inset 0 1px 0 rgba(255,255,255,0.26), inset 0 -26px 48px rgba(25,20,16,0.34), 0 24px 44px rgba(0,0,0,0.4)",
-                    }}
+                    className="relative h-full"
                     data-rl-story-version="rl-story-v1"
                     data-rl-story-name="replacement-anxiety-pattern"
                   >
-                    <div
-                      className="pointer-events-none absolute inset-0 opacity-55"
-                      style={{
-                        background:
-                          "repeating-linear-gradient(0deg,rgba(0,0,0,0) 0,rgba(0,0,0,0) 48%,rgba(42,35,31,0.28) 48%,rgba(42,35,31,0.28) 49%),repeating-linear-gradient(90deg,rgba(0,0,0,0) 0,rgba(0,0,0,0) 19.6%,rgba(36,31,27,0.24) 19.6%,rgba(36,31,27,0.24) 20.1%),radial-gradient(circle at 18% 22%,rgba(255,255,255,0.08),rgba(255,255,255,0) 44%),radial-gradient(circle at 78% 72%,rgba(0,0,0,0.16),rgba(0,0,0,0) 52%)",
-                      }}
-                    />
-                    <div className="relative h-full overflow-auto pr-1">
-                      <div className="grid grid-cols-3 gap-2 pb-2 sm:grid-cols-4 md:grid-cols-6 md:gap-3 lg:grid-cols-8 xl:grid-cols-10">
+                    <div className="relative h-full overflow-auto">
+                      <div className="grid grid-cols-3 gap-y-6 pb-6 sm:grid-cols-4 md:grid-cols-6 md:gap-y-7 lg:grid-cols-8 xl:grid-cols-10">
                         {glyphWallItems.map((item) => (
                           <article
                             key={item.id}
-                            className="relative rounded-[0.8rem] border border-[#696058]/85 p-2 md:p-2.5"
-                            style={{
-                              background:
-                                "linear-gradient(162deg,#a19890 0%,#90877f 47%,#847b74 100%)",
-                              boxShadow:
-                                "inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -12px 20px rgba(43,37,32,0.26), 0 8px 18px rgba(0,0,0,0.22)",
-                            }}
+                            className="relative flex items-center justify-center"
                             data-rl-story-index={item.index + 1}
                             data-rl-canonical={item.canonical}
-                            data-rl-id={item.sourceId}
+                            data-rl-id={item.id}
+                            data-rl-phase={item.phase}
                           >
                             <div
-                              className="relative overflow-hidden rounded-md border border-[#665d56]/75 p-1.5"
+                              className="relative h-[7rem] w-[7rem] overflow-hidden rounded-full border border-[#86b5eb]/34"
                               style={{
                                 background:
-                                  "linear-gradient(168deg,#8d857e 0%,#7f7770 54%,#746c65 100%)",
+                                  "radial-gradient(circle_at_45%_42%,rgba(132,174,233,0.2),rgba(12,22,40,0.92)_72%)",
                                 boxShadow:
-                                  "inset 0 1px 0 rgba(255,255,255,0.24), inset 0 -8px 14px rgba(33,28,24,0.3)",
+                                  "0 0 20px rgba(98,163,236,0.24), inset 0 0 18px rgba(0,0,0,0.36), inset 0 1px 0 rgba(208,232,255,0.24)",
+                                animation:
+                                  item.index % 3 === 0
+                                    ? "glyffFloatA 7.8s ease-in-out infinite"
+                                    : item.index % 3 === 1
+                                      ? "glyffFloatB 9.2s ease-in-out infinite"
+                                      : "glyffFloatC 8.4s ease-in-out infinite",
+                                animationDelay: `${(item.index % 11) * 0.16}s`,
                               }}
                             >
                               {item.previewDataUrl ? (
-                                <div className="relative h-[7.8rem] w-full overflow-hidden rounded-[0.45rem] bg-[#8a8179]">
+                                <div className="relative h-full w-full overflow-hidden rounded-full bg-[#11213c]">
                                   <img
                                     src={item.previewDataUrl}
-                                    alt={item.title}
-                                    className="absolute inset-0 h-full w-full object-cover opacity-78 mix-blend-multiply"
+                                    alt={`Glyff ${item.index + 1}`}
+                                    className="absolute inset-0 h-full w-full object-cover opacity-88 mix-blend-screen"
                                     loading="lazy"
                                   />
-                                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_19%,rgba(255,255,255,0.14),rgba(255,255,255,0)_58%),radial-gradient(circle_at_81%_78%,rgba(0,0,0,0.22),rgba(0,0,0,0)_62%)]" />
+                                  <div className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_19%_18%,rgba(198,228,255,0.22),rgba(198,228,255,0)_42%),radial-gradient(circle_at_82%_79%,rgba(0,0,0,0.26),rgba(0,0,0,0)_56%)]" />
                                 </div>
                               ) : (
-                                <div className="h-[7.8rem] w-full rounded-[0.45rem] bg-[#7f766e]" />
+                                <div className="h-full w-full rounded-full bg-[#11213c]" />
                               )}
                             </div>
                             <span className="sr-only">{item.canonical}</span>
@@ -4506,12 +4657,12 @@ export function IntelligensTunnelSite() {
                   onTouchEnd={onVideoRoomTouchEnd}
                 >
                   <div className="relative h-[min(92vw,47rem)] w-[min(98vw,76rem)] [perspective:760px] [perspective-origin:50%_56%]">
-                    <div className="pointer-events-none absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_50%_44%,rgba(80,123,181,0.15),rgba(7,14,25,0.74)_56%,rgba(3,7,14,0.96)_100%)]" />
-                    <div className="pointer-events-none absolute inset-0 rounded-[2rem] shadow-[inset_0_0_90px_rgba(0,0,0,0.66)]" />
-                    <p className="absolute left-1/2 top-1 -translate-x-1/2 text-[0.62rem] font-semibold uppercase tracking-[0.15em] text-[#99bae5]">
+                    <div className="pointer-events-none absolute inset-0 rounded-[2rem] bg-black" />
+                    <div className="pointer-events-none absolute inset-0 rounded-[2rem] shadow-[inset_0_0_120px_rgba(0,0,0,0.92)]" />
+                    <p className="absolute left-1/2 top-1 -translate-x-1/2 text-[0.62rem] font-semibold uppercase tracking-[0.15em] text-[#e5e7eb]">
                       {videoRoomIndex + 1} / {HEX_VIDEO_ROOM_SOURCES.length}
                     </p>
-                    <div className="absolute left-1/2 top-1/2 h-[1.05rem] w-[1.05rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#d9e8ff]/95 shadow-[0_0_18px_rgba(140,185,255,0.72)]" />
+                    <div className="absolute left-1/2 top-1/2 h-[1.05rem] w-[1.05rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/90 shadow-[0_0_10px_rgba(255,255,255,0.35)]" />
                     <div
                       className="absolute left-1/2 top-1/2 h-full w-full [transform-style:preserve-3d]"
                       style={{
@@ -4520,30 +4671,28 @@ export function IntelligensTunnelSite() {
                       }}
                     >
                       <div
-                        className="absolute left-1/2 top-1/2 border border-[#83a9dd]/24"
+                        className="absolute left-1/2 top-1/2 border border-white/10"
                         style={{
                           width: `${HEX_VIDEO_FLOOR_CEILING_SIZE_REM.toFixed(3)}rem`,
                           height: `${HEX_VIDEO_FLOOR_CEILING_SIZE_REM.toFixed(3)}rem`,
                           transform: `translate(-50%, -50%) translateY(${HEX_VIDEO_FLOOR_CEILING_OFFSET_REM.toFixed(3)}rem) rotateX(90deg)`,
-                          background:
-                            "linear-gradient(180deg, rgba(150,183,223,0.24) 0%, rgba(58,77,103,0.3) 14%, rgba(19,29,45,0.82) 100%)",
-                          boxShadow: "0 0 56px rgba(48,94,156,0.22)",
+                          background: "linear-gradient(180deg, rgba(0,0,0,0.98) 0%, rgba(0,0,0,1) 100%)",
+                          boxShadow: "none",
                         }}
                       />
                       <div
-                        className="absolute left-1/2 top-1/2 border border-[#83a9dd]/18"
+                        className="absolute left-1/2 top-1/2 border border-white/8"
                         style={{
                           width: `${HEX_VIDEO_FLOOR_CEILING_SIZE_REM.toFixed(3)}rem`,
                           height: `${HEX_VIDEO_FLOOR_CEILING_SIZE_REM.toFixed(3)}rem`,
                           transform: `translate(-50%, -50%) translateY(-${HEX_VIDEO_FLOOR_CEILING_OFFSET_REM.toFixed(3)}rem) rotateX(-90deg)`,
-                          background:
-                            "linear-gradient(180deg, rgba(22,31,45,0.92) 0%, rgba(24,36,56,0.62) 34%, rgba(117,151,204,0.22) 100%)",
+                          background: "linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.96) 100%)",
                         }}
                       />
                       {HEX_VIDEO_ROOM_SOURCES.map((videoItem, index) => (
                         <div
                           key={`${videoItem.video}-${index}`}
-                          className="absolute left-1/2 top-1/2 overflow-hidden border border-[#89b0e4]/34 bg-[#050b16]/95 shadow-[0_22px_44px_rgba(0,0,0,0.6)]"
+                          className="absolute left-1/2 top-1/2 overflow-hidden border border-white/10 bg-black shadow-[0_22px_44px_rgba(0,0,0,0.86)]"
                           style={{
                             width: `${(HEX_VIDEO_WALL_WIDTH_REM + HEX_VIDEO_WALL_OVERLAP_REM).toFixed(3)}rem`,
                             height: `${HEX_VIDEO_WALL_HEIGHT_REM}rem`,
