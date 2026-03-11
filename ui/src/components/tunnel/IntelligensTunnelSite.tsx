@@ -3014,7 +3014,14 @@ export function IntelligensTunnelSite() {
       // ======= EXIT GLYPH =======
       let isOutside = false;
       let outsideT = 0; // 0 = inside tunnel, 1 = fully outside
-      let outsideScrollImpulse = 0; // subtle orbit/dolly impulse driven by wheel/touch while outside
+      let outsideOrbitYaw = 0;
+      let outsideOrbitPitch = 0;
+      let outsideOrbitRoll = 0;
+      let outsideZoomOffset = 0;
+      let outsideDragActive = false;
+      let outsideDragRollMode = false;
+      let outsideLastPointerX = 0;
+      let outsideLastPointerY = 0;
       const exitCameraTarget = new THREE.Vector3(); // computed once on transition start
       const exitLookTarget = new THREE.Vector3();   // center of tunnel
 
@@ -3043,6 +3050,8 @@ export function IntelligensTunnelSite() {
       const setOutsideView = (nextOutside: boolean) => {
         if (isOutside === nextOutside) return;
         isOutside = nextOutside;
+        outsideDragActive = false;
+        outsideDragRollMode = false;
         setOutsideMenuVisible(nextOutside);
         if (nextOutside) {
           updateOutsideCameraTargets();
@@ -3143,26 +3152,36 @@ export function IntelligensTunnelSite() {
         const rect = renderer.domElement.getBoundingClientRect();
         pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        outsideLastPointerX = event.clientX;
+        outsideLastPointerY = event.clientY;
 
         raycaster.setFromCamera(pointer, camera);
         const hits = raycaster.intersectObjects(panelObjects, false);
+
+        if (isOutside) {
+          if (hits.length > 0) {
+            const hitObj = hits[0].object;
+            if (hitObj.userData.isReentryDot) {
+              setOutsideView(false);
+              return;
+            }
+            if (hitObj.userData.isExitGlyph) {
+              toggleOutsideView();
+              return;
+            }
+          }
+
+          outsideDragActive = true;
+          outsideDragRollMode = event.shiftKey || event.altKey || event.button === 2;
+          return;
+        }
+
         if (hits.length > 0) {
           const hitObj = hits[0].object;
-
-          if (hitObj.userData.isReentryDot && isOutside) {
-            setOutsideView(false);
-            return;
-          }
 
           // --- Exit glyph click ---
           if (hitObj.userData.isExitGlyph) {
             toggleOutsideView();
-            return;
-          }
-
-          // --- Click anywhere in space to re-enter tunnel when outside ---
-          if (isOutside) {
-            setOutsideView(false);
             return;
           }
 
@@ -3179,12 +3198,7 @@ export function IntelligensTunnelSite() {
             }
           }
         } else {
-          // Click on empty space: if outside, re-enter; otherwise collapse cards
-          if (isOutside) {
-            setOutsideView(false);
-          } else {
-            glyphRunes.forEach((r) => { r.expanded = false; });
-          }
+          glyphRunes.forEach((r) => { r.expanded = false; });
         }
       };
 
@@ -3194,17 +3208,53 @@ export function IntelligensTunnelSite() {
       const mouseCurrent = { x: 0, y: 0 };
 
       const onPointerMove = (event: PointerEvent) => {
-        if (isReducedMotion || isMobile) return;
         const rect = renderer.domElement.getBoundingClientRect();
         const x = (event.clientX - rect.left) / rect.width;
         const y = (event.clientY - rect.top) / rect.height;
         mouseTarget.x = (x - 0.5) * 2;
         mouseTarget.y = (y - 0.5) * 2;
+
+        if (isOutside && outsideDragActive) {
+          const dx = event.clientX - outsideLastPointerX;
+          const dy = event.clientY - outsideLastPointerY;
+          outsideLastPointerX = event.clientX;
+          outsideLastPointerY = event.clientY;
+
+          if (outsideDragRollMode) {
+            outsideOrbitRoll = THREE.MathUtils.clamp(
+              outsideOrbitRoll + dx * 0.0038,
+              -Math.PI * 0.48,
+              Math.PI * 0.48,
+            );
+          } else {
+            outsideOrbitYaw += dx * 0.0046;
+            outsideOrbitPitch = THREE.MathUtils.clamp(
+              outsideOrbitPitch + dy * 0.0035,
+              -0.88,
+              0.88,
+            );
+          }
+          return;
+        }
+
+        if (isReducedMotion || isMobile) return;
       };
 
       const onPointerLeave = () => {
         mouseTarget.x = 0;
         mouseTarget.y = 0;
+        outsideDragActive = false;
+        outsideDragRollMode = false;
+      };
+
+      const onPointerUp = () => {
+        outsideDragActive = false;
+        outsideDragRollMode = false;
+      };
+
+      const onContextMenu = (event: MouseEvent) => {
+        if (!isOutside) return;
+        event.preventDefault();
       };
 
       renderer.domElement.addEventListener("pointermove", onPointerMove, {
@@ -3213,14 +3263,18 @@ export function IntelligensTunnelSite() {
       renderer.domElement.addEventListener("pointerleave", onPointerLeave, {
         passive: true,
       });
+      renderer.domElement.addEventListener("pointerup", onPointerUp, { passive: true });
+      renderer.domElement.addEventListener("pointercancel", onPointerUp, { passive: true });
+      renderer.domElement.addEventListener("contextmenu", onContextMenu);
 
       const onWheel = (event: WheelEvent) => {
         event.preventDefault();
         if (isOutside) {
-          outsideScrollImpulse = THREE.MathUtils.clamp(
-            outsideScrollImpulse + event.deltaY * 0.0012,
-            -1.15,
-            1.15,
+          outsideOrbitYaw += event.deltaY * 0.0017;
+          outsideZoomOffset = THREE.MathUtils.clamp(
+            outsideZoomOffset + event.deltaY * 0.22,
+            -165,
+            230,
           );
           return;
         }
@@ -3249,10 +3303,11 @@ export function IntelligensTunnelSite() {
         const currentY = event.touches[0]?.clientY ?? touchStartY;
         const deltaY = touchStartY - currentY;
         if (isOutside) {
-          outsideScrollImpulse = THREE.MathUtils.clamp(
-            outsideScrollImpulse + deltaY * 0.0017,
-            -1.15,
-            1.15,
+          outsideOrbitYaw += deltaY * 0.0021;
+          outsideZoomOffset = THREE.MathUtils.clamp(
+            outsideZoomOffset + deltaY * 0.13,
+            -165,
+            230,
           );
           touchStartY = currentY;
           return;
@@ -3331,47 +3386,63 @@ export function IntelligensTunnelSite() {
         const easeOut = outsideT < 0.5
           ? 4 * outsideT * outsideT * outsideT
           : 1 - Math.pow(-2 * outsideT + 2, 3) / 2;
-        outsideScrollImpulse = THREE.MathUtils.damp(outsideScrollImpulse, 0, 3.8, dt);
         const outsideMotionWeight = THREE.MathUtils.smoothstep(easeOut, 0.18, 1);
-        const outsideMotionX = mouseCurrent.x * (isMobile ? 0 : 12.0) * outsideMotionWeight;
-        const outsideMotionY = mouseCurrent.y * (isMobile ? 0 : 6.8) * outsideMotionWeight;
-        const outsideScrollMotion = outsideScrollImpulse * outsideMotionWeight;
-        const outsideOrbitYaw = outsideScrollMotion * 0.12;
-        const outsideDolly = outsideScrollMotion * 16.5;
+        const outsideMotionX = mouseCurrent.x * (isMobile ? 0 : 15.4) * outsideMotionWeight;
+        const outsideMotionY = mouseCurrent.y * (isMobile ? 0 : 9.2) * outsideMotionWeight;
 
         // ---- Dynamically adjust fog, lighting, background for exterior view ----
         exteriorKeyTarget.position
           .copy(tunnelCenter)
-          .add(new THREE.Vector3(outsideScrollMotion * 4.2, outsideScrollMotion * 1.15, -outsideScrollMotion * 2.5));
+          .add(
+            new THREE.Vector3(
+              Math.sin(outsideOrbitYaw) * 6.8 + outsideMotionX * 0.2,
+              outsideOrbitPitch * 2.4 + outsideMotionY * 0.18,
+              Math.cos(outsideOrbitYaw) * 3.6 - outsideMotionX * 0.13,
+            ),
+          );
         exteriorFillTarget.position
           .copy(tunnelCenter)
-          .add(new THREE.Vector3(-outsideScrollMotion * 1.8, outsideScrollMotion * 0.65, outsideScrollMotion * 1.4));
+          .add(
+            new THREE.Vector3(
+              -Math.sin(outsideOrbitYaw) * 3.2,
+              outsideOrbitPitch * 0.9,
+              Math.cos(outsideOrbitYaw) * 2.1,
+            ),
+          );
         // Sun key with subtle pointer-responsive shift for a slight "object reacts to movement" feel.
         exteriorKey.position.set(
-          tunnelCenter.x + 590 + outsideMotionX * 2.1 + outsideScrollMotion * 13,
-          tunnelCenter.y + 410 + outsideMotionY * 1.5 + outsideScrollMotion * 5.4,
-          tunnelCenter.z - 230 - outsideMotionX * 1.05 - outsideScrollMotion * 8.2,
+          tunnelCenter.x + 640 + outsideMotionX * 2.6 + Math.sin(outsideOrbitYaw) * 44,
+          tunnelCenter.y + 380 + outsideMotionY * 1.8 + outsideOrbitPitch * 36,
+          tunnelCenter.z - 170 - outsideMotionX * 1.25 + Math.cos(outsideOrbitYaw) * 26,
         );
         // Opposite fill stays weak to preserve contrast.
         exteriorFill.position.set(
-          tunnelCenter.x - 440 - outsideMotionX * 0.72 - outsideScrollMotion * 4.8,
-          tunnelCenter.y + 60 + outsideMotionY * 0.3 + outsideScrollMotion * 1.8,
-          tunnelCenter.z + 340 + outsideMotionX * 0.55 + outsideScrollMotion * 3.2,
+          tunnelCenter.x - 470 - outsideMotionX * 0.82 - Math.sin(outsideOrbitYaw) * 16,
+          tunnelCenter.y + 35 + outsideMotionY * 0.22 + outsideOrbitPitch * 10,
+          tunnelCenter.z + 360 + outsideMotionX * 0.6 - Math.cos(outsideOrbitYaw) * 12,
         );
         const outsideBaseOffset = exitCameraTarget
           .clone()
           .sub(tunnelCenter)
-          .applyAxisAngle(new THREE.Vector3(0, 1, 0), outsideOrbitYaw);
-        const outsideDepthDir = outsideBaseOffset.clone().normalize();
+          .applyQuaternion(
+            new THREE.Quaternion().setFromEuler(
+              new THREE.Euler(outsideOrbitPitch, outsideOrbitYaw, 0, "YXZ"),
+            ),
+          );
+        const outsideDistance = THREE.MathUtils.clamp(
+          outsideBaseOffset.length() + outsideZoomOffset,
+          260,
+          860,
+        );
+        outsideBaseOffset.setLength(outsideDistance);
         const outsideCameraPos = tunnelCenter
           .clone()
           .add(outsideBaseOffset)
-          .add(outsideDepthDir.multiplyScalar(outsideDolly))
           .add(new THREE.Vector3(outsideMotionX, outsideMotionY * 0.84, outsideMotionX * 0.58));
         const outsideLook = exitLookTarget
           .clone()
-          .add(new THREE.Vector3(outsideMotionX * 0.13, outsideMotionY * 0.11, outsideMotionX * 0.09))
-          .add(new THREE.Vector3(outsideScrollMotion * 1.35, outsideScrollMotion * 0.95, outsideScrollMotion * 0.88));
+          .add(new THREE.Vector3(outsideMotionX * 0.11, outsideMotionY * 0.095, outsideMotionX * 0.085));
+        const outsideRollQuat = new THREE.Quaternion();
 
         if (easeOut > 0.01) {
           // Push fog far away when outside
@@ -3380,24 +3451,24 @@ export function IntelligensTunnelSite() {
             scene.fog.far = THREE.MathUtils.lerp(230, 10000, easeOut);
           }
           const insideBg = new THREE.Color(0x0f1217);
-          const outsideBg = new THREE.Color(0x03050b);
+          const outsideBg = new THREE.Color(0x02040a);
           (scene.background as THREE.Color).copy(insideBg).lerp(outsideBg, easeOut);
 
           // Further contrast: darker base, stronger sun, weaker fill.
-          ambient.intensity = THREE.MathUtils.lerp(0.05, 0.018, easeOut);
-          hemi.intensity = THREE.MathUtils.lerp(0.08, 0.032, easeOut);
-          exteriorKey.intensity = THREE.MathUtils.lerp(0, isMobile ? 3.3 : 5.6, easeOut);
-          exteriorFill.intensity = THREE.MathUtils.lerp(0, isMobile ? 0.1 : 0.15, easeOut);
+          ambient.intensity = THREE.MathUtils.lerp(0.05, 0.011, easeOut);
+          hemi.intensity = THREE.MathUtils.lerp(0.08, 0.022, easeOut);
+          exteriorKey.intensity = THREE.MathUtils.lerp(0, isMobile ? 3.9 : 6.8, easeOut);
+          exteriorFill.intensity = THREE.MathUtils.lerp(0, isMobile ? 0.06 : 0.09, easeOut);
           renderer.toneMappingExposure = THREE.MathUtils.lerp(
             isMobile ? 0.76 : 0.72,
-            isMobile ? 0.86 : 0.89,
+            isMobile ? 0.8 : 0.82,
             easeOut,
           );
 
           // Keep emissive low to avoid flattening shadow contrast.
           [floorMat, wallMat].forEach((mat) => {
             mat.emissive.set(0x334455);
-            mat.emissiveIntensity = 0.022 * easeOut;
+            mat.emissiveIntensity = 0.01 * easeOut;
           });
           // Ceiling: transition from pure emissive soft-box (inside) to
           // PBR-lit white (outside) so sun shadows are visible on it
@@ -3438,11 +3509,21 @@ export function IntelligensTunnelSite() {
           // Fully outside: direct camera control
           camera.position.copy(outsideCameraPos);
           camera.lookAt(outsideLook);
+          if (Math.abs(outsideOrbitRoll) > 0.0001) {
+            const outsideViewDir = outsideLook.clone().sub(camera.position).normalize();
+            outsideRollQuat.setFromAxisAngle(outsideViewDir, outsideOrbitRoll);
+            camera.quaternion.multiply(outsideRollQuat);
+          }
         } else if (easeOut > 0.001) {
           // Transitioning: blend camera
           camera.position.lerpVectors(insidePos, outsideCameraPos, easeOut);
           const blendedLook = insideLook.clone().lerp(outsideLook, easeOut);
           camera.lookAt(blendedLook);
+          if (Math.abs(outsideOrbitRoll) > 0.0001) {
+            const blendedViewDir = blendedLook.clone().sub(camera.position).normalize();
+            outsideRollQuat.setFromAxisAngle(blendedViewDir, outsideOrbitRoll * easeOut);
+            camera.quaternion.multiply(outsideRollQuat);
+          }
         } else {
           camera.position.copy(insidePos);
           lookDummy.position.copy(camera.position);
@@ -3682,6 +3763,9 @@ export function IntelligensTunnelSite() {
         renderer.domElement.removeEventListener("pointerdown", onPointerDown);
         renderer.domElement.removeEventListener("pointermove", onPointerMove);
         renderer.domElement.removeEventListener("pointerleave", onPointerLeave);
+        renderer.domElement.removeEventListener("pointerup", onPointerUp);
+        renderer.domElement.removeEventListener("pointercancel", onPointerUp);
+        renderer.domElement.removeEventListener("contextmenu", onContextMenu);
         renderer.domElement.removeEventListener("wheel", onWheel);
         renderer.domElement.removeEventListener("touchstart", onTouchStart);
         renderer.domElement.removeEventListener("touchmove", onTouchMove);
