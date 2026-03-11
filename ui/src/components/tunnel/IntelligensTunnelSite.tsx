@@ -119,6 +119,44 @@ type GlyphRune = {
   expandT: number;
 };
 
+type UiLanguage = "nb" | "en";
+
+type UiCopy = {
+  siteName: string;
+  languageLabel: string;
+  loadingPanels: string;
+  panelsFallback: string;
+  activeInstallation: string;
+  outsideVideos: string;
+  outsideSignatures: string;
+  outsideAiNews: string;
+};
+
+const LANGUAGE_STORAGE_KEY = "intelligenspartiet:language";
+
+const UI_COPY: Record<UiLanguage, UiCopy> = {
+  nb: {
+    siteName: "INTELLIGENSPARTIET",
+    languageLabel: "Språk",
+    loadingPanels: "Laster mediepaneler ...",
+    panelsFallback: "Kunne ikke laste media-paneler. Viser lokal fallback.",
+    activeInstallation: "Aktiv installasjon",
+    outsideVideos: "Videoer",
+    outsideSignatures: "Signaturer",
+    outsideAiNews: "AI-nyheter",
+  },
+  en: {
+    siteName: "INTELLIGENSPARTIET",
+    languageLabel: "Language",
+    loadingPanels: "Loading media panels ...",
+    panelsFallback: "Could not load media panels. Showing local fallback.",
+    activeInstallation: "Active installation",
+    outsideVideos: "Videos",
+    outsideSignatures: "Signatures",
+    outsideAiNews: "AI news",
+  },
+};
+
 const DEFAULT_PANEL_SHADING: PanelShadingReaction = {
   material: {
     emissive_base: 0,
@@ -362,6 +400,83 @@ const drawFormattedCardText = (
   ctx.font = regularFont;
 };
 
+const FORMAT_DIRECTIVE_TOKEN_PATTERN = /\(\s*(?:bold|new\s*line|new\s*paragraph)\s*\)/gi;
+
+const EN_TO_NB_EXACT: Record<string, string> = {
+  "ai fatigue": "AI-tretthet",
+  "brain fry": "Hjernekok",
+  "threaded work": "Trådet arbeid",
+  "cognitive orchestration": "Kognitiv orkestrering",
+  "output inflation": "Output-inflasjon",
+  "prompt looping": "Prompt-løkker",
+  "decision density": "Beslutningstetthet",
+  "cognitive overproduction": "Kognitiv overproduksjon",
+  "continuous partial attention": "Kontinuerlig delvis oppmerksomhet",
+  "ai work rhythm": "AI-arbeidsrytme",
+  "cognitive checkpoints increase in short horizon.": "Kognitive kontrollpunkter øker på kort sikt.",
+  "overload reduces evaluative sharpness.": "Overbelastning reduserer vurderingsskarphet.",
+  "linear workflows shift to parallel supervision.": "Lineære arbeidsflyter går over til parallell oppfølging.",
+  "new skill: coordinating ai outputs.": "Ny ferdighet: koordinering av AI-utdata.",
+  "output volume spikes immediately.": "Volumet av utdata øker umiddelbart.",
+  "prompt-output loops shape behavior now.": "Prompt-utdata-løkker former adferd nå.",
+  "micro-decisions per hour increase.": "Antall mikrobeslutninger per time øker.",
+  "input load scales faster than cognition.": "Informasjonsmengden skalerer raskere enn kognisjonen.",
+  "prepared concept, not assigned to a tunnel slot yet.": "Klargjort konsept, ikke tildelt tunnelplass ennå.",
+  "mental exhaustion caused by continuous interaction with ai systems: prompting, reviewing, correcting, switching context, and supervising outputs.":
+    "Mental utmattelse forårsaket av kontinuerlig samhandling med AI-systemer: prompting, vurdering, korrigering, kontekstbytte og oppfølging av utdata.",
+  "ai does not remove work - it multiplies cognitive checkpoints.":
+    "AI fjerner ikke arbeid - den multipliserer kognitive kontrollpunkter.",
+  "ai does not remove work — it multiplies cognitive checkpoints.":
+    "AI fjerner ikke arbeid - den multipliserer kognitive kontrollpunkter.",
+};
+
+const EN_TO_NB_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/\bmeaning\b/gi, "Betydning"],
+  [/\bwhy it happens\b/gi, "Hvorfor det skjer"],
+  [/\bkey insight\b/gi, "Nøkkelinnsikt"],
+  [/\bsymptoms\b/gi, "Symptomer"],
+  [/\bmental exhaustion\b/gi, "Mental utmattelse"],
+  [/\bcontinuous interaction\b/gi, "kontinuerlig samhandling"],
+  [/\bcognitive checkpoints\b/gi, "kognitive kontrollpunkter"],
+  [/\bnew paragraph\b/gi, "new paragraph"],
+];
+
+const autoTranslateEnglishToBokmal = (text: string) => {
+  if (!text || !text.trim()) return text;
+
+  const directives: string[] = [];
+  let working = text.replace(FORMAT_DIRECTIVE_TOKEN_PATTERN, (match) => {
+    const token = `__FMT_${directives.length}__`;
+    directives.push(match);
+    return token;
+  });
+
+  working = working
+    .split("\n")
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return line;
+
+      const exact = EN_TO_NB_EXACT[trimmed.toLowerCase()];
+      if (exact) {
+        return line.replace(trimmed, exact);
+      }
+
+      let replaced = line;
+      EN_TO_NB_REPLACEMENTS.forEach(([pattern, next]) => {
+        replaced = replaced.replace(pattern, next);
+      });
+      return replaced;
+    })
+    .join("\n");
+
+  directives.forEach((directive, index) => {
+    working = working.replace(`__FMT_${index}__`, directive);
+  });
+
+  return working;
+};
+
 const TWO_PI = Math.PI * 2;
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
@@ -600,8 +715,32 @@ export function IntelligensTunnelSite() {
   const [glyphLanguageItems, setGlyphLanguageItems] = useState<GlyphLanguageItem[]>([]);
   const [activePanelId, setActivePanelId] = useState(FALLBACK_PANELS[0].id);
   const [panelsLoading, setPanelsLoading] = useState(true);
-  const [panelsLoadError, setPanelsLoadError] = useState<string | null>(null);
+  const [panelsLoadError, setPanelsLoadError] = useState(false);
   const [outsideMenuVisible, setOutsideMenuVisible] = useState(false);
+  const [language, setLanguage] = useState<UiLanguage>(() => {
+    if (typeof window === "undefined") return "nb";
+    try {
+      const saved = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+      if (saved === "nb" || saved === "en") return saved;
+    } catch (_error) {
+      // Ignore storage access errors and default to Bokmal.
+    }
+    return "nb";
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    } catch (_error) {
+      // Ignore storage write errors.
+    }
+  }, [language]);
+
+  const uiCopy = UI_COPY[language];
+  const localizeDynamicText = useMemo(
+    () => (text: string) => (language === "nb" ? autoTranslateEnglishToBokmal(text) : text),
+    [language],
+  );
 
   useEffect(() => {
     let isCancelled = false;
@@ -706,7 +845,7 @@ export function IntelligensTunnelSite() {
 
     const loadPanels = async () => {
       setPanelsLoading(true);
-      setPanelsLoadError(null);
+      setPanelsLoadError(false);
 
       try {
         const response = await fetch("/assets/data/media-panels.json", { cache: "no-store" });
@@ -773,7 +912,7 @@ export function IntelligensTunnelSite() {
         if (isCancelled) return;
         setPanelData(FALLBACK_PANELS);
         setActivePanelId(FALLBACK_PANELS[0].id);
-        setPanelsLoadError("Kunne ikke laste media-paneler. Viser lokal fallback.");
+        setPanelsLoadError(true);
       } finally {
         if (!isCancelled) setPanelsLoading(false);
       }
@@ -789,6 +928,10 @@ export function IntelligensTunnelSite() {
     () => panelData.find((panel) => panel.id === activePanelId) ?? panelData[0] ?? { title: "", body: "" } as UiPanel,
     [activePanelId, panelData],
   );
+  const activeInstallationText = useMemo(() => {
+    const glyphLabel = glyphCopyByPanelId.get(activePanel.id)?.label;
+    return localizeDynamicText(glyphLabel || activePanel.title || "");
+  }, [activePanel.id, activePanel.title, glyphCopyByPanelId, localizeDynamicText]);
 
   useEffect(() => {
     if (panelData.length === 0) return;
@@ -1984,8 +2127,8 @@ export function IntelligensTunnelSite() {
 
         // Card texture: glyph semantic copy overrides panel copy when assigned.
         const glyphCopy = glyphCopyByPanelId.get(panel.id);
-        const cardTitle = glyphCopy?.label || panel.title;
-        const cardBody = glyphCopy?.note || panel.body;
+        const cardTitle = localizeDynamicText(glyphCopy?.label || panel.title || "");
+        const cardBody = localizeDynamicText(glyphCopy?.note || panel.body || "");
         const cardTex = createCardTexture(cardTitle, cardBody);
         dynamicTextures.push(cardTex);
 
@@ -2726,25 +2869,51 @@ export function IntelligensTunnelSite() {
       isDisposed = true;
       cleanup();
     };
-  }, [panelData, glyphCanonicalByPanelId, glyphCopyByPanelId]);
+  }, [panelData, glyphCanonicalByPanelId, glyphCopyByPanelId, localizeDynamicText]);
 
   return (
     <div className="relative h-[100svh] w-full overflow-hidden overscroll-none touch-none bg-[#f7f7f4] text-[#141414]">
       <div ref={containerRef} className="absolute inset-0" />
 
+      <div className="absolute right-4 top-4 z-30 flex items-center gap-2 rounded-full border border-black/20 bg-white/90 px-2 py-1 shadow-[0_6px_18px_rgba(0,0,0,0.12)] backdrop-blur">
+        <span className="px-2 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-[#5a5a5a]">
+          {uiCopy.languageLabel}
+        </span>
+        <button
+          type="button"
+          onClick={() => setLanguage("nb")}
+          className={`pointer-events-auto rounded-full px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] transition ${
+            language === "nb" ? "bg-[#11161f] text-white" : "bg-transparent text-[#4f4f4f] hover:bg-black/5"
+          }`}
+          aria-pressed={language === "nb"}
+        >
+          NO
+        </button>
+        <button
+          type="button"
+          onClick={() => setLanguage("en")}
+          className={`pointer-events-auto rounded-full px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] transition ${
+            language === "en" ? "bg-[#11161f] text-white" : "bg-transparent text-[#4f4f4f] hover:bg-black/5"
+          }`}
+          aria-pressed={language === "en"}
+        >
+          EN
+        </button>
+      </div>
+
       {panelsLoading || panelsLoadError ? (
         <div className="pointer-events-none absolute left-1/2 top-[5.35rem] z-30 -translate-x-1/2 rounded-full border border-black/15 bg-white/85 px-4 py-2 text-[0.64rem] uppercase tracking-[0.16em] text-[#3f3f3f] shadow-[0_6px_18px_rgba(0,0,0,0.1)] backdrop-blur">
-          {panelsLoading ? "Laster mediepaneler ..." : panelsLoadError}
+          {panelsLoading ? uiCopy.loadingPanels : uiCopy.panelsFallback}
         </div>
       ) : null}
 
       {!outsideMenuVisible ? (
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-5 pt-5 md:px-8">
           <h1 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#525252]">
-            INTELLIGENSPARTIET
+            {uiCopy.siteName}
           </h1>
           <p className="mt-1 text-[0.64rem] uppercase tracking-[0.15em] text-[#6a6a6a]">
-            Aktiv installasjon: {glyphCopyByPanelId.get(activePanel.id)?.label || activePanel.title}
+            {uiCopy.activeInstallation}: {activeInstallationText}
           </p>
         </div>
       ) : null}
@@ -2776,7 +2945,7 @@ export function IntelligensTunnelSite() {
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[0.8rem] font-semibold uppercase tracking-[0.24em] text-[#dbe7ff] md:text-[0.95rem]"
             style={{ animation: "outsideCorePulse 6.8s ease-in-out infinite" }}
           >
-            INTELLIGENSPARTET
+            {uiCopy.siteName}
           </p>
 
           <a
@@ -2785,7 +2954,7 @@ export function IntelligensTunnelSite() {
             style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
           >
             <span className="inline-block" style={{ animation: "outsideLinkFloatA 7.5s ease-in-out infinite" }}>
-              Videoer
+              {uiCopy.outsideVideos}
             </span>
           </a>
 
@@ -2795,7 +2964,7 @@ export function IntelligensTunnelSite() {
             style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
           >
             <span className="inline-block" style={{ animation: "outsideLinkFloatB 8.8s ease-in-out infinite" }}>
-              Signaturer
+              {uiCopy.outsideSignatures}
             </span>
           </a>
 
@@ -2805,7 +2974,7 @@ export function IntelligensTunnelSite() {
             style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
           >
             <span className="inline-block" style={{ animation: "outsideLinkFloatC 6.9s ease-in-out infinite" }}>
-              AI-nyheter
+              {uiCopy.outsideAiNews}
             </span>
           </a>
         </div>
