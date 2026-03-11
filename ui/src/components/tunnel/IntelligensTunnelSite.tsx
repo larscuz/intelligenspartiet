@@ -209,6 +209,7 @@ const circularDamp = (current: number, target: number, smooth: number, dt: numbe
 const ROOM_WIDTH = 12;
 const ROOM_HEIGHT = 9;
 const CAMERA_START_PROGRESS = 0.12;
+const ROUTE_PROGRESS_DIRECTION = -1;
 // const WALL_THICKNESS = 0.24;
 // const FLOOR_THICKNESS = 0.32;
 
@@ -556,26 +557,62 @@ export function IntelligensTunnelSite() {
     };
   }, []);
 
+  const orderedActiveGlyphItems = useMemo(
+    () =>
+      glyphLanguageItems.filter(
+        (item) => item.enabled !== false && typeof item.canonical === "string" && item.canonical.trim().length > 0,
+      ),
+    [glyphLanguageItems],
+  );
+
+  const glyphByPanelIdInUiOrder = useMemo(() => {
+    const byPanelId = new Map<string, GlyphLanguageItem>();
+    if (!panelData.length || !orderedActiveGlyphItems.length) return byPanelId;
+
+    const routeDistanceFromStart = (placementT: number) => {
+      const t = wrap01(placementT);
+      return ROUTE_PROGRESS_DIRECTION >= 0
+        ? wrap01(t - CAMERA_START_PROGRESS)
+        : wrap01(CAMERA_START_PROGRESS - t);
+    };
+
+    const orderedPanels = [...panelData].sort((a, b) => {
+      const placementA =
+        typeof a.installation?.placement_t === "number" ? a.installation.placement_t : 0;
+      const placementB =
+        typeof b.installation?.placement_t === "number" ? b.installation.placement_t : 0;
+      const distanceA = routeDistanceFromStart(placementA);
+      const distanceB = routeDistanceFromStart(placementB);
+      if (distanceA === distanceB) return a.id.localeCompare(b.id);
+      return distanceA - distanceB;
+    });
+
+    const limit = Math.min(orderedPanels.length, orderedActiveGlyphItems.length);
+    for (let i = 0; i < limit; i += 1) {
+      byPanelId.set(orderedPanels[i].id, orderedActiveGlyphItems[i]);
+    }
+
+    return byPanelId;
+  }, [panelData, orderedActiveGlyphItems]);
+
   const glyphCanonicalByPanelId = useMemo(() => {
     const byPanelId = new Map<string, string>();
-    glyphLanguageItems.forEach((item) => {
-      if (!item.panel_id || !item.canonical || byPanelId.has(item.panel_id)) return;
-      byPanelId.set(item.panel_id, item.canonical);
+    glyphByPanelIdInUiOrder.forEach((item, panelId) => {
+      if (item.canonical) byPanelId.set(panelId, item.canonical);
     });
     return byPanelId;
-  }, [glyphLanguageItems]);
+  }, [glyphByPanelIdInUiOrder]);
 
   const glyphCopyByPanelId = useMemo(() => {
     const byPanelId = new Map<string, { label: string; note: string }>();
-    glyphLanguageItems.forEach((item) => {
-      if (!item.panel_id || item.enabled === false || byPanelId.has(item.panel_id)) return;
-      byPanelId.set(item.panel_id, {
+    glyphByPanelIdInUiOrder.forEach((item, panelId) => {
+      byPanelId.set(panelId, {
         label: item.label || "",
         note: item.note || "",
       });
     });
     return byPanelId;
-  }, [glyphLanguageItems]);
+  }, [glyphByPanelIdInUiOrder]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -1138,7 +1175,6 @@ export function IntelligensTunnelSite() {
       const runtimeVideos: HTMLVideoElement[] = [];
       const parallaxLayers: Array<{ mesh: THREE.Mesh; basePosition: THREE.Vector3; strength: number }> = [];
       // Negative progression is the intended "forward" route chronology for this tunnel.
-      const ROUTE_PROGRESS_DIRECTION = -1;
       const requestVideoPlay = (video: HTMLVideoElement) => {
         if (!video.paused && video.currentTime > 0) return; // already playing
         const playAttempt = video.play();
