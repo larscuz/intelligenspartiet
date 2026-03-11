@@ -77,6 +77,7 @@ const state = {
     description: '',
     items: [],
     dirty: false,
+    translating: false,
   },
   publicGlyphPreview: {
     loaded: false,
@@ -151,6 +152,7 @@ const mediaStatusNode = document.querySelector('#media-cms-status');
 
 const glyphLoadButton = document.querySelector('#glyph-load');
 const glyphAddButton = document.querySelector('#glyph-add');
+const glyphTranslateAllButton = document.querySelector('#glyph-translate-all');
 const glyphSaveButton = document.querySelector('#glyph-save');
 const glyphCommitMessageInput = document.querySelector('#glyph-commit-message');
 const glyphListNode = document.querySelector('#glyph-cms-list');
@@ -168,6 +170,12 @@ function setStatus(node, message, kind = '') {
 
 function parseError(error) {
   return String(error && error.message ? error.message : error || 'Ukjent feil');
+}
+
+function looksEnglish(text) {
+  const value = String(text || '').trim();
+  if (!value) return false;
+  return /[a-zA-Z]/.test(value);
 }
 
 function formatNorwegianDate(iso) {
@@ -455,10 +463,12 @@ function normalizeGlyphItem(item, index = 0) {
   return {
     id: String(item && item.id ? item.id : `glyph-${String(index + 1).padStart(2, '0')}`).trim(),
     label: String(item && item.label ? item.label : '').trim(),
+    label_nb: String(item && (item.label_nb || item.label_no) ? (item.label_nb || item.label_no) : '').trim(),
     panel_id: String(item && item.panel_id ? item.panel_id : '').trim(),
     canonical: String(item && item.canonical ? item.canonical : '').trim().toUpperCase(),
     enabled: item && item.enabled !== false,
     note: String(item && item.note ? item.note : '').trim(),
+    note_nb: String(item && (item.note_nb || item.note_no) ? (item.note_nb || item.note_no) : '').trim(),
   };
 }
 
@@ -466,10 +476,12 @@ function createEmptyGlyphItem(index = 0) {
   return {
     id: `glyph-${String(index + 1).padStart(2, '0')}`,
     label: '',
+    label_nb: '',
     panel_id: '',
     canonical: 'IDEA.TECHNOLOGY.GROWS.MEDIUM.LT1Y.INDICATION',
     enabled: true,
     note: '',
+    note_nb: '',
   };
 }
 
@@ -501,6 +513,14 @@ async function requestR2UploadUrl({ filename, contentType, folder }) {
     content_type: contentType || '',
     folder,
     expires_in: 900,
+  });
+}
+
+async function requestGlyphLlmTranslation(items) {
+  return apiRequest('POST', '/api/translate-glyphs', {
+    source_lang: 'en',
+    target_lang: 'nb',
+    items,
   });
 }
 
@@ -566,6 +586,7 @@ function updateCmsActionState() {
   if (glyphLoadButton) glyphLoadButton.disabled = !loggedIn;
   if (glyphCommitMessageInput) glyphCommitMessageInput.disabled = !loggedIn;
   if (glyphAddButton) glyphAddButton.disabled = !glyphLoaded;
+  if (glyphTranslateAllButton) glyphTranslateAllButton.disabled = !glyphLoaded || state.glyph.translating;
   if (glyphSaveButton) glyphSaveButton.disabled = !glyphLoaded || !state.glyph.dirty;
 }
 
@@ -648,6 +669,7 @@ function resetGlyphState() {
     description: '',
     items: [],
     dirty: false,
+    translating: false,
   };
   if (glyphListNode) glyphListNode.innerHTML = '';
   if (glyphSpotOverviewNode) glyphSpotOverviewNode.innerHTML = '';
@@ -1616,7 +1638,17 @@ function renderGlyphList() {
       state.glyph.items[index].label = glyphLabelInput.value;
       markGlyphDirty();
     });
-    grid.appendChild(createField('Label', glyphLabelInput));
+    grid.appendChild(createField('Label (EN)', glyphLabelInput));
+
+    const glyphLabelNbInput = document.createElement('input');
+    glyphLabelNbInput.type = 'text';
+    glyphLabelNbInput.value = item.label_nb || '';
+    glyphLabelNbInput.placeholder = 'KI-tretthet';
+    glyphLabelNbInput.addEventListener('input', () => {
+      state.glyph.items[index].label_nb = glyphLabelNbInput.value;
+      markGlyphDirty();
+    });
+    grid.appendChild(createField('Label (NO)', glyphLabelNbInput));
 
     const panelInput = document.createElement('input');
     panelInput.type = 'text';
@@ -1723,12 +1755,21 @@ function renderGlyphList() {
 
     const noteArea = document.createElement('textarea');
     noteArea.value = item.note || '';
-    noteArea.placeholder = 'Kort redaksjonell note';
+    noteArea.placeholder = 'Kort redaksjonell note (engelsk)';
     noteArea.addEventListener('input', () => {
       state.glyph.items[index].note = noteArea.value;
       markGlyphDirty();
     });
-    grid.appendChild(createField('Note', noteArea, true));
+    grid.appendChild(createField('Note (EN)', noteArea, true));
+
+    const noteNbArea = document.createElement('textarea');
+    noteNbArea.value = item.note_nb || '';
+    noteNbArea.placeholder = 'Kort redaksjonell note (norsk bokmål)';
+    noteNbArea.addEventListener('input', () => {
+      state.glyph.items[index].note_nb = noteNbArea.value;
+      markGlyphDirty();
+    });
+    grid.appendChild(createField('Note (NO)', noteNbArea, true));
 
     card.appendChild(head);
     card.appendChild(grid);
@@ -1757,6 +1798,7 @@ async function loadGlyphCms() {
     state.glyph.description = String(parsed.description || '').trim();
     state.glyph.items = items;
     state.glyph.dirty = false;
+    state.glyph.translating = false;
 
     renderGlyphList();
     updateGlyphMeta();
@@ -1772,6 +1814,7 @@ async function loadGlyphCms() {
       state.glyph.description = '';
       state.glyph.items = [];
       state.glyph.dirty = false;
+      state.glyph.translating = false;
       renderGlyphList();
       updateGlyphMeta();
       updateCmsActionState();
@@ -1852,6 +1895,69 @@ async function saveGlyphCms() {
     renderGlyphList();
   } catch (error) {
     setStatus(glyphStatusNode, `Glyph map-lagring feilet: ${parseError(error)}`, 'error');
+  }
+}
+
+async function translateAllGlyphsWithLlm() {
+  if (!state.authenticated || !state.glyph.loaded) return;
+
+  const normalizedItems = state.glyph.items.map((item, index) => normalizeGlyphItem(item, index));
+  const candidates = normalizedItems
+    .map((item, index) => ({
+      index,
+      id: item.id,
+      label: item.label,
+      note: item.note,
+      label_nb: item.label_nb,
+      note_nb: item.note_nb,
+    }))
+    .filter((item) => looksEnglish(item.label) || looksEnglish(item.note));
+
+  if (!candidates.length) {
+    setStatus(glyphStatusNode, 'Fant ingen engelske glyph-tekster som trenger LLM-oversettelse.');
+    return;
+  }
+
+  state.glyph.translating = true;
+  updateCmsActionState();
+  setStatus(glyphStatusNode, `Oversetter ${candidates.length} glyphs med LLM ...`);
+
+  try {
+    const result = await requestGlyphLlmTranslation(candidates);
+    const translated = Array.isArray(result && result.items) ? result.items : [];
+    if (!translated.length) {
+      throw new Error('LLM returnerte ingen oversettelser.');
+    }
+
+    let updated = 0;
+    translated.forEach((entry) => {
+      const index = Number(entry && entry.index);
+      if (!Number.isInteger(index) || index < 0 || index >= state.glyph.items.length) return;
+
+      const current = normalizeGlyphItem(state.glyph.items[index], index);
+      const nextLabel = String(entry && entry.label_nb ? entry.label_nb : '').trim();
+      const nextNote = String(entry && entry.note_nb ? entry.note_nb : '').trim();
+
+      if (nextLabel) current.label_nb = nextLabel;
+      if (nextNote) current.note_nb = nextNote;
+
+      state.glyph.items[index] = current;
+      updated += 1;
+    });
+
+    if (!updated) {
+      throw new Error('LLM svarte, men ingen gyldige oversettelser kunne brukes.');
+    }
+
+    renderGlyphList();
+    markGlyphDirty(`LLM-oversettelse oppdatert for ${updated} glyphs.`);
+    const modelNote = result && result.model ? ` Modell: ${result.model}.` : '';
+    setStatus(glyphStatusNode, `LLM-oversatte ${updated} glyphs.${modelNote} Sjekk og lagre.`, 'ok');
+  } catch (error) {
+    setStatus(glyphStatusNode, `LLM-oversettelse feilet: ${parseError(error)}`, 'error');
+  } finally {
+    state.glyph.translating = false;
+    updateCmsActionState();
   }
 }
 
@@ -2846,6 +2952,7 @@ function init() {
 
   if (glyphLoadButton) glyphLoadButton.addEventListener('click', loadGlyphCms);
   if (glyphAddButton) glyphAddButton.addEventListener('click', addGlyphItem);
+  if (glyphTranslateAllButton) glyphTranslateAllButton.addEventListener('click', translateAllGlyphsWithLlm);
   if (glyphSaveButton) glyphSaveButton.addEventListener('click', saveGlyphCms);
 
   setEditorEnabled(false);

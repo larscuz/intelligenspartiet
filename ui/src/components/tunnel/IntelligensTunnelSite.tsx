@@ -59,10 +59,12 @@ type UiPanel = TunnelPanel & {
 type GlyphLanguageItem = {
   id: string;
   label?: string;
+  label_nb?: string;
   panel_id: string;
   canonical: string;
   enabled?: boolean;
   note?: string;
+  note_nb?: string;
 };
 
 type RuntimePanel = {
@@ -225,10 +227,12 @@ const FALLBACK_PANELS: UiPanel[] = [
 const normalizeGlyphLanguageItem = (raw: any, index: number): GlyphLanguageItem => ({
   id: String(raw?.id ?? `glyph-${index + 1}`).trim() || `glyph-${index + 1}`,
   label: String(raw?.label ?? "").trim(),
+  label_nb: String(raw?.label_nb ?? raw?.label_no ?? "").trim(),
   panel_id: String(raw?.panel_id ?? "").trim(),
   canonical: String(raw?.canonical ?? "").trim().toUpperCase(),
   enabled: raw?.enabled !== false,
   note: String(raw?.note ?? "").trim(),
+  note_nb: String(raw?.note_nb ?? raw?.note_no ?? "").trim(),
 });
 
 const wrap01 = (value: number) => {
@@ -1031,11 +1035,13 @@ export function IntelligensTunnelSite() {
   }, [glyphByPanelIdInUiOrder]);
 
   const glyphCopyByPanelId = useMemo(() => {
-    const byPanelId = new Map<string, { label: string; note: string }>();
+    const byPanelId = new Map<string, { label: string; note: string; labelNb: string; noteNb: string }>();
     glyphByPanelIdInUiOrder.forEach((item, panelId) => {
       byPanelId.set(panelId, {
         label: item.label || "",
         note: item.note || "",
+        labelNb: item.label_nb || "",
+        noteNb: item.note_nb || "",
       });
     });
     return byPanelId;
@@ -1130,9 +1136,12 @@ export function IntelligensTunnelSite() {
     [activePanelId, panelData],
   );
   const activeInstallationText = useMemo(() => {
-    const glyphLabel = glyphCopyByPanelId.get(activePanel.id)?.label;
-    return localizeDynamicText(glyphLabel || activePanel.title || "");
-  }, [activePanel.id, activePanel.title, glyphCopyByPanelId, localizeDynamicText]);
+    const glyphCopy = glyphCopyByPanelId.get(activePanel.id);
+    if (language === "nb") {
+      return glyphCopy?.labelNb || localizeDynamicText(glyphCopy?.label || activePanel.title || "");
+    }
+    return glyphCopy?.label || activePanel.title || "";
+  }, [activePanel.id, activePanel.title, glyphCopyByPanelId, localizeDynamicText, language]);
 
   useEffect(() => {
     if (panelData.length === 0) return;
@@ -2328,8 +2337,12 @@ export function IntelligensTunnelSite() {
 
         // Card texture: glyph semantic copy overrides panel copy when assigned.
         const glyphCopy = glyphCopyByPanelId.get(panel.id);
-        const cardTitle = localizeDynamicText(glyphCopy?.label || panel.title || "");
-        const cardBody = localizeDynamicText(glyphCopy?.note || panel.body || "");
+        const cardTitle = language === "nb"
+          ? (glyphCopy?.labelNb || localizeDynamicText(glyphCopy?.label || panel.title || ""))
+          : (glyphCopy?.label || panel.title || "");
+        const cardBody = language === "nb"
+          ? (glyphCopy?.noteNb || localizeDynamicText(glyphCopy?.note || panel.body || ""))
+          : (glyphCopy?.note || panel.body || "");
         const cardTex = createCardTexture(cardTitle, cardBody);
         dynamicTextures.push(cardTex);
 
