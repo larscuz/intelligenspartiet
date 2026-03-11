@@ -209,7 +209,8 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     outsideVideosTitle: "Videoer",
     outsideSignaturesTitle: "Signaturer",
     outsideGlyphWallTitle: "Glyff",
-    outsideGlyphWallBody: "",
+    outsideGlyphWallBody:
+      "Dette er historien om erstatningsangst, som alltid har sett lik ut og alltid vil gjøre det. Gjenkjenn symptomet, ikke hat den som er redd.",
     outsideNewsTitle: "KI-nyheter",
     outsideNewsBody: "Direkte feed fra eksisterende nyhetsgrunnlag.",
     outsideNewsLoading: "Laster KI-nyheter ...",
@@ -229,7 +230,8 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     outsideVideosTitle: "Videos",
     outsideSignaturesTitle: "Signatures",
     outsideGlyphWallTitle: "Glyff",
-    outsideGlyphWallBody: "",
+    outsideGlyphWallBody:
+      "This is the story of replacement anxiety, which always looked the same and always will. Recognize the symptom, do not hate the fearful.",
     outsideNewsTitle: "AI news",
     outsideNewsBody: "Live feed from the existing news dataset.",
     outsideNewsLoading: "Loading AI news ...",
@@ -340,6 +342,8 @@ const GLYPH_WALL_STORY: GlyphWallStoryItem[] = [
     bodyEn: "Work shifts from sequential execution to continuous process supervision.",
   },
 ];
+
+const GLYPH_WALL_RENDER_COUNT = 100;
 
 const DEFAULT_PANEL_SHADING: PanelShadingReaction = {
   material: {
@@ -1501,8 +1505,18 @@ export function IntelligensTunnelSite() {
     return byId;
   }, [glyphLanguageItems]);
   const glyphWallItems = useMemo(
-    () =>
-      GLYPH_WALL_STORY.map((item, index) => {
+    () => {
+      const expandedStory = Array.from({ length: GLYPH_WALL_RENDER_COUNT }, (_, expandedIndex) => {
+        const sourceIndex = expandedIndex % GLYPH_WALL_STORY.length;
+        const sequence = Math.floor(expandedIndex / GLYPH_WALL_STORY.length) + 1;
+        const baseItem = GLYPH_WALL_STORY[sourceIndex];
+        return {
+          ...baseItem,
+          id: `${baseItem.id}-${String(sequence).padStart(2, "0")}-${String(sourceIndex + 1).padStart(2, "0")}`,
+        };
+      });
+
+      return expandedStory.map((item, index) => {
         const source = glyphLanguageById.get(item.sourceId);
         const canonical = pickFirstText(source?.canonical, item.fallbackCanonical).toUpperCase();
 
@@ -1553,7 +1567,8 @@ export function IntelligensTunnelSite() {
           bodySegments,
           previewDataUrl,
         };
-      }),
+      });
+    },
     [glyphLanguageById, language],
   );
   const glyphWallPayloadJson = useMemo(
@@ -1561,7 +1576,7 @@ export function IntelligensTunnelSite() {
       JSON.stringify(
         {
           version: "rl-story-v1",
-          name: "from-output-to-cognitive-order",
+          name: "replacement-anxiety-pattern",
           items: glyphWallItems.map((item) => ({
             order: item.index + 1,
             id: item.id,
@@ -4299,6 +4314,11 @@ export function IntelligensTunnelSite() {
                     <h2 className="text-xl font-semibold uppercase tracking-[0.2em] text-[#e7f1ff] md:text-2xl">
                       {uiCopy.outsideGlyphWallTitle}
                     </h2>
+                    {uiCopy.outsideGlyphWallBody ? (
+                      <p className="mt-2 max-w-4xl text-sm leading-relaxed text-[#b8cbe6] md:text-base">
+                        {uiCopy.outsideGlyphWallBody}
+                      </p>
+                    ) : null}
                   </>
                 ) : null}
               </div>
@@ -4418,7 +4438,7 @@ export function IntelligensTunnelSite() {
                         "inset 0 1px 0 rgba(255,255,255,0.26), inset 0 -26px 48px rgba(25,20,16,0.34), 0 24px 44px rgba(0,0,0,0.4)",
                     }}
                     data-rl-story-version="rl-story-v1"
-                    data-rl-story-name="from-output-to-cognitive-order"
+                    data-rl-story-name="replacement-anxiety-pattern"
                   >
                     <div
                       className="pointer-events-none absolute inset-0 opacity-55"
@@ -4428,11 +4448,11 @@ export function IntelligensTunnelSite() {
                       }}
                     />
                     <div className="relative h-full overflow-auto pr-1">
-                      <div className="grid grid-cols-2 gap-3 pb-2 md:grid-cols-5 md:gap-4">
+                      <div className="grid grid-cols-3 gap-2 pb-2 sm:grid-cols-4 md:grid-cols-6 md:gap-3 lg:grid-cols-8 xl:grid-cols-10">
                         {glyphWallItems.map((item) => (
                           <article
                             key={item.id}
-                            className="group relative rounded-[0.8rem] border border-[#696058]/85 p-2 md:p-2.5"
+                            className="relative rounded-[0.8rem] border border-[#696058]/85 p-2 md:p-2.5"
                             style={{
                               background:
                                 "linear-gradient(162deg,#a19890 0%,#90877f 47%,#847b74 100%)",
@@ -4465,30 +4485,6 @@ export function IntelligensTunnelSite() {
                               ) : (
                                 <div className="h-[7.8rem] w-full rounded-[0.45rem] bg-[#7f766e]" />
                               )}
-                              <button
-                                type="button"
-                                className="absolute inset-0 z-20 cursor-help bg-transparent"
-                                aria-label={`${item.title}. ${item.body}`}
-                              />
-                              <div className="pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
-                                <div className="absolute inset-x-1.5 bottom-1.5 rounded-md border border-[#8eb6e5]/28 bg-[#0b1628]/90 p-2 shadow-[0_8px_18px_rgba(0,0,0,0.4)]">
-                                  <p className="text-[0.56rem] font-semibold uppercase tracking-[0.14em] text-[#d9e8ff]">
-                                    {item.title}
-                                  </p>
-                                  <div className="mt-1">
-                                    {item.bodySegments.map((segment, segmentIndex) => (
-                                      <p
-                                        key={`${item.id}-segment-${segmentIndex}`}
-                                        className={`text-[0.61rem] leading-relaxed ${
-                                          segment.bold ? "font-semibold text-[#d8e8ff]" : "text-[#b6c9e3]"
-                                        } ${segmentIndex > 0 && segment.paragraphBreak ? "mt-2" : ""}`}
-                                      >
-                                        {segment.text}
-                                      </p>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
                             </div>
                             <span className="sr-only">{item.canonical}</span>
                           </article>
