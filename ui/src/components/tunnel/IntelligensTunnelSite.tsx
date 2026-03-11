@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type TouchEvent as ReactTouchEvent,
+  type WheelEvent as ReactWheelEvent,
+} from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { drawCanonicalGlyphToContext } from "@/lib/radarLanguageGlyph";
@@ -78,6 +86,17 @@ type GlyphCopy = {
   noteNb: string;
 };
 
+type OutsideSection = "menu" | "videos" | "signatures" | "news";
+
+type AiNewsItem = {
+  title: string;
+  source: string;
+  url: string;
+  snippet: string;
+  published_at: string;
+  published: boolean;
+};
+
 type RuntimePanel = {
   meta: UiPanel;
   progress: number;
@@ -143,6 +162,17 @@ type UiCopy = {
   outsideVideos: string;
   outsideSignatures: string;
   outsideAiNews: string;
+  outsideBack: string;
+  outsideVideosTitle: string;
+  outsideVideosBody: string;
+  outsideSignaturesTitle: string;
+  outsideSignaturesBody: string;
+  outsideSignaturesContact: string;
+  outsideNewsTitle: string;
+  outsideNewsBody: string;
+  outsideNewsLoading: string;
+  outsideNewsEmpty: string;
+  outsideNewsError: string;
 };
 
 const LANGUAGE_STORAGE_KEY = "intelligenspartiet:language";
@@ -157,6 +187,17 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     outsideVideos: "Videoer",
     outsideSignatures: "Signaturer",
     outsideAiNews: "KI-nyheter",
+    outsideBack: "Tilbake",
+    outsideVideosTitle: "Videoer",
+    outsideVideosBody: "Et sekskantrom med video på hver flate.",
+    outsideSignaturesTitle: "Signaturer",
+    outsideSignaturesBody: "Denne funksjonen kommer. Ta kontakt hvis du vil engasjere deg.",
+    outsideSignaturesContact: "Kontakt Lars",
+    outsideNewsTitle: "KI-nyheter",
+    outsideNewsBody: "Direkte feed fra eksisterende nyhetsgrunnlag.",
+    outsideNewsLoading: "Laster KI-nyheter ...",
+    outsideNewsEmpty: "Ingen publiserte nyheter tilgjengelig ennå.",
+    outsideNewsError: "Kunne ikke laste KI-nyheter.",
   },
   en: {
     siteName: "INTELLIGENSPARTIET",
@@ -167,6 +208,17 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     outsideVideos: "Videos",
     outsideSignatures: "Signatures",
     outsideAiNews: "AI news",
+    outsideBack: "Back",
+    outsideVideosTitle: "Videos",
+    outsideVideosBody: "A hexagon room with one video on each wall.",
+    outsideSignaturesTitle: "Signatures",
+    outsideSignaturesBody: "This feature is coming. Reach out if you want to get involved.",
+    outsideSignaturesContact: "Contact Lars",
+    outsideNewsTitle: "AI news",
+    outsideNewsBody: "Live feed from the existing news dataset.",
+    outsideNewsLoading: "Loading AI news ...",
+    outsideNewsEmpty: "No published news items available yet.",
+    outsideNewsError: "Could not load AI news.",
   },
 };
 
@@ -293,6 +345,56 @@ const EXIT_CAMERA_DISTANCE = 400;
 const EXIT_TRANSITION_DURATION = 2.5; // seconds
 const EXIT_GLYPH_COLOR = 0xffaa33; // gold/amber
 const EXIT_GLYPH_SIZE = 3.0;
+
+const AI_NEWS_PATHS = [
+  "/assets/data/ai-jobs-news.local.json",
+  "/assets/data/ai-jobs-news.json",
+];
+
+const HEX_VIDEO_ROOM_SOURCES = [
+  {
+    video: "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/videos/1770978482749-c088b297-1ChristTheater.mp4",
+    poster:
+      "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/posters/1770978437489-d0299c39-WelhavenTheater.png",
+  },
+  {
+    video: "https://larscuzner.com/static/_upload/2ChristTheater.mp4",
+    poster:
+      "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/posters/1770979065067-ff4bab61-WergelandTheater.jpg",
+  },
+  {
+    video: "https://larscuzner.com/static/_upload/3ChristTheater.mp4",
+    poster:
+      "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/posters/1770979092555-8d0fe8b9-DameTheater.jpg",
+  },
+  {
+    video: "https://larscuzner.com/static/_upload/4ChristTheater.mp4",
+    poster:
+      "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/posters/1770979109765-9708239d-TomatTheater.jpg",
+  },
+  {
+    video: "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/videos/1771415406784-886154de-CamillaStone.mp4",
+    poster:
+      "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/posters/1771415863642-3227a9d0-camillaStill.jpg",
+  },
+  {
+    video:
+      "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/videos/1771442235013-9c01df3d-FremtidensIntelligenssedler.mp4",
+    poster:
+      "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/posters/1771442255228-9181695a-freepik__keep-everything-in-img1-the-same-only-change-the-p__35543.png",
+  },
+];
+
+const HEX_VIDEO_WALL_HEIGHT_REM = 17.6;
+const HEX_VIDEO_WALL_WIDTH_REM = HEX_VIDEO_WALL_HEIGHT_REM * (16 / 9);
+const HEX_VIDEO_ROOM_APOTHEM_REM = (HEX_VIDEO_WALL_WIDTH_REM * Math.sqrt(3)) / 2;
+const HEX_VIDEO_WALL_OVERLAP_REM = 0.56;
+const HEX_VIDEO_VIEWER_PUSH_REM = 31.2;
+const HEX_VIDEO_FLOOR_CEILING_SIZE_REM = HEX_VIDEO_ROOM_APOTHEM_REM * 2.62;
+const HEX_VIDEO_FLOOR_CEILING_OFFSET_REM = HEX_VIDEO_WALL_HEIGHT_REM * 0.56;
+const VIDEO_ROOM_STEP_ANGLE = 60;
+const VIDEO_ROOM_WHEEL_THRESHOLD = 40;
+const VIDEO_ROOM_SCROLL_COOLDOWN_MS = 220;
 
 const getCurvePoints = (THREE: any) => {
   const base = [
@@ -935,6 +1037,7 @@ export function IntelligensTunnelSite() {
   const runtimePanelsRef = useRef<RuntimePanel[]>([]);
   const targetProgressRef = useRef(CAMERA_START_PROGRESS);
   const currentProgressRef = useRef(CAMERA_START_PROGRESS);
+  const videoRoomRefs = useRef<Array<HTMLVideoElement | null>>([]);
 
   // Lock body scroll so the page never bounces behind the canvas
   useEffect(() => {
@@ -954,6 +1057,11 @@ export function IntelligensTunnelSite() {
   const [panelsLoading, setPanelsLoading] = useState(true);
   const [panelsLoadError, setPanelsLoadError] = useState(false);
   const [outsideMenuVisible, setOutsideMenuVisible] = useState(false);
+  const [outsideSection, setOutsideSection] = useState<OutsideSection>("menu");
+  const [outsideNewsItems, setOutsideNewsItems] = useState<AiNewsItem[]>([]);
+  const [outsideNewsLoading, setOutsideNewsLoading] = useState(false);
+  const [outsideNewsError, setOutsideNewsError] = useState("");
+  const [videoRoomIndex, setVideoRoomIndex] = useState(0);
   const [language, setLanguage] = useState<UiLanguage>(() => {
     if (typeof window === "undefined") return "nb";
     try {
@@ -978,6 +1086,145 @@ export function IntelligensTunnelSite() {
     () => (text: string) => (language === "nb" ? autoTranslateEnglishToBokmal(text) : text),
     [language],
   );
+  const videoWheelAccumulatorRef = useRef(0);
+  const videoWheelLastStepAtRef = useRef(0);
+  const videoTouchStartXRef = useRef<number | null>(null);
+
+  const stepVideoRoomIndex = useCallback((direction: number) => {
+    const step = direction >= 0 ? 1 : -1;
+    setVideoRoomIndex((prev) => {
+      const total = HEX_VIDEO_ROOM_SOURCES.length;
+      return (prev + step + total) % total;
+    });
+  }, []);
+
+  const onVideoRoomWheel = useCallback(
+    (event: ReactWheelEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const dominant = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      videoWheelAccumulatorRef.current += dominant;
+
+      const now = performance.now();
+      if (now - videoWheelLastStepAtRef.current < VIDEO_ROOM_SCROLL_COOLDOWN_MS) return;
+      if (Math.abs(videoWheelAccumulatorRef.current) < VIDEO_ROOM_WHEEL_THRESHOLD) return;
+
+      stepVideoRoomIndex(videoWheelAccumulatorRef.current > 0 ? 1 : -1);
+      videoWheelAccumulatorRef.current = 0;
+      videoWheelLastStepAtRef.current = now;
+    },
+    [stepVideoRoomIndex],
+  );
+
+  const onVideoRoomTouchStart = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    videoTouchStartXRef.current = event.touches[0]?.clientX ?? null;
+  }, []);
+
+  const onVideoRoomTouchEnd = useCallback(
+    (event: ReactTouchEvent<HTMLDivElement>) => {
+      const startX = videoTouchStartXRef.current;
+      const endX = event.changedTouches[0]?.clientX ?? null;
+      videoTouchStartXRef.current = null;
+      if (startX === null || endX === null) return;
+
+      const deltaX = endX - startX;
+      if (Math.abs(deltaX) < 28) return;
+      stepVideoRoomIndex(deltaX < 0 ? 1 : -1);
+    },
+    [stepVideoRoomIndex],
+  );
+
+  useEffect(() => {
+    if (!outsideMenuVisible) {
+      setOutsideSection("menu");
+    }
+  }, [outsideMenuVisible]);
+
+  useEffect(() => {
+    if (outsideSection !== "videos") return;
+    videoWheelAccumulatorRef.current = 0;
+    videoWheelLastStepAtRef.current = 0;
+  }, [outsideSection]);
+
+  useEffect(() => {
+    if (!outsideMenuVisible || outsideSection !== "videos") return;
+    let isCancelled = false;
+
+    const tryPlayAll = () => {
+      if (isCancelled) return;
+      videoRoomRefs.current.forEach((videoNode) => {
+        if (!videoNode) return;
+        if (!videoNode.paused && videoNode.readyState >= 2) return;
+        const attempt = videoNode.play();
+        if (attempt && typeof attempt.catch === "function") {
+          attempt.catch(() => {
+            // Browser autoplay guards: keep retry loop alive while this view is open.
+          });
+        }
+      });
+    };
+
+    tryPlayAll();
+    const poll = window.setInterval(tryPlayAll, 900);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(poll);
+    };
+  }, [outsideMenuVisible, outsideSection]);
+
+  useEffect(() => {
+    if (!outsideMenuVisible || outsideSection !== "news") return;
+    let isCancelled = false;
+
+    const normalizeNewsItem = (raw: any): AiNewsItem => ({
+      title: String(raw?.title ?? "").trim(),
+      source: String(raw?.source ?? "").trim(),
+      url: String(raw?.url ?? "").trim(),
+      snippet: String(raw?.snippet ?? "").trim(),
+      published_at: String(raw?.published_at ?? "").trim(),
+      published: raw?.published !== false,
+    });
+
+    const parseTimestamp = (value: string) => {
+      const time = Date.parse(value);
+      return Number.isFinite(time) ? time : 0;
+    };
+
+    const loadNews = async () => {
+      setOutsideNewsLoading(true);
+      setOutsideNewsError("");
+
+      for (const path of AI_NEWS_PATHS) {
+        try {
+          const response = await fetch(path, { cache: "no-store" });
+          if (!response.ok) continue;
+          const payload = await response.json();
+          if (!Array.isArray(payload?.items)) continue;
+
+          const items = payload.items
+            .map(normalizeNewsItem)
+            .filter((item: AiNewsItem) => item.published && item.title && item.url)
+            .sort((a: AiNewsItem, b: AiNewsItem) => parseTimestamp(b.published_at) - parseTimestamp(a.published_at));
+
+          if (isCancelled) return;
+          setOutsideNewsItems(items);
+          setOutsideNewsLoading(false);
+          return;
+        } catch {
+          // Try next path.
+        }
+      }
+
+      if (isCancelled) return;
+      setOutsideNewsItems([]);
+      setOutsideNewsError(uiCopy.outsideNewsError);
+      setOutsideNewsLoading(false);
+    };
+
+    void loadNews();
+    return () => {
+      isCancelled = true;
+    };
+  }, [outsideMenuVisible, outsideSection, uiCopy.outsideNewsError]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -1212,6 +1459,13 @@ export function IntelligensTunnelSite() {
   const activeInstallationText = useMemo(() => {
     return resolveLocalizedGlyphCopy(activePanel).title;
   }, [activePanel, resolveLocalizedGlyphCopy]);
+  const formatOutsideNewsDate = useMemo(
+    () =>
+      new Intl.DateTimeFormat(language === "nb" ? "nb-NO" : "en-US", {
+        dateStyle: "medium",
+      }),
+    [language],
+  );
 
   useEffect(() => {
     if (panelData.length === 0) return;
@@ -3227,45 +3481,231 @@ export function IntelligensTunnelSite() {
                 0%, 100% { opacity: 0.88; text-shadow: 0 0 20px rgba(171, 194, 232, 0.34); }
                 50% { opacity: 1; text-shadow: 0 0 28px rgba(171, 194, 232, 0.58); }
               }
+              @keyframes outsideHexRoomSpin {
+                0% { transform: translate(-50%, -50%) rotateY(0deg); }
+                100% { transform: translate(-50%, -50%) rotateY(0deg); }
+              }
             `}
           </style>
 
-          <p
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[0.8rem] font-semibold uppercase tracking-[0.24em] text-[#dbe7ff] md:text-[0.95rem]"
-            style={{ animation: "outsideCorePulse 6.8s ease-in-out infinite" }}
-          >
-            {uiCopy.siteName}
-          </p>
+          {outsideSection === "menu" ? (
+            <>
+              <p
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[0.8rem] font-semibold uppercase tracking-[0.24em] text-[#dbe7ff] md:text-[0.95rem]"
+                style={{ animation: "outsideCorePulse 6.8s ease-in-out infinite" }}
+              >
+                {uiCopy.siteName}
+              </p>
 
-          <a
-            href="#videos"
-            className="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-[10.7rem] -translate-y-[6.8rem] text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:-translate-x-[15.6rem] md:-translate-y-[8.8rem] md:text-base"
-            style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
-          >
-            <span className="inline-block" style={{ animation: "outsideLinkFloatA 7.5s ease-in-out infinite" }}>
-              {uiCopy.outsideVideos}
-            </span>
-          </a>
+              <button
+                type="button"
+                onClick={() => setOutsideSection("videos")}
+                className="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-[10.7rem] -translate-y-[6.8rem] text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:-translate-x-[15.6rem] md:-translate-y-[8.8rem] md:text-base"
+                style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
+              >
+                <span className="inline-block" style={{ animation: "outsideLinkFloatA 7.5s ease-in-out infinite" }}>
+                  {uiCopy.outsideVideos}
+                </span>
+              </button>
 
-          <a
-            href="#signatures"
-            className="pointer-events-auto absolute left-1/2 top-1/2 translate-x-[6.8rem] -translate-y-[1.4rem] text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:translate-x-[14.2rem] md:-translate-y-[2.2rem] md:text-base"
-            style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
-          >
-            <span className="inline-block" style={{ animation: "outsideLinkFloatB 8.8s ease-in-out infinite" }}>
-              {uiCopy.outsideSignatures}
-            </span>
-          </a>
+              <button
+                type="button"
+                onClick={() => setOutsideSection("signatures")}
+                className="pointer-events-auto absolute left-1/2 top-1/2 translate-x-[6.8rem] -translate-y-[1.4rem] text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:translate-x-[14.2rem] md:-translate-y-[2.2rem] md:text-base"
+                style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
+              >
+                <span className="inline-block" style={{ animation: "outsideLinkFloatB 8.8s ease-in-out infinite" }}>
+                  {uiCopy.outsideSignatures}
+                </span>
+              </button>
 
-          <a
-            href="#news"
-            className="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-[3.2rem] translate-y-[5.4rem] text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:-translate-x-[4.4rem] md:translate-y-[8.2rem] md:text-base"
-            style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
-          >
-            <span className="inline-block" style={{ animation: "outsideLinkFloatC 6.9s ease-in-out infinite" }}>
-              {uiCopy.outsideAiNews}
-            </span>
-          </a>
+              <button
+                type="button"
+                onClick={() => setOutsideSection("news")}
+                className="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-[3.2rem] translate-y-[5.4rem] text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:-translate-x-[4.4rem] md:translate-y-[8.2rem] md:text-base"
+                style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
+              >
+                <span className="inline-block" style={{ animation: "outsideLinkFloatC 6.9s ease-in-out infinite" }}>
+                  {uiCopy.outsideAiNews}
+                </span>
+              </button>
+            </>
+          ) : null}
+
+          {outsideSection !== "menu" ? (
+            <div className="pointer-events-auto absolute inset-0 bg-[radial-gradient(circle_at_50%_48%,rgba(22,36,58,0.75),rgba(4,8,18,0.96)_70%)]">
+              <div className="absolute left-4 right-4 top-20 z-20 mx-auto w-full max-w-6xl md:left-8 md:right-8 md:top-24">
+                <button
+                  type="button"
+                  onClick={() => setOutsideSection("menu")}
+                  className="mb-4 rounded-full border border-[#8eaed7]/40 bg-[#0b1324]/70 px-4 py-2 text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-[#dbe7ff] transition hover:bg-[#101d35]"
+                >
+                  {uiCopy.outsideBack}
+                </button>
+
+                {outsideSection === "videos" ? (
+                  <>
+                    <h2 className="text-xl font-semibold uppercase tracking-[0.2em] text-[#e7f1ff] md:text-2xl">
+                      {uiCopy.outsideVideosTitle}
+                    </h2>
+                    <p className="mt-2 text-sm text-[#b8cbe6] md:text-base">{uiCopy.outsideVideosBody}</p>
+                  </>
+                ) : null}
+                {outsideSection === "signatures" ? (
+                  <>
+                    <h2 className="text-xl font-semibold uppercase tracking-[0.2em] text-[#e7f1ff] md:text-2xl">
+                      {uiCopy.outsideSignaturesTitle}
+                    </h2>
+                    <p className="mt-2 max-w-3xl text-sm text-[#b8cbe6] md:text-base">{uiCopy.outsideSignaturesBody}</p>
+                  </>
+                ) : null}
+                {outsideSection === "news" ? (
+                  <>
+                    <h2 className="text-xl font-semibold uppercase tracking-[0.2em] text-[#e7f1ff] md:text-2xl">
+                      {uiCopy.outsideNewsTitle}
+                    </h2>
+                    <p className="mt-2 text-sm text-[#b8cbe6] md:text-base">{uiCopy.outsideNewsBody}</p>
+                  </>
+                ) : null}
+              </div>
+
+              {outsideSection === "signatures" ? (
+                <div className="absolute inset-x-4 bottom-14 top-[15.5rem] mx-auto flex w-full max-w-6xl items-start justify-start md:inset-x-8 md:top-64">
+                  <a
+                    href="mailto:lars@larscuzner.com?subject=Engasjement%20i%20Intelligenspartiet"
+                    className="rounded-xl border border-[#8fb5e8]/40 bg-[#0c1629]/78 px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#dbe9ff] transition hover:bg-[#12233f]"
+                  >
+                    {uiCopy.outsideSignaturesContact}: lars@larscuzner.com
+                  </a>
+                </div>
+              ) : null}
+
+              {outsideSection === "news" ? (
+                <div className="absolute inset-x-4 bottom-8 top-[15.5rem] mx-auto w-full max-w-6xl overflow-auto rounded-2xl border border-[#93b4df]/25 bg-[#071226]/68 p-4 md:inset-x-8 md:top-64 md:p-6">
+                  {outsideNewsLoading ? (
+                    <p className="text-sm text-[#b8cbe6]">{uiCopy.outsideNewsLoading}</p>
+                  ) : null}
+                  {!outsideNewsLoading && outsideNewsError ? (
+                    <p className="text-sm text-[#ffb6b6]">{outsideNewsError}</p>
+                  ) : null}
+                  {!outsideNewsLoading && !outsideNewsError && outsideNewsItems.length === 0 ? (
+                    <p className="text-sm text-[#b8cbe6]">{uiCopy.outsideNewsEmpty}</p>
+                  ) : null}
+                  {!outsideNewsLoading && !outsideNewsError && outsideNewsItems.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      {outsideNewsItems.map((item) => {
+                        const timestamp = Date.parse(item.published_at);
+                        const dateLabel = Number.isFinite(timestamp)
+                          ? formatOutsideNewsDate.format(new Date(timestamp))
+                          : item.published_at;
+                        return (
+                          <article
+                            key={`${item.url}-${item.title}`}
+                            className="rounded-xl border border-[#8aa9d3]/20 bg-[#0b162c]/80 p-4"
+                          >
+                            <p className="text-[0.62rem] uppercase tracking-[0.15em] text-[#8fb4e8]">
+                              {item.source}{dateLabel ? ` · ${dateLabel}` : ""}
+                            </p>
+                            <h3 className="mt-1 text-base font-semibold leading-tight text-[#e4efff]">
+                              {item.title}
+                            </h3>
+                            {item.snippet ? (
+                              <p className="mt-2 text-sm leading-relaxed text-[#bbcee9]">{item.snippet}</p>
+                            ) : null}
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-3 inline-block text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[#9fc6ff] transition hover:text-white"
+                            >
+                              {language === "nb" ? "Åpne sak" : "Open story"}
+                            </a>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {outsideSection === "videos" ? (
+                <div
+                  className="absolute inset-x-4 bottom-10 top-[15.5rem] mx-auto flex w-full max-w-6xl items-center justify-center md:inset-x-8 md:top-52"
+                  onWheel={onVideoRoomWheel}
+                  onTouchStart={onVideoRoomTouchStart}
+                  onTouchEnd={onVideoRoomTouchEnd}
+                >
+                  <div className="relative h-[min(92vw,47rem)] w-[min(98vw,76rem)] [perspective:760px] [perspective-origin:50%_56%]">
+                    <div className="pointer-events-none absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_50%_44%,rgba(80,123,181,0.15),rgba(7,14,25,0.74)_56%,rgba(3,7,14,0.96)_100%)]" />
+                    <div className="pointer-events-none absolute inset-0 rounded-[2rem] shadow-[inset_0_0_90px_rgba(0,0,0,0.66)]" />
+                    <p className="absolute left-1/2 top-1 -translate-x-1/2 text-[0.62rem] font-semibold uppercase tracking-[0.15em] text-[#99bae5]">
+                      {videoRoomIndex + 1} / {HEX_VIDEO_ROOM_SOURCES.length}
+                    </p>
+                    <p className="absolute left-1/2 top-7 -translate-x-1/2 text-[0.57rem] font-semibold uppercase tracking-[0.14em] text-[#88a9d5]/90">
+                      {language === "nb" ? "Scroll eller sveip sideveis" : "Scroll or swipe sideways"}
+                    </p>
+                    <div className="absolute left-1/2 top-1/2 h-[1.05rem] w-[1.05rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#d9e8ff]/95 shadow-[0_0_18px_rgba(140,185,255,0.72)]" />
+                    <div
+                      className="absolute left-1/2 top-1/2 h-full w-full [transform-style:preserve-3d]"
+                      style={{
+                        transform: `translate(-50%, -50%) translateZ(${HEX_VIDEO_VIEWER_PUSH_REM.toFixed(3)}rem) rotateY(${-videoRoomIndex * VIDEO_ROOM_STEP_ANGLE}deg)`,
+                        transition: "transform 420ms cubic-bezier(0.22,0.61,0.36,1)",
+                      }}
+                    >
+                      <div
+                        className="absolute left-1/2 top-1/2 border border-[#83a9dd]/24"
+                        style={{
+                          width: `${HEX_VIDEO_FLOOR_CEILING_SIZE_REM.toFixed(3)}rem`,
+                          height: `${HEX_VIDEO_FLOOR_CEILING_SIZE_REM.toFixed(3)}rem`,
+                          transform: `translate(-50%, -50%) translateY(${HEX_VIDEO_FLOOR_CEILING_OFFSET_REM.toFixed(3)}rem) rotateX(90deg)`,
+                          background:
+                            "linear-gradient(180deg, rgba(150,183,223,0.24) 0%, rgba(58,77,103,0.3) 14%, rgba(19,29,45,0.82) 100%)",
+                          boxShadow: "0 0 56px rgba(48,94,156,0.22)",
+                        }}
+                      />
+                      <div
+                        className="absolute left-1/2 top-1/2 border border-[#83a9dd]/18"
+                        style={{
+                          width: `${HEX_VIDEO_FLOOR_CEILING_SIZE_REM.toFixed(3)}rem`,
+                          height: `${HEX_VIDEO_FLOOR_CEILING_SIZE_REM.toFixed(3)}rem`,
+                          transform: `translate(-50%, -50%) translateY(-${HEX_VIDEO_FLOOR_CEILING_OFFSET_REM.toFixed(3)}rem) rotateX(-90deg)`,
+                          background:
+                            "linear-gradient(180deg, rgba(22,31,45,0.92) 0%, rgba(24,36,56,0.62) 34%, rgba(117,151,204,0.22) 100%)",
+                        }}
+                      />
+                      {HEX_VIDEO_ROOM_SOURCES.map((videoItem, index) => (
+                        <div
+                          key={`${videoItem.video}-${index}`}
+                          className="absolute left-1/2 top-1/2 overflow-hidden border border-[#89b0e4]/34 bg-[#050b16]/95 shadow-[0_22px_44px_rgba(0,0,0,0.6)]"
+                          style={{
+                            width: `${(HEX_VIDEO_WALL_WIDTH_REM + HEX_VIDEO_WALL_OVERLAP_REM).toFixed(3)}rem`,
+                            height: `${HEX_VIDEO_WALL_HEIGHT_REM}rem`,
+                            transform: `translate(-50%, -50%) rotateY(${index * 60}deg) translateZ(-${HEX_VIDEO_ROOM_APOTHEM_REM.toFixed(3)}rem)`,
+                            backfaceVisibility: "hidden",
+                          }}
+                        >
+                          <video
+                            ref={(node) => {
+                              videoRoomRefs.current[index] = node;
+                            }}
+                            src={videoItem.video}
+                            poster={videoItem.poster}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            preload="metadata"
+                            className="h-full w-full object-cover"
+                            style={{ pointerEvents: "none" }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
