@@ -171,7 +171,6 @@ type UiLanguage = "nb" | "en";
 
 type UiCopy = {
   siteName: string;
-  languageLabel: string;
   loadingPanels: string;
   panelsFallback: string;
   activeInstallation: string;
@@ -180,10 +179,7 @@ type UiCopy = {
   outsideAiNews: string;
   outsideBack: string;
   outsideVideosTitle: string;
-  outsideVideosBody: string;
   outsideSignaturesTitle: string;
-  outsideSignaturesBody: string;
-  outsideSignaturesContact: string;
   outsideNewsTitle: string;
   outsideNewsBody: string;
   outsideNewsLoading: string;
@@ -196,7 +192,6 @@ const LANGUAGE_STORAGE_KEY = "intelligenspartiet:language";
 const UI_COPY: Record<UiLanguage, UiCopy> = {
   nb: {
     siteName: "INTELLIGENSPARTIET",
-    languageLabel: "Språk",
     loadingPanels: "Laster mediepaneler ...",
     panelsFallback: "Kunne ikke laste media-paneler. Viser lokal fallback.",
     activeInstallation: "Aktiv installasjon",
@@ -205,10 +200,7 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     outsideAiNews: "KI-nyheter",
     outsideBack: "Tilbake",
     outsideVideosTitle: "Videoer",
-    outsideVideosBody: "Et sekskantrom med video på hver flate.",
     outsideSignaturesTitle: "Signaturer",
-    outsideSignaturesBody: "Denne funksjonen kommer. Ta kontakt hvis du vil engasjere deg.",
-    outsideSignaturesContact: "Kontakt Lars",
     outsideNewsTitle: "KI-nyheter",
     outsideNewsBody: "Direkte feed fra eksisterende nyhetsgrunnlag.",
     outsideNewsLoading: "Laster KI-nyheter ...",
@@ -217,7 +209,6 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
   },
   en: {
     siteName: "INTELLIGENSPARTIET",
-    languageLabel: "Language",
     loadingPanels: "Loading media panels ...",
     panelsFallback: "Could not load media panels. Showing local fallback.",
     activeInstallation: "Active installation",
@@ -226,10 +217,7 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     outsideAiNews: "AI news",
     outsideBack: "Back",
     outsideVideosTitle: "Videos",
-    outsideVideosBody: "A hexagon room with one video on each wall.",
     outsideSignaturesTitle: "Signatures",
-    outsideSignaturesBody: "This feature is coming. Reach out if you want to get involved.",
-    outsideSignaturesContact: "Contact Lars",
     outsideNewsTitle: "AI news",
     outsideNewsBody: "Live feed from the existing news dataset.",
     outsideNewsLoading: "Loading AI news ...",
