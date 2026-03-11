@@ -2192,16 +2192,17 @@ export function IntelligensTunnelSite() {
       if (exteriorKey.castShadow) {
         exteriorKey.shadow.mapSize.width = 4096;
         exteriorKey.shadow.mapSize.height = 4096;
-        exteriorKey.shadow.bias = -0.0002;
-        exteriorKey.shadow.normalBias = 0.005;
-        // Ortho frustum covers the full tunnel ring (~500×450 units)
-        const S = 320;
+        // Sharper exterior shadows: tighter frustum + lower bias + no soft radius blur.
+        exteriorKey.shadow.bias = -0.00008;
+        exteriorKey.shadow.normalBias = 0.0012;
+        exteriorKey.shadow.radius = 0;
+        const S = isMobile ? 250 : 220;
         exteriorKey.shadow.camera.left = -S;
         exteriorKey.shadow.camera.right = S;
         exteriorKey.shadow.camera.top = S;
         exteriorKey.shadow.camera.bottom = -S;
-        exteriorKey.shadow.camera.near = 1;
-        exteriorKey.shadow.camera.far = 1200;
+        exteriorKey.shadow.camera.near = 25;
+        exteriorKey.shadow.camera.far = 980;
       }
       scene.add(exteriorKey);
 
@@ -3314,22 +3315,31 @@ export function IntelligensTunnelSite() {
         const easeOut = outsideT < 0.5
           ? 4 * outsideT * outsideT * outsideT
           : 1 - Math.pow(-2 * outsideT + 2, 3) / 2;
+        const outsideMotionWeight = THREE.MathUtils.smoothstep(easeOut, 0.18, 1);
+        const outsideMotionX = mouseCurrent.x * (isMobile ? 0 : 9.5) * outsideMotionWeight;
+        const outsideMotionY = mouseCurrent.y * (isMobile ? 0 : 5.2) * outsideMotionWeight;
 
         // ---- Dynamically adjust fog, lighting, background for exterior view ----
         exteriorKeyTarget.position.copy(tunnelCenter);
         exteriorFillTarget.position.copy(tunnelCenter);
-        // Sun: far away, high-angle, slightly behind-left — parallel rays like real sunlight
+        // Sun key with subtle pointer-responsive shift for a slight "object reacts to movement" feel.
         exteriorKey.position.set(
-          tunnelCenter.x + 500,
-          tunnelCenter.y + 600,
-          tunnelCenter.z - 300,
+          tunnelCenter.x + 560 + outsideMotionX * 1.9,
+          tunnelCenter.y + 430 + outsideMotionY * 1.2,
+          tunnelCenter.z - 260 - outsideMotionX * 0.95,
         );
-        // Fill: opposite side, lower angle
+        // Opposite fill stays weak to preserve contrast.
         exteriorFill.position.set(
-          tunnelCenter.x - 400,
-          tunnelCenter.y + 150,
-          tunnelCenter.z + 350,
+          tunnelCenter.x - 420 - outsideMotionX * 0.7,
+          tunnelCenter.y + 90 + outsideMotionY * 0.35,
+          tunnelCenter.z + 330 + outsideMotionX * 0.55,
         );
+        const outsideCameraPos = exitCameraTarget
+          .clone()
+          .add(new THREE.Vector3(outsideMotionX, outsideMotionY * 0.82, outsideMotionX * 0.52));
+        const outsideLook = exitLookTarget
+          .clone()
+          .add(new THREE.Vector3(outsideMotionX * 0.12, outsideMotionY * 0.1, outsideMotionX * 0.08));
 
         if (easeOut > 0.01) {
           // Push fog far away when outside
@@ -3338,26 +3348,24 @@ export function IntelligensTunnelSite() {
             scene.fog.far = THREE.MathUtils.lerp(230, 10000, easeOut);
           }
           const insideBg = new THREE.Color(0x0f1217);
-          const outsideBg = new THREE.Color(0x060a12);
+          const outsideBg = new THREE.Color(0x04070e);
           (scene.background as THREE.Color).copy(insideBg).lerp(outsideBg, easeOut);
 
-          // Low ambient/hemi so sun shadows have contrast
-          ambient.intensity = THREE.MathUtils.lerp(0.05, 0.08, easeOut);
-          hemi.intensity = THREE.MathUtils.lerp(0.08, 0.12, easeOut);
-          // Sun key — strong, drives all exterior definition
-          exteriorKey.intensity = THREE.MathUtils.lerp(0, isMobile ? 2.2 : 3.5, easeOut);
-          // Cool fill — very subtle, just lifts the shadow side so it's not pure black
-          exteriorFill.intensity = THREE.MathUtils.lerp(0, isMobile ? 0.25 : 0.4, easeOut);
+          // Stronger contrast: lower ambient/fill, stronger key.
+          ambient.intensity = THREE.MathUtils.lerp(0.05, 0.028, easeOut);
+          hemi.intensity = THREE.MathUtils.lerp(0.08, 0.05, easeOut);
+          exteriorKey.intensity = THREE.MathUtils.lerp(0, isMobile ? 2.9 : 4.9, easeOut);
+          exteriorFill.intensity = THREE.MathUtils.lerp(0, isMobile ? 0.14 : 0.22, easeOut);
           renderer.toneMappingExposure = THREE.MathUtils.lerp(
             isMobile ? 0.76 : 0.72,
-            isMobile ? 1.0 : 1.1,
+            isMobile ? 0.9 : 0.95,
             easeOut,
           );
 
-          // Minimal emissive — let the sun do the shading work
+          // Keep emissive low to avoid flattening shadow contrast.
           [floorMat, wallMat].forEach((mat) => {
             mat.emissive.set(0x334455);
-            mat.emissiveIntensity = 0.12 * easeOut;
+            mat.emissiveIntensity = 0.045 * easeOut;
           });
           // Ceiling: transition from pure emissive soft-box (inside) to
           // PBR-lit white (outside) so sun shadows are visible on it
@@ -3365,7 +3373,7 @@ export function IntelligensTunnelSite() {
           ceilingMat.toneMapped = easeOut > 0.5;      // let tone mapper handle it when outside
           ceilingMat.fog = easeOut > 0.5;              // re-enable fog outside (pushed to 9999 anyway)
           ceilingMat.emissive.set(0xffffff);
-          ceilingMat.emissiveIntensity = THREE.MathUtils.lerp(1.0, 0.15, easeOut);
+          ceilingMat.emissiveIntensity = THREE.MathUtils.lerp(1.0, 0.08, easeOut);
           ceilingMat.envMapIntensity = THREE.MathUtils.lerp(0.0, 0.1, easeOut);
         } else {
           ambient.intensity = 0.05;
@@ -3396,12 +3404,12 @@ export function IntelligensTunnelSite() {
 
         if (easeOut > 0.99) {
           // Fully outside: direct camera control
-          camera.position.copy(exitCameraTarget);
-          camera.lookAt(exitLookTarget);
+          camera.position.copy(outsideCameraPos);
+          camera.lookAt(outsideLook);
         } else if (easeOut > 0.001) {
           // Transitioning: blend camera
-          camera.position.lerpVectors(insidePos, exitCameraTarget, easeOut);
-          const blendedLook = insideLook.clone().lerp(exitLookTarget, easeOut);
+          camera.position.lerpVectors(insidePos, outsideCameraPos, easeOut);
+          const blendedLook = insideLook.clone().lerp(outsideLook, easeOut);
           camera.lookAt(blendedLook);
         } else {
           camera.position.copy(insidePos);
