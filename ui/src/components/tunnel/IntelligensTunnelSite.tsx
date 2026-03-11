@@ -105,6 +105,7 @@ type CursorTrailPoint = {
 
 type CursorTrailRenderState = {
   tailPath: string;
+  taperPaths: string[];
   headPath: string;
   headX: number;
   headY: number;
@@ -414,9 +415,13 @@ const CURSOR_TRAIL_LIFETIME_MS = 360;
 const CURSOR_HEAD_WINDOW_MS = 105;
 const CURSOR_MIN_POINT_DISTANCE_PX = 0.75;
 const CURSOR_TRAIL_MAX_POINTS = 96;
+const CURSOR_TAPER_WINDOWS_MS = [330, 250, 180, 120];
+const CURSOR_TAPER_WIDTHS = [2.0, 3.2, 4.8, 6.2];
+const CURSOR_TAPER_OPACITIES = [0.12, 0.17, 0.22, 0.3];
 
 const EMPTY_CURSOR_TRAIL_STATE: CursorTrailRenderState = {
   tailPath: "",
+  taperPaths: CURSOR_TAPER_WINDOWS_MS.map(() => ""),
   headPath: "",
   headX: 0,
   headY: 0,
@@ -1182,6 +1187,15 @@ function CursorCometTrail() {
         setTrailState((previous) => (previous.visible ? EMPTY_CURSOR_TRAIL_STATE : previous));
       } else {
         const tailPath = buildSmoothPath(points);
+        const taperPaths = CURSOR_TAPER_WINDOWS_MS.map((windowMs) => {
+          const taperCutoff = now - windowMs;
+          let startIndex = points.length - 1;
+          while (startIndex > 0 && points[startIndex - 1].t >= taperCutoff) {
+            startIndex -= 1;
+          }
+          const segment = points.slice(startIndex);
+          return buildSmoothPath(segment.length >= 2 ? segment : points.slice(-2));
+        });
         const headCutoff = now - CURSOR_HEAD_WINDOW_MS;
 
         let headStartIndex = points.length - 1;
@@ -1201,6 +1215,7 @@ function CursorCometTrail() {
           if (
             previous.visible &&
             previous.tailPath === tailPath &&
+            previous.taperPaths.every((path, index) => path === taperPaths[index]) &&
             previous.headPath === headPath &&
             previous.headX === headPoint.x &&
             previous.headY === headPoint.y
@@ -1209,6 +1224,7 @@ function CursorCometTrail() {
           }
           return {
             tailPath,
+            taperPaths,
             headPath,
             headX: headPoint.x,
             headY: headPoint.y,
@@ -1263,18 +1279,33 @@ function CursorCometTrail() {
             d={trailState.tailPath}
             fill="none"
             stroke="#7ad7ff"
-            strokeOpacity="0.26"
-            strokeWidth="8.6"
+            strokeOpacity="0.1"
+            strokeWidth="1.35"
             strokeLinecap="round"
             strokeLinejoin="round"
             filter="url(#cursor-trail-glow)"
           />
+          {trailState.taperPaths.map((path, index) =>
+            path ? (
+              <path
+                key={`cursor-taper-${CURSOR_TAPER_WINDOWS_MS[index]}`}
+                d={path}
+                fill="none"
+                stroke="#7ad7ff"
+                strokeOpacity={CURSOR_TAPER_OPACITIES[index]}
+                strokeWidth={CURSOR_TAPER_WIDTHS[index]}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                filter="url(#cursor-trail-glow)"
+              />
+            ) : null,
+          )}
           <path
             d={trailState.headPath}
             fill="none"
             stroke="url(#cursor-head-gradient)"
             strokeOpacity="0.98"
-            strokeWidth="3.35"
+            strokeWidth="3.1"
             strokeLinecap="round"
             strokeLinejoin="round"
             filter="url(#cursor-trail-glow)"
