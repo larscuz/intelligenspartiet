@@ -228,6 +228,22 @@ export function parseCanonicalSentence(input: string): RlStatement {
   return statement;
 }
 
+export function serializeCanonicalSentence(statement: RlStatement): string {
+  validateStatement(statement);
+  return [
+    statement.subject,
+    statement.domain,
+    statement.verb,
+    statement.magnitude,
+    statement.time,
+    statement.certainty,
+  ].join(".");
+}
+
+export function canonicalizeCanonicalSentence(input: string): string {
+  return serializeCanonicalSentence(parseCanonicalSentence(input));
+}
+
 function drawMarker(
   ctx: CanvasRenderingContext2D,
   subject: RlStatement["subject"],

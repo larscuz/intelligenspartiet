@@ -10,7 +10,10 @@ import {
 } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { drawCanonicalGlyphToContext } from "@/lib/radarLanguageGlyph";
+import {
+  canonicalizeCanonicalSentence,
+  drawCanonicalGlyphToContext,
+} from "@/lib/radarLanguageGlyph";
 
 type PanelKind = "text" | "image" | "video";
 
@@ -87,7 +90,7 @@ type GlyphCopy = {
   noteNb: string;
 };
 
-type OutsideSection = "menu" | "videos" | "signatures" | "news";
+type OutsideSection = "menu" | "videos" | "signatures" | "news" | "glyphwall";
 
 type AiNewsItem = {
   title: string;
@@ -177,9 +180,12 @@ type UiCopy = {
   outsideVideos: string;
   outsideSignatures: string;
   outsideAiNews: string;
+  outsideGlyphWall: string;
   outsideBack: string;
   outsideVideosTitle: string;
   outsideSignaturesTitle: string;
+  outsideGlyphWallTitle: string;
+  outsideGlyphWallBody: string;
   outsideNewsTitle: string;
   outsideNewsBody: string;
   outsideNewsLoading: string;
@@ -198,9 +204,12 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     outsideVideos: "Videoer",
     outsideSignatures: "Signaturer",
     outsideAiNews: "KI-nyheter",
+    outsideGlyphWall: "Glyff",
     outsideBack: "Tilbake",
     outsideVideosTitle: "Videoer",
     outsideSignaturesTitle: "Signaturer",
+    outsideGlyphWallTitle: "Glyff",
+    outsideGlyphWallBody: "",
     outsideNewsTitle: "KI-nyheter",
     outsideNewsBody: "Direkte feed fra eksisterende nyhetsgrunnlag.",
     outsideNewsLoading: "Laster KI-nyheter ...",
@@ -215,9 +224,12 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     outsideVideos: "Videos",
     outsideSignatures: "Signatures",
     outsideAiNews: "AI news",
+    outsideGlyphWall: "Glyff",
     outsideBack: "Back",
     outsideVideosTitle: "Videos",
     outsideSignaturesTitle: "Signatures",
+    outsideGlyphWallTitle: "Glyff",
+    outsideGlyphWallBody: "",
     outsideNewsTitle: "AI news",
     outsideNewsBody: "Live feed from the existing news dataset.",
     outsideNewsLoading: "Loading AI news ...",
@@ -225,6 +237,109 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     outsideNewsError: "Could not load AI news.",
   },
 };
+
+type GlyphWallStoryItem = {
+  id: string;
+  sourceId: string;
+  fallbackCanonical: string;
+  titleNb: string;
+  titleEn: string;
+  bodyNb: string;
+  bodyEn: string;
+};
+
+const GLYPH_WALL_STORY: GlyphWallStoryItem[] = [
+  {
+    id: "output-inflation",
+    sourceId: "v1-output-inflation",
+    fallbackCanonical: "SYSTEM.ORGANIZATIONS.GROWS.EXTREME.NOW.CONFIRMED",
+    titleNb: "Outputinflasjon",
+    titleEn: "Output Inflation",
+    bodyNb: "Mengden utdata eksploderer, og evalueringsarbeidet flyttes til mennesker.",
+    bodyEn: "Output volume explodes, and evaluation workload shifts to humans.",
+  },
+  {
+    id: "prompt-looping",
+    sourceId: "v1-prompt-looping",
+    fallbackCanonical: "SYSTEM.TECHNOLOGY.INFLUENCES.HIGH.NOW.PROBABLE",
+    titleNb: "Prompt-løkker",
+    titleEn: "Prompt Looping",
+    bodyNb: "Arbeid går i raske mikroløkker av prompting, korreksjon og ny prompting.",
+    bodyEn: "Work shifts into rapid micro-loops of prompting, correction, and re-prompting.",
+  },
+  {
+    id: "decision-density",
+    sourceId: "v1-decision-density",
+    fallbackCanonical: "INDIVIDUAL.INDIVIDUALS.GROWS.HIGH.NOW.CONFIRMED",
+    titleNb: "Beslutningstetthet",
+    titleEn: "Decision Density",
+    bodyNb: "Antallet små beslutninger per time øker og tærer på konsentrasjonen.",
+    bodyEn: "Micro-decisions per hour increase and erode concentration.",
+  },
+  {
+    id: "cognitive-overproduction",
+    sourceId: "v1-cognitive-overproduction",
+    fallbackCanonical: "SYSTEM.TECHNOLOGY.GROWS.EXTREME.LT1Y.PROBABLE",
+    titleNb: "Kognitiv overproduksjon",
+    titleEn: "Cognitive Overproduction",
+    bodyNb: "Informasjonsmengden skalerer raskere enn menneskelig bearbeidingskapasitet.",
+    bodyEn: "Information volume scales faster than human processing capacity.",
+  },
+  {
+    id: "continuous-partial-attention",
+    sourceId: "v1-continuous-partial-attention",
+    fallbackCanonical: "INDIVIDUAL.INDIVIDUALS.DECLINES.MEDIUM.NOW.PROBABLE",
+    titleNb: "Kontinuerlig delt oppmerksomhet",
+    titleEn: "Continuous Partial Attention",
+    bodyNb: "Oppmerksomheten fragmenteres på tvers av verktøy, faner og arbeidsflyter.",
+    bodyEn: "Attention fragments across tools, tabs, and workflows.",
+  },
+  {
+    id: "brain-fry",
+    sourceId: "v1-brain-fry",
+    fallbackCanonical: "INDIVIDUAL.INDIVIDUALS.DECLINES.HIGH.LT1Y.PROBABLE",
+    titleNb: "Hjernekok",
+    titleEn: "Brain Fry",
+    bodyNb: "Kognitiv overbelastning svekker evnen til å vurdere kvalitet.",
+    bodyEn: "Cognitive overload weakens quality judgment.",
+  },
+  {
+    id: "ai-fatigue",
+    sourceId: "v1-ai-fatigue",
+    fallbackCanonical: "SYSTEM.ORGANIZATIONS.GROWS.HIGH.LT1Y.PROBABLE",
+    titleNb: "KI-tretthet",
+    titleEn: "AI Fatigue",
+    bodyNb: "Vedvarende tilsynsarbeid gir mental utmattelse over tid.",
+    bodyEn: "Continuous supervision work creates sustained mental exhaustion.",
+  },
+  {
+    id: "threaded-work",
+    sourceId: "v1-threaded-work",
+    fallbackCanonical: "SYSTEM.ORGANIZATIONS.TRANSFORMS.HIGH.NOW.CONFIRMED",
+    titleNb: "Trådet arbeid",
+    titleEn: "Threaded Work",
+    bodyNb: "Rollen skifter fra utfører til orkestrator av parallelle maskinprosesser.",
+    bodyEn: "Roles shift from maker to orchestrator of parallel machine processes.",
+  },
+  {
+    id: "cognitive-orchestration",
+    sourceId: "v1-cognitive-orchestration",
+    fallbackCanonical: "IDEA.EDUCATION.GROWS.MEDIUM.Y1_3.PROBABLE",
+    titleNb: "Kognitiv orkestrering",
+    titleEn: "Cognitive Orchestration",
+    bodyNb: "Mennesker dirigerer maskinell tenkning i stedet for å produsere alt direkte.",
+    bodyEn: "Humans conduct machine reasoning instead of producing every output directly.",
+  },
+  {
+    id: "ai-work-rhythm",
+    sourceId: "v1-ai-work-rhythm",
+    fallbackCanonical: "SYSTEM.ORGANIZATIONS.TRANSFORMS.EXTREME.Y1_3.CONFIRMED",
+    titleNb: "KI-arbeidsrytmen",
+    titleEn: "AI Work Rhythm",
+    bodyNb: "Arbeid flyttes fra sekvensiell utførelse til kontinuerlig prosessovervåking.",
+    bodyEn: "Work shifts from sequential execution to continuous process supervision.",
+  },
+];
 
 const DEFAULT_PANEL_SHADING: PanelShadingReaction = {
   material: {
@@ -308,7 +423,7 @@ const normalizeGlyphLanguageItem = (raw: any, index: number): GlyphLanguageItem 
   label: String(raw?.label ?? "").trim(),
   label_nb: String(raw?.label_nb ?? raw?.label_no ?? "").trim(),
   panel_id: String(raw?.panel_id ?? "").trim(),
-  canonical: String(raw?.canonical ?? "").trim().toUpperCase(),
+  canonical: String(raw?.canonical ?? "").trim(),
   enabled: raw?.enabled !== false,
   note: String(raw?.note ?? "").trim(),
   note_nb: String(raw?.note_nb ?? raw?.note_no ?? "").trim(),
@@ -569,6 +684,13 @@ const drawFormattedCardText = (
 
   ctx.font = regularFont;
 };
+
+const plainTextFromFormattedCardText = (text: string) =>
+  parseFormattedCardText(text)
+    .map((segment) => segment.text)
+    .join(" ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 
 const FORMAT_DIRECTIVE_TOKEN_PATTERN = /\(\s*(?:bold|new\s*line|new\s*paragraph)\s*\)/gi;
 
@@ -1371,6 +1493,87 @@ export function IntelligensTunnelSite() {
     () => (text: string) => (language === "nb" ? autoTranslateEnglishToBokmal(text) : text),
     [language],
   );
+  const glyphLanguageById = useMemo(() => {
+    const byId = new Map<string, GlyphLanguageItem>();
+    glyphLanguageItems.forEach((item) => {
+      if (item?.id) byId.set(item.id, item);
+    });
+    return byId;
+  }, [glyphLanguageItems]);
+  const glyphWallItems = useMemo(
+    () =>
+      GLYPH_WALL_STORY.map((item, index) => {
+        const source = glyphLanguageById.get(item.sourceId);
+        const canonical = pickFirstText(source?.canonical, item.fallbackCanonical).toUpperCase();
+
+        const titleNbResolved = pickFirstText(source?.label_nb, source?.label, item.titleNb);
+        const titleEnResolved = pickFirstText(source?.label, item.titleEn, item.titleNb);
+
+        const sourceNoteNb = pickFirstText(source?.note_nb);
+        const sourceNoteEn = pickFirstText(source?.note);
+        const bodyNbResolved = pickFirstText(sourceNoteNb, item.bodyNb);
+        const bodyEnResolved = pickFirstText(sourceNoteEn, item.bodyEn);
+        const bodyNbPlain = plainTextFromFormattedCardText(bodyNbResolved);
+        const bodyEnPlain = plainTextFromFormattedCardText(bodyEnResolved);
+        const bodyRich = language === "nb" ? bodyNbResolved : bodyEnResolved;
+        const body = language === "nb" ? bodyNbPlain : bodyEnPlain;
+        const bodySegments = parseFormattedCardText(bodyRich);
+
+        let previewDataUrl = "";
+        if (typeof document !== "undefined") {
+          const canvas = document.createElement("canvas");
+          canvas.width = 420;
+          canvas.height = 420;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            try {
+              drawCanonicalGlyphToContext(ctx, canonical, {
+                backgroundColor: "rgba(0,0,0,0)",
+                lineColor: "rgba(46,39,33,0.94)",
+                gridColor: "rgba(69,60,53,0.48)",
+              });
+              previewDataUrl = canvas.toDataURL("image/png");
+            } catch {
+              previewDataUrl = "";
+            }
+          }
+        }
+
+        return {
+          ...item,
+          index,
+          canonical,
+          titleNbResolved,
+          titleEnResolved,
+          bodyNbResolved,
+          bodyEnResolved,
+          title: language === "nb" ? titleNbResolved : titleEnResolved,
+          body,
+          bodyRich,
+          bodySegments,
+          previewDataUrl,
+        };
+      }),
+    [glyphLanguageById, language],
+  );
+  const glyphWallPayloadJson = useMemo(
+    () =>
+      JSON.stringify(
+        {
+          version: "rl-story-v1",
+          name: "from-output-to-cognitive-order",
+          items: glyphWallItems.map((item) => ({
+            order: item.index + 1,
+            id: item.id,
+            source_id: item.sourceId,
+            canonical: item.canonical,
+          })),
+        },
+        null,
+        2,
+      ),
+    [glyphWallItems],
+  );
   const onTunnelToggleClick = useCallback(() => {
     tunnelOutsideToggleRef.current?.();
   }, []);
@@ -1557,9 +1760,54 @@ export function IntelligensTunnelSite() {
           throw new Error("Glyph language payload missing 'items' array");
         }
 
-        const mapped = data.items
+        const normalized = data.items
           .map((item: any, index: number) => normalizeGlyphLanguageItem(item, index))
           .filter((item: GlyphLanguageItem) => item.enabled !== false);
+
+        const canonicalToId = new Map<string, string>();
+        const mapped: GlyphLanguageItem[] = [];
+        const droppedInvalid: string[] = [];
+        const droppedDuplicate: string[] = [];
+
+        normalized.forEach((item: GlyphLanguageItem) => {
+          if (!item.canonical) {
+            droppedInvalid.push(`${item.id} (empty canonical)`);
+            return;
+          }
+
+          let lockedCanonical = "";
+          try {
+            lockedCanonical = canonicalizeCanonicalSentence(item.canonical);
+          } catch {
+            droppedInvalid.push(`${item.id} (${item.canonical})`);
+            return;
+          }
+
+          const existingId = canonicalToId.get(lockedCanonical);
+          if (existingId && existingId !== item.id) {
+            droppedDuplicate.push(`${item.id} duplicates ${existingId} (${lockedCanonical})`);
+            return;
+          }
+
+          canonicalToId.set(lockedCanonical, item.id);
+          mapped.push({
+            ...item,
+            canonical: lockedCanonical,
+          });
+        });
+
+        if (droppedInvalid.length > 0) {
+          console.warn(
+            "Glyph language map dropped invalid canonical rows:",
+            droppedInvalid.join("; "),
+          );
+        }
+        if (droppedDuplicate.length > 0) {
+          console.warn(
+            "Glyph language map dropped duplicate canonical rows:",
+            droppedDuplicate.join("; "),
+          );
+        }
 
         if (isCancelled) return;
         setGlyphLanguageItems(mapped);
@@ -3943,6 +4191,10 @@ export function IntelligensTunnelSite() {
                 0%, 100% { transform: translate3d(0px, 0px, 0px); }
                 50% { transform: translate3d(0px, -12px, 0px); }
               }
+              @keyframes outsideLinkFloatD {
+                0%, 100% { transform: translate3d(0px, 0px, 0px); }
+                50% { transform: translate3d(0px, -16px, 0px); }
+              }
               @keyframes outsideCorePulse {
                 0%, 100% { opacity: 0.88; text-shadow: 0 0 20px rgba(171, 194, 232, 0.34); }
                 50% { opacity: 1; text-shadow: 0 0 28px rgba(171, 194, 232, 0.58); }
@@ -3995,6 +4247,17 @@ export function IntelligensTunnelSite() {
                   {uiCopy.outsideAiNews}
                 </span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => setOutsideSection("glyphwall")}
+                className="pointer-events-auto absolute left-1/2 top-1/2 translate-x-[1.5rem] -translate-y-[7.9rem] text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:translate-x-[4.8rem] md:-translate-y-[10.8rem] md:text-base"
+                style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
+              >
+                <span className="inline-block" style={{ animation: "outsideLinkFloatD 8.1s ease-in-out infinite" }}>
+                  {uiCopy.outsideGlyphWall}
+                </span>
+              </button>
             </>
           ) : null}
 
@@ -4029,6 +4292,13 @@ export function IntelligensTunnelSite() {
                       {uiCopy.outsideNewsTitle}
                     </h2>
                     <p className="mt-2 text-sm text-[#b8cbe6] md:text-base">{uiCopy.outsideNewsBody}</p>
+                  </>
+                ) : null}
+                {outsideSection === "glyphwall" ? (
+                  <>
+                    <h2 className="text-xl font-semibold uppercase tracking-[0.2em] text-[#e7f1ff] md:text-2xl">
+                      {uiCopy.outsideGlyphWallTitle}
+                    </h2>
                   </>
                 ) : null}
               </div>
@@ -4134,6 +4404,101 @@ export function IntelligensTunnelSite() {
                       })}
                     </div>
                   ) : null}
+                </div>
+              ) : null}
+
+              {outsideSection === "glyphwall" ? (
+                <div className="absolute inset-x-4 bottom-8 top-[15.5rem] mx-auto w-full max-w-6xl md:inset-x-8 md:top-64">
+                  <section
+                    className="relative h-full overflow-hidden rounded-[1.35rem] border border-[#5d5650]/90 p-3 md:p-4"
+                    style={{
+                      background:
+                        "linear-gradient(160deg,#958d85 0%,#847d76 38%,#756f68 64%,#68625c 100%)",
+                      boxShadow:
+                        "inset 0 1px 0 rgba(255,255,255,0.26), inset 0 -26px 48px rgba(25,20,16,0.34), 0 24px 44px rgba(0,0,0,0.4)",
+                    }}
+                    data-rl-story-version="rl-story-v1"
+                    data-rl-story-name="from-output-to-cognitive-order"
+                  >
+                    <div
+                      className="pointer-events-none absolute inset-0 opacity-55"
+                      style={{
+                        background:
+                          "repeating-linear-gradient(0deg,rgba(0,0,0,0) 0,rgba(0,0,0,0) 48%,rgba(42,35,31,0.28) 48%,rgba(42,35,31,0.28) 49%),repeating-linear-gradient(90deg,rgba(0,0,0,0) 0,rgba(0,0,0,0) 19.6%,rgba(36,31,27,0.24) 19.6%,rgba(36,31,27,0.24) 20.1%),radial-gradient(circle at 18% 22%,rgba(255,255,255,0.08),rgba(255,255,255,0) 44%),radial-gradient(circle at 78% 72%,rgba(0,0,0,0.16),rgba(0,0,0,0) 52%)",
+                      }}
+                    />
+                    <div className="relative h-full overflow-auto pr-1">
+                      <div className="grid grid-cols-2 gap-3 pb-2 md:grid-cols-5 md:gap-4">
+                        {glyphWallItems.map((item) => (
+                          <article
+                            key={item.id}
+                            className="group relative rounded-[0.8rem] border border-[#696058]/85 p-2 md:p-2.5"
+                            style={{
+                              background:
+                                "linear-gradient(162deg,#a19890 0%,#90877f 47%,#847b74 100%)",
+                              boxShadow:
+                                "inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -12px 20px rgba(43,37,32,0.26), 0 8px 18px rgba(0,0,0,0.22)",
+                            }}
+                            data-rl-story-index={item.index + 1}
+                            data-rl-canonical={item.canonical}
+                            data-rl-id={item.sourceId}
+                          >
+                            <div
+                              className="relative overflow-hidden rounded-md border border-[#665d56]/75 p-1.5"
+                              style={{
+                                background:
+                                  "linear-gradient(168deg,#8d857e 0%,#7f7770 54%,#746c65 100%)",
+                                boxShadow:
+                                  "inset 0 1px 0 rgba(255,255,255,0.24), inset 0 -8px 14px rgba(33,28,24,0.3)",
+                              }}
+                            >
+                              {item.previewDataUrl ? (
+                                <div className="relative h-[7.8rem] w-full overflow-hidden rounded-[0.45rem] bg-[#8a8179]">
+                                  <img
+                                    src={item.previewDataUrl}
+                                    alt={item.title}
+                                    className="absolute inset-0 h-full w-full object-cover opacity-78 mix-blend-multiply"
+                                    loading="lazy"
+                                  />
+                                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_19%,rgba(255,255,255,0.14),rgba(255,255,255,0)_58%),radial-gradient(circle_at_81%_78%,rgba(0,0,0,0.22),rgba(0,0,0,0)_62%)]" />
+                                </div>
+                              ) : (
+                                <div className="h-[7.8rem] w-full rounded-[0.45rem] bg-[#7f766e]" />
+                              )}
+                              <button
+                                type="button"
+                                className="absolute inset-0 z-20 cursor-help bg-transparent"
+                                aria-label={`${item.title}. ${item.body}`}
+                              />
+                              <div className="pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
+                                <div className="absolute inset-x-1.5 bottom-1.5 rounded-md border border-[#8eb6e5]/28 bg-[#0b1628]/90 p-2 shadow-[0_8px_18px_rgba(0,0,0,0.4)]">
+                                  <p className="text-[0.56rem] font-semibold uppercase tracking-[0.14em] text-[#d9e8ff]">
+                                    {item.title}
+                                  </p>
+                                  <div className="mt-1">
+                                    {item.bodySegments.map((segment, segmentIndex) => (
+                                      <p
+                                        key={`${item.id}-segment-${segmentIndex}`}
+                                        className={`text-[0.61rem] leading-relaxed ${
+                                          segment.bold ? "font-semibold text-[#d8e8ff]" : "text-[#b6c9e3]"
+                                        } ${segmentIndex > 0 && segment.paragraphBreak ? "mt-2" : ""}`}
+                                      >
+                                        {segment.text}
+                                      </p>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <span className="sr-only">{item.canonical}</span>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                    <pre className="sr-only" data-rl-story-payload>
+                      {glyphWallPayloadJson}
+                    </pre>
+                  </section>
                 </div>
               ) : null}
 
