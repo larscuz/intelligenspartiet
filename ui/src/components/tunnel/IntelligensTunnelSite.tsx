@@ -565,6 +565,18 @@ export function IntelligensTunnelSite() {
     return byPanelId;
   }, [glyphLanguageItems]);
 
+  const glyphCopyByPanelId = useMemo(() => {
+    const byPanelId = new Map<string, { label: string; note: string }>();
+    glyphLanguageItems.forEach((item) => {
+      if (!item.panel_id || item.enabled === false || byPanelId.has(item.panel_id)) return;
+      byPanelId.set(item.panel_id, {
+        label: item.label || "",
+        note: item.note || "",
+      });
+    });
+    return byPanelId;
+  }, [glyphLanguageItems]);
+
   useEffect(() => {
     let isCancelled = false;
 
@@ -1836,8 +1848,11 @@ export function IntelligensTunnelSite() {
         panelObjects.push(glyphMesh);
         scene.add(glyphMesh);
 
-        // Card texture
-        const cardTex = createCardTexture(panel.title, panel.body);
+        // Card texture: glyph semantic copy overrides panel copy when assigned.
+        const glyphCopy = glyphCopyByPanelId.get(panel.id);
+        const cardTitle = glyphCopy?.label || panel.title;
+        const cardBody = glyphCopy?.note || panel.body;
+        const cardTex = createCardTexture(cardTitle, cardBody);
         dynamicTextures.push(cardTex);
 
         const cardMat = new THREE.MeshStandardMaterial({
@@ -2577,7 +2592,7 @@ export function IntelligensTunnelSite() {
       isDisposed = true;
       cleanup();
     };
-  }, [panelData, glyphCanonicalByPanelId]);
+  }, [panelData, glyphCanonicalByPanelId, glyphCopyByPanelId]);
 
   return (
     <div className="relative h-[100svh] w-full overflow-hidden overscroll-none touch-none bg-[#f7f7f4] text-[#141414]">
@@ -2595,7 +2610,7 @@ export function IntelligensTunnelSite() {
             INTELLIGENSPARTIET
           </h1>
           <p className="mt-1 text-[0.64rem] uppercase tracking-[0.15em] text-[#6a6a6a]">
-            Aktiv installasjon: {activePanel.title}
+            Aktiv installasjon: {glyphCopyByPanelId.get(activePanel.id)?.label || activePanel.title}
           </p>
         </div>
       ) : null}
