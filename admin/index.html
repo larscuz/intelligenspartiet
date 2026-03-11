@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="no">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,10 +9,13 @@
   <link rel="shortcut icon" href="/assets/logo/logoIntelli.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@400;600;700;800;900&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/style.css" />
   <link rel="stylesheet" href="/admin/admin.css" />
 </head>
+
 <body>
   <header class="topbar">
     <div class="topbar-inner">
@@ -35,6 +39,8 @@
   <nav class="section-nav admin-nav" aria-label="Adminseksjoner">
     <a href="#studio">Studio</a>
     <a href="#story-cms">Scrollytelling-CMS</a>
+    <a href="#media-cms">Mediepaneler-CMS</a>
+    <a href="#glyph-cms">Glyph Language</a>
     <a href="#prompt-cms">Kling promptbank</a>
     <a href="#cms">Nyhets-CMS</a>
     <a href="#auth">Innlogging</a>
@@ -101,7 +107,8 @@
     <section id="story-cms" class="card story-cms-card">
       <div class="cms-head">
         <h2>Scrollytelling-CMS</h2>
-        <p>Visuell redigering av <code>INTELLIGENSPARTIET - Welhaven, Wergeland og Cuzner</code>. Legg til nye scener, video, tekst og fallback-bilde.</p>
+        <p>Visuell redigering av <code>INTELLIGENSPARTIET - Welhaven, Wergeland og Cuzner</code>. Legg til nye scener,
+          video, tekst og fallback-bilde.</p>
       </div>
 
       <div class="editor-toolbar">
@@ -164,7 +171,8 @@
     <section id="cms" class="card cms-card">
       <div class="cms-head">
         <h2>Norsk arbeidsmarked</h2>
-        <p>Publiser, slett og flytt artikler visuelt. Endringer lagres til <code>assets/data/ai-jobs-news.json</code>.</p>
+        <p>Publiser, slett og flytt artikler visuelt. Endringer lagres til <code>assets/data/ai-jobs-news.json</code>.
+        </p>
       </div>
 
       <div class="editor-toolbar">
@@ -186,6 +194,66 @@
 
       <div class="actions">
         <button id="cms-save" type="button" disabled>Lagre CMS til GitHub</button>
+      </div>
+    </section>
+
+    <section id="media-cms" class="card media-cms-card">
+      <div class="cms-head">
+        <h2>Mediepaneler i 3D-tunnelen</h2>
+        <p>Visuell redigering av mediepanelene som vises inne i tarmen/tunnelen i hovedopplevelsen. Lagres til
+          <code>assets/data/media-panels.json</code>.</p>
+      </div>
+
+      <div class="editor-toolbar">
+        <button id="media-load" type="button" disabled>Last mediepaneler</button>
+      </div>
+
+      <label for="media-commit-message">Commit-melding</label>
+      <input id="media-commit-message" type="text" value="Admin CMS update: Media Panels" />
+
+      <div class="cms-meta-row">
+        <p id="media-cms-meta" class="status">Logg inn for å laste mediepaneler-CMS.</p>
+        <p id="media-cms-status" class="status"></p>
+      </div>
+
+      <div id="media-cms-list" class="cms-list" aria-live="polite"></div>
+
+      <div class="actions">
+        <button id="media-save" type="button" disabled>Lagre mediepaneler til GitHub</button>
+      </div>
+    </section>
+
+    <section id="glyph-cms" class="card glyph-cms-card">
+      <div class="cms-head">
+        <h2>Glyph Language (Radar Language v0.1)</h2>
+        <p>Bind semantiske RL-glyphs til konkrete tunnel-spots. Lagres til
+          <code>assets/data/glyph-language-map.json</code>.</p>
+      </div>
+
+      <div class="editor-toolbar">
+        <button id="glyph-load" type="button" disabled>Last glyph map</button>
+        <button id="glyph-add" type="button" disabled>Legg til glyph binding</button>
+        <a href="/radar-language/demo.html" target="_blank" rel="noopener">Åpne Radar Language v0.1 Local Test</a>
+      </div>
+
+      <label for="glyph-commit-message">Commit-melding</label>
+      <input id="glyph-commit-message" type="text" value="Admin CMS update: Glyph Language Map" />
+
+      <div class="cms-meta-row">
+        <p id="glyph-cms-meta" class="status">Logg inn for å laste glyph language-CMS.</p>
+        <p id="glyph-cms-status" class="status"></p>
+      </div>
+
+      <div class="glyph-spot-overview-block">
+        <p class="status">Tunnel-spot oversikt (live):</p>
+        <div id="glyph-spot-overview" class="glyph-spot-grid" aria-live="polite"></div>
+      </div>
+
+      <datalist id="glyph-panel-ids-list"></datalist>
+      <div id="glyph-cms-list" class="cms-list" aria-live="polite"></div>
+
+      <div class="actions">
+        <button id="glyph-save" type="button" disabled>Lagre glyph map til GitHub</button>
       </div>
     </section>
 
@@ -257,8 +325,10 @@
     <section id="quick" class="card quick-card">
       <h2>Hurtigfiler</h2>
       <div class="quick-actions">
-        <button class="quick-open" data-path="assets/data/scrollytelling-welhaven-wergeland-cuzner.json" type="button" disabled>Scrollytelling data</button>
-        <button class="quick-open" data-path="assets/data/kling3-prompts.json" type="button" disabled>Kling prompts</button>
+        <button class="quick-open" data-path="assets/data/scrollytelling-welhaven-wergeland-cuzner.json" type="button"
+          disabled>Scrollytelling data</button>
+        <button class="quick-open" data-path="assets/data/kling3-prompts.json" type="button" disabled>Kling
+          prompts</button>
         <button class="quick-open" data-path="index.html" type="button" disabled>Forside HTML</button>
         <button class="quick-open" data-path="assets/css/style.css" type="button" disabled>Forside CSS</button>
         <button class="quick-open" data-path="assets/js/main.js" type="button" disabled>Forside JS</button>
@@ -267,6 +337,8 @@
     </section>
   </main>
 
+  <script src="/assets/js/radar-language-runtime.js"></script>
   <script src="/admin/admin.js"></script>
 </body>
+
 </html>

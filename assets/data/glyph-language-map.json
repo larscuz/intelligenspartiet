@@ -1,0 +1,87 @@
+{
+  "version": "0.1.0",
+  "updated_at": "2026-03-11T00:00:00.000Z",
+  "description": "Semantic glyph bindings for tunnel panel spots. One canonical RL sentence per glyph.",
+  "items": [
+    {
+      "id": "v1-ai-fatigue",
+      "label": "AI Fatigue",
+      "panel_id": "right-led-continuous-main",
+      "canonical": "SYSTEM.ORGANIZATIONS.GROWS.HIGH.LT1Y.PROBABLE",
+      "enabled": true,
+      "note": "Cognitive checkpoints increase in short horizon."
+    },
+    {
+      "id": "v1-brain-fry",
+      "label": "Brain Fry",
+      "panel_id": "left-led-continuous-main",
+      "canonical": "INDIVIDUAL.INDIVIDUALS.DECLINES.HIGH.LT1Y.PROBABLE",
+      "enabled": true,
+      "note": "Overload reduces evaluative sharpness."
+    },
+    {
+      "id": "v1-threaded-work",
+      "label": "Threaded Work",
+      "panel_id": "halfwall-01",
+      "canonical": "SYSTEM.ORGANIZATIONS.TRANSFORMS.HIGH.NOW.CONFIRMED",
+      "enabled": true,
+      "note": "Linear workflows shift to parallel supervision."
+    },
+    {
+      "id": "v1-cognitive-orchestration",
+      "label": "Cognitive Orchestration",
+      "panel_id": "halfwall-02",
+      "canonical": "IDEA.EDUCATION.GROWS.MEDIUM.Y1_3.PROBABLE",
+      "enabled": true,
+      "note": "New skill: coordinating AI outputs."
+    },
+    {
+      "id": "v1-output-inflation",
+      "label": "Output Inflation",
+      "panel_id": "halfwall-03",
+      "canonical": "SYSTEM.ORGANIZATIONS.GROWS.EXTREME.NOW.CONFIRMED",
+      "enabled": true,
+      "note": "Output volume spikes immediately."
+    },
+    {
+      "id": "v1-prompt-looping",
+      "label": "Prompt Looping",
+      "panel_id": "halfwall-04",
+      "canonical": "SYSTEM.TECHNOLOGY.INFLUENCES.HIGH.NOW.PROBABLE",
+      "enabled": true,
+      "note": "Prompt-output loops shape behavior now."
+    },
+    {
+      "id": "v1-decision-density",
+      "label": "Decision Density",
+      "panel_id": "halfwall-05",
+      "canonical": "INDIVIDUAL.INDIVIDUALS.GROWS.HIGH.NOW.CONFIRMED",
+      "enabled": true,
+      "note": "Micro-decisions per hour increase."
+    },
+    {
+      "id": "v1-cognitive-overproduction",
+      "label": "Cognitive Overproduction",
+      "panel_id": "halfwall-06",
+      "canonical": "SYSTEM.TECHNOLOGY.GROWS.EXTREME.LT1Y.PROBABLE",
+      "enabled": true,
+      "note": "Input load scales faster than cognition."
+    },
+    {
+      "id": "v1-continuous-partial-attention",
+      "label": "Continuous Partial Attention",
+      "panel_id": "",
+      "canonical": "INDIVIDUAL.INDIVIDUALS.DECLINES.MEDIUM.NOW.PROBABLE",
+      "enabled": true,
+      "note": "Prepared concept, not assigned to a tunnel slot yet."
+    },
+    {
+      "id": "v1-ai-work-rhythm",
+      "label": "AI Work Rhythm",
+      "panel_id": "",
+      "canonical": "SYSTEM.ORGANIZATIONS.TRANSFORMS.EXTREME.Y1_3.CONFIRMED",
+      "enabled": true,
+      "note": "Prepared concept, not assigned to a tunnel slot yet."
+    }
+  ]
+}

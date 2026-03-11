@@ -107,6 +107,23 @@ textarea {
   align-items: center;
 }
 
+.editor-toolbar a {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--admin-line);
+  background: #fff;
+  color: var(--ink);
+  border-radius: 4px;
+  padding: 0.45rem 0.72rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.editor-toolbar a:hover,
+.editor-toolbar a:focus-visible {
+  border-color: var(--ink);
+}
+
 button {
   border: 1px solid var(--admin-line);
   background: #fff;
@@ -333,6 +350,98 @@ button:focus-visible {
 
 .cms-field textarea {
   min-height: 90px;
+}
+
+.glyph-preview-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.glyph-preview-canvas {
+  width: 124px;
+  height: 124px;
+  border: 1px solid #48657f;
+  border-radius: 12px;
+  background: #0c1420;
+}
+
+.glyph-preview-meta {
+  min-width: 240px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.glyph-spot-overview-block {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.glyph-spot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.65rem;
+}
+
+.glyph-spot-card {
+  border: 1px solid var(--admin-line);
+  border-radius: 10px;
+  padding: 0.6rem;
+  background: #f7f9fc;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.glyph-spot-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.glyph-spot-card-id {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1f2937;
+  font-weight: 800;
+}
+
+.glyph-spot-card-type {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.glyph-spot-preview {
+  width: 100%;
+  max-width: 124px;
+  height: auto;
+}
+
+.glyph-spot-assignment {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #111827;
+}
+
+.glyph-spot-canonical {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #4b5563;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.glyph-spot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
 }
 
 .cms-switch {
