@@ -143,7 +143,7 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     activeInstallation: "Aktiv installasjon",
     outsideVideos: "Videoer",
     outsideSignatures: "Signaturer",
-    outsideAiNews: "AI-nyheter",
+    outsideAiNews: "KI-nyheter",
   },
   en: {
     siteName: "INTELLIGENSPARTIET",
@@ -202,7 +202,7 @@ const FALLBACK_PANELS: UiPanel[] = [
   makeFallbackPanel(
     "fallback-01",
     "INTELLIGENSPARTIET",
-    "Politisk AI-kapasitet for et samfunn i rask omforming.",
+    "Politisk KI-kapasitet for et samfunn i rask omforming.",
     "right",
     0.1,
   ),
@@ -403,7 +403,7 @@ const drawFormattedCardText = (
 const FORMAT_DIRECTIVE_TOKEN_PATTERN = /\(\s*(?:bold|new\s*line|new\s*paragraph)\s*\)/gi;
 
 const EN_TO_NB_EXACT: Record<string, string> = {
-  "ai fatigue": "AI-tretthet",
+  "ai fatigue": "KI-tretthet",
   "brain fry": "Hjernekok",
   "threaded work": "Trådet arbeid",
   "cognitive orchestration": "Kognitiv orkestrering",
@@ -412,22 +412,22 @@ const EN_TO_NB_EXACT: Record<string, string> = {
   "decision density": "Beslutningstetthet",
   "cognitive overproduction": "Kognitiv overproduksjon",
   "continuous partial attention": "Kontinuerlig delvis oppmerksomhet",
-  "ai work rhythm": "AI-arbeidsrytme",
+  "ai work rhythm": "KI-arbeidsrytme",
   "cognitive checkpoints increase in short horizon.": "Kognitive kontrollpunkter øker på kort sikt.",
   "overload reduces evaluative sharpness.": "Overbelastning reduserer vurderingsskarphet.",
   "linear workflows shift to parallel supervision.": "Lineære arbeidsflyter går over til parallell oppfølging.",
-  "new skill: coordinating ai outputs.": "Ny ferdighet: koordinering av AI-utdata.",
+  "new skill: coordinating ai outputs.": "Ny ferdighet: koordinering av KI-utdata.",
   "output volume spikes immediately.": "Volumet av utdata øker umiddelbart.",
   "prompt-output loops shape behavior now.": "Prompt-utdata-løkker former adferd nå.",
   "micro-decisions per hour increase.": "Antall mikrobeslutninger per time øker.",
   "input load scales faster than cognition.": "Informasjonsmengden skalerer raskere enn kognisjonen.",
   "prepared concept, not assigned to a tunnel slot yet.": "Klargjort konsept, ikke tildelt tunnelplass ennå.",
   "mental exhaustion caused by continuous interaction with ai systems: prompting, reviewing, correcting, switching context, and supervising outputs.":
-    "Mental utmattelse forårsaket av kontinuerlig samhandling med AI-systemer: prompting, vurdering, korrigering, kontekstbytte og oppfølging av utdata.",
+    "Mental utmattelse forårsaket av kontinuerlig samhandling med KI-systemer: prompting, vurdering, korrigering, kontekstbytte og oppfølging av utdata.",
   "ai does not remove work - it multiplies cognitive checkpoints.":
-    "AI fjerner ikke arbeid - den multipliserer kognitive kontrollpunkter.",
+    "KI fjerner ikke arbeid - den multipliserer kognitive kontrollpunkter.",
   "ai does not remove work — it multiplies cognitive checkpoints.":
-    "AI fjerner ikke arbeid - den multipliserer kognitive kontrollpunkter.",
+    "KI fjerner ikke arbeid - den multipliserer kognitive kontrollpunkter.",
 };
 
 const EN_TO_NB_REPLACEMENTS: Array<[RegExp, string]> = [
@@ -474,7 +474,8 @@ const autoTranslateEnglishToBokmal = (text: string) => {
     working = working.replace(`__FMT_${index}__`, directive);
   });
 
-  return working;
+  // In Norwegian mode, always render AI terms as KI.
+  return working.replace(/\bai(?=\b|-)/gi, "KI");
 };
 
 const TWO_PI = Math.PI * 2;
