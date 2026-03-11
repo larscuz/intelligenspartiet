@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "updated_at": "2026-03-11T00:00:00.000Z",
+  "updated_at": "2026-03-11T06:59:03.852Z",
   "description": "Semantic glyph bindings for tunnel panel spots. One canonical RL sentence per glyph.",
   "items": [
     {
@@ -9,7 +9,7 @@
       "panel_id": "right-led-continuous-main",
       "canonical": "SYSTEM.ORGANIZATIONS.GROWS.HIGH.LT1Y.PROBABLE",
       "enabled": true,
-      "note": "Cognitive checkpoints increase in short horizon."
+      "note": "The broad umbrella term.\n\nMeaning\nMental exhaustion caused by continuous interaction with AI systems: prompting, reviewing, correcting, switching context, and supervising outputs.\n\nWhy it happens\nAI does not remove work — it multiplies cognitive checkpoints."
     },
     {
       "id": "v1-brain-fry",
