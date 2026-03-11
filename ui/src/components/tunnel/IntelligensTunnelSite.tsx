@@ -402,44 +402,259 @@ const drawFormattedCardText = (
 
 const FORMAT_DIRECTIVE_TOKEN_PATTERN = /\(\s*(?:bold|new\s*line|new\s*paragraph)\s*\)/gi;
 
-const EN_TO_NB_EXACT: Record<string, string> = {
-  "ai fatigue": "KI-tretthet",
-  "brain fry": "Hjernekok",
-  "threaded work": "Trådet arbeid",
-  "cognitive orchestration": "Kognitiv orkestrering",
-  "output inflation": "Output-inflasjon",
-  "prompt looping": "Prompt-løkker",
-  "decision density": "Beslutningstetthet",
-  "cognitive overproduction": "Kognitiv overproduksjon",
-  "continuous partial attention": "Kontinuerlig delvis oppmerksomhet",
-  "ai work rhythm": "KI-arbeidsrytme",
-  "cognitive checkpoints increase in short horizon.": "Kognitive kontrollpunkter øker på kort sikt.",
-  "overload reduces evaluative sharpness.": "Overbelastning reduserer vurderingsskarphet.",
-  "linear workflows shift to parallel supervision.": "Lineære arbeidsflyter går over til parallell oppfølging.",
-  "new skill: coordinating ai outputs.": "Ny ferdighet: koordinering av KI-utdata.",
-  "output volume spikes immediately.": "Volumet av utdata øker umiddelbart.",
-  "prompt-output loops shape behavior now.": "Prompt-utdata-løkker former adferd nå.",
-  "micro-decisions per hour increase.": "Antall mikrobeslutninger per time øker.",
-  "input load scales faster than cognition.": "Informasjonsmengden skalerer raskere enn kognisjonen.",
-  "prepared concept, not assigned to a tunnel slot yet.": "Klargjort konsept, ikke tildelt tunnelplass ennå.",
-  "mental exhaustion caused by continuous interaction with ai systems: prompting, reviewing, correcting, switching context, and supervising outputs.":
+const normalizeTranslationKey = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[—–]/g, "-")
+    .replace(/[.!?]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const EN_TO_NB_EXACT_ENTRIES: Array<[string, string]> = [
+  ["ai fatigue", "KI-tretthet"],
+  ["brain fry", "Hjernekok"],
+  ["threaded work", "Trådet arbeid"],
+  ["cognitive orchestration", "Kognitiv orkestrering"],
+  ["output inflation", "Output-inflasjon"],
+  ["prompt looping", "Prompt-løkker"],
+  ["decision density", "Beslutningstetthet"],
+  ["cognitive overproduction", "Kognitiv overproduksjon"],
+  ["continuous partial attention", "Kontinuerlig delvis oppmerksomhet"],
+  ["ai work rhythm", "KI-arbeidsrytme"],
+  ["cognitive checkpoints increase in short horizon.", "Kognitive kontrollpunkter øker på kort sikt."],
+  ["overload reduces evaluative sharpness.", "Overbelastning reduserer vurderingsskarphet."],
+  ["linear workflows shift to parallel supervision.", "Lineære arbeidsflyter går over til parallell oppfølging."],
+  ["new skill: coordinating ai outputs.", "Ny ferdighet: koordinering av KI-utdata."],
+  ["output volume spikes immediately.", "Volumet av utdata øker umiddelbart."],
+  ["prompt-output loops shape behavior now.", "Prompt-utdata-løkker former adferd nå."],
+  ["micro-decisions per hour increase.", "Antall mikrobeslutninger per time øker."],
+  ["input load scales faster than cognition.", "Informasjonsmengden skalerer raskere enn kognisjonen."],
+  ["prepared concept, not assigned to a tunnel slot yet.", "Klargjort konsept, ikke tildelt tunnelplass ennå."],
+  [
+    "mental exhaustion caused by continuous interaction with ai systems: prompting, reviewing, correcting, switching context, and supervising outputs.",
     "Mental utmattelse forårsaket av kontinuerlig samhandling med KI-systemer: prompting, vurdering, korrigering, kontekstbytte og oppfølging av utdata.",
-  "ai does not remove work - it multiplies cognitive checkpoints.":
-    "KI fjerner ikke arbeid - den multipliserer kognitive kontrollpunkter.",
-  "ai does not remove work — it multiplies cognitive checkpoints.":
-    "KI fjerner ikke arbeid - den multipliserer kognitive kontrollpunkter.",
+  ],
+  ["ai does not remove work - it multiplies cognitive checkpoints.", "KI fjerner ikke arbeid - den multipliserer kognitive kontrollpunkter."],
+  ["ai does not remove work — it multiplies cognitive checkpoints.", "KI fjerner ikke arbeid - den multipliserer kognitive kontrollpunkter."],
+  ["the broad umbrella term.", "Det brede paraplybegrepet."],
+  ["ai accelerates production but slows mental recovery.", "KI akselererer produksjon, men senker mental restitusjon."],
+];
+
+const EN_TO_NB_EXACT = new Map<string, string>(
+  EN_TO_NB_EXACT_ENTRIES.map(([source, target]) => [normalizeTranslationKey(source), target]),
+);
+
+const EN_TO_NB_PHRASE_REPLACEMENTS: Array<[string, string]> = [
+  ["meaning", "Betydning"],
+  ["why it happens", "Hvorfor det skjer"],
+  ["key insight", "Nøkkelinnsikt"],
+  ["symptoms", "Symptomer"],
+  ["mental exhaustion", "mental utmattelse"],
+  ["continuous interaction", "kontinuerlig samhandling"],
+  ["cognitive checkpoints", "kognitive kontrollpunkter"],
+  ["decision paralysis", "beslutningsparalyse"],
+  ["difficulty judging quality", "vansker med å vurdere kvalitet"],
+  ["rereading the same content", "gjenlesing av det samme innholdet"],
+  ["loss of critical thinking sharpness", "tap av kritisk vurderingsskarphet"],
+  ["parallel cognitive threads", "parallelle kognitive tråder"],
+  ["parallel supervision", "parallell oppfølging"],
+  ["new skill", "ny ferdighet"],
+  ["coordinating outputs", "koordinering av utdata"],
+  ["output volume", "volumet av utdata"],
+  ["micro-decisions", "mikrobeslutninger"],
+  ["input load", "informasjonsmengde"],
+  ["short horizon", "kort sikt"],
+  ["workers operate in parallel cognitive threads", "arbeidere opererer i parallelle kognitive tråder"],
+  ["instead of finishing one thing, people supervise many processes simultaneously", "i stedet for å fullføre én ting, overvåker folk mange prosesser samtidig"],
+  ["ai accelerates production but slows mental recovery", "KI akselererer produksjon, men senker mental restitusjon"],
+  ["ai does not remove work", "KI fjerner ikke arbeid"],
+  ["it multiplies cognitive checkpoints", "den multipliserer kognitive kontrollpunkter"],
+  ["prepared concept", "klargjort konsept"],
+  ["not assigned to a tunnel slot yet", "ikke tildelt tunnelplass ennå"],
+  ["new paragraph", "new paragraph"],
+];
+
+const EN_TO_NB_PHRASE_REGEX: Array<[RegExp, string]> = EN_TO_NB_PHRASE_REPLACEMENTS.map(([source, target]) => [
+  new RegExp(escapeRegExp(source), "gi"),
+  target,
+]);
+
+const EN_TO_NB_WORD_REPLACEMENTS: Record<string, string> = {
+  meaning: "betydning",
+  the: "den",
+  a: "en",
+  an: "en",
+  of: "av",
+  in: "i",
+  on: "på",
+  at: "ved",
+  for: "for",
+  from: "fra",
+  across: "på tvers av",
+  into: "inn i",
+  is: "er",
+  are: "er",
+  be: "være",
+  can: "kan",
+  will: "vil",
+  this: "denne",
+  that: "det",
+  these: "disse",
+  those: "de",
+  and: "og",
+  or: "eller",
+  if: "hvis",
+  then: "da",
+  also: "også",
+  people: "folk",
+  person: "person",
+  workers: "arbeidere",
+  operate: "opererer",
+  many: "mange",
+  processes: "prosesser",
+  process: "prosess",
+  simultaneously: "samtidig",
+  instead: "i stedet",
+  finishing: "fullfører",
+  finish: "fullføre",
+  one: "én",
+  thing: "ting",
+  same: "samme",
+  content: "innhold",
+  critical: "kritisk",
+  thinking: "tenkning",
+  quality: "kvalitet",
+  judging: "vurdere",
+  difficulty: "vansker",
+  loss: "tap",
+  term: "begrep",
+  broad: "bredt",
+  umbrella: "paraply",
+  threads: "tråder",
+  why: "hvorfor",
+  happens: "skjer",
+  key: "nøkkel",
+  insight: "innsikt",
+  symptoms: "symptomer",
+  mental: "mental",
+  exhaustion: "utmattelse",
+  caused: "forårsaket",
+  by: "av",
+  continuous: "kontinuerlig",
+  interaction: "samhandling",
+  with: "med",
+  systems: "systemer",
+  prompting: "prompting",
+  reviewing: "vurdering",
+  correcting: "korrigering",
+  switching: "bytte",
+  context: "kontekst",
+  supervising: "oppfølging",
+  outputs: "utdata",
+  does: "gjør",
+  not: "ikke",
+  remove: "fjerner",
+  work: "arbeid",
+  it: "den",
+  multiplies: "multipliserer",
+  cognitive: "kognitive",
+  checkpoints: "kontrollpunkter",
+  accelerates: "akselererer",
+  production: "produksjon",
+  but: "men",
+  slows: "senker",
+  recovery: "restitusjon",
+  overload: "overbelastning",
+  reduces: "reduserer",
+  evaluative: "vurderings",
+  sharpness: "skarphet",
+  linear: "lineære",
+  workflows: "arbeidsflyter",
+  shift: "skifter",
+  to: "til",
+  parallel: "parallell",
+  supervision: "oppfølging",
+  new: "ny",
+  skill: "ferdighet",
+  coordinating: "koordinering",
+  output: "utdata",
+  volume: "volum",
+  spikes: "øker",
+  immediately: "umiddelbart",
+  prompt: "prompt",
+  loops: "løkker",
+  shape: "former",
+  behavior: "adferd",
+  now: "nå",
+  "micro-decisions": "mikrobeslutninger",
+  per: "per",
+  hour: "time",
+  increase: "øker",
+  input: "input",
+  load: "belastning",
+  scales: "skalerer",
+  faster: "raskere",
+  than: "enn",
+  cognition: "kognisjon",
+  prepared: "klargjort",
+  concept: "konsept",
+  assigned: "tildelt",
+  tunnel: "tunnel",
+  slot: "plass",
+  yet: "ennå",
+  fatigue: "tretthet",
+  brain: "hjerne",
+  fry: "kok",
+  threaded: "trådet",
+  orchestration: "orkestrering",
+  inflation: "inflasjon",
+  looping: "løkker",
+  density: "tetthet",
+  overproduction: "overproduksjon",
+  partial: "delvis",
+  attention: "oppmerksomhet",
+  rhythm: "rytme",
 };
 
-const EN_TO_NB_REPLACEMENTS: Array<[RegExp, string]> = [
-  [/\bmeaning\b/gi, "Betydning"],
-  [/\bwhy it happens\b/gi, "Hvorfor det skjer"],
-  [/\bkey insight\b/gi, "Nøkkelinnsikt"],
-  [/\bsymptoms\b/gi, "Symptomer"],
-  [/\bmental exhaustion\b/gi, "Mental utmattelse"],
-  [/\bcontinuous interaction\b/gi, "kontinuerlig samhandling"],
-  [/\bcognitive checkpoints\b/gi, "kognitive kontrollpunkter"],
-  [/\bnew paragraph\b/gi, "new paragraph"],
-];
+const preserveWordCase = (source: string, replacement: string) => {
+  if (!replacement) return replacement;
+  if (source === source.toUpperCase()) return replacement.toUpperCase();
+  if (source[0] === source[0].toUpperCase()) {
+    return replacement[0].toUpperCase() + replacement.slice(1);
+  }
+  return replacement;
+};
+
+const applyPhraseReplacements = (value: string) => {
+  let next = value;
+  EN_TO_NB_PHRASE_REGEX.forEach(([pattern, replacement]) => {
+    next = next.replace(pattern, replacement);
+  });
+  return next;
+};
+
+const applyWordFallback = (value: string) =>
+  value.replace(/\b[A-Za-z][A-Za-z'-]*\b/g, (word) => {
+    const replacement = EN_TO_NB_WORD_REPLACEMENTS[word.toLowerCase()];
+    if (!replacement) return word;
+    return preserveWordCase(word, replacement);
+  });
+
+const translateLineToBokmal = (line: string) => {
+  const trimmed = line.trim();
+  if (!trimmed) return line;
+
+  const exact = EN_TO_NB_EXACT.get(normalizeTranslationKey(trimmed));
+  const translatedBase = exact ?? applyWordFallback(applyPhraseReplacements(trimmed));
+
+  return translatedBase
+    .replace(/\bai(?=\b|-)/gi, "KI")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+};
 
 const autoTranslateEnglishToBokmal = (text: string) => {
   if (!text || !text.trim()) return text;
@@ -453,29 +668,14 @@ const autoTranslateEnglishToBokmal = (text: string) => {
 
   working = working
     .split("\n")
-    .map((line) => {
-      const trimmed = line.trim();
-      if (!trimmed) return line;
-
-      const exact = EN_TO_NB_EXACT[trimmed.toLowerCase()];
-      if (exact) {
-        return line.replace(trimmed, exact);
-      }
-
-      let replaced = line;
-      EN_TO_NB_REPLACEMENTS.forEach(([pattern, next]) => {
-        replaced = replaced.replace(pattern, next);
-      });
-      return replaced;
-    })
+    .map((line) => translateLineToBokmal(line))
     .join("\n");
 
   directives.forEach((directive, index) => {
     working = working.replace(`__FMT_${index}__`, directive);
   });
 
-  // In Norwegian mode, always render AI terms as KI.
-  return working.replace(/\bai(?=\b|-)/gi, "KI");
+  return working;
 };
 
 const TWO_PI = Math.PI * 2;
