@@ -682,6 +682,8 @@ const autoTranslateEnglishToBokmal = (text: string) => {
   return working;
 };
 
+const forceKiTerminology = (text: string) => String(text || "").replace(/\bai(?=\b|-)/gi, "KI");
+
 const TWO_PI = Math.PI * 2;
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
@@ -1138,10 +1140,10 @@ export function IntelligensTunnelSite() {
   const activeInstallationText = useMemo(() => {
     const glyphCopy = glyphCopyByPanelId.get(activePanel.id);
     if (language === "nb") {
-      return glyphCopy?.labelNb || localizeDynamicText(glyphCopy?.label || activePanel.title || "");
+      return glyphCopy?.labelNb || forceKiTerminology(glyphCopy?.label || activePanel.title || "");
     }
     return glyphCopy?.label || activePanel.title || "";
-  }, [activePanel.id, activePanel.title, glyphCopyByPanelId, localizeDynamicText, language]);
+  }, [activePanel.id, activePanel.title, glyphCopyByPanelId, language]);
 
   useEffect(() => {
     if (panelData.length === 0) return;
@@ -2338,10 +2340,10 @@ export function IntelligensTunnelSite() {
         // Card texture: glyph semantic copy overrides panel copy when assigned.
         const glyphCopy = glyphCopyByPanelId.get(panel.id);
         const cardTitle = language === "nb"
-          ? (glyphCopy?.labelNb || localizeDynamicText(glyphCopy?.label || panel.title || ""))
+          ? (glyphCopy?.labelNb || forceKiTerminology(glyphCopy?.label || panel.title || ""))
           : (glyphCopy?.label || panel.title || "");
         const cardBody = language === "nb"
-          ? (glyphCopy?.noteNb || localizeDynamicText(glyphCopy?.note || panel.body || ""))
+          ? (glyphCopy?.noteNb || forceKiTerminology(glyphCopy?.note || panel.body || ""))
           : (glyphCopy?.note || panel.body || "");
         const cardTex = createCardTexture(cardTitle, cardBody);
         dynamicTextures.push(cardTex);
@@ -3083,7 +3085,7 @@ export function IntelligensTunnelSite() {
       isDisposed = true;
       cleanup();
     };
-  }, [panelData, glyphCanonicalByPanelId, glyphCopyByPanelId, localizeDynamicText]);
+  }, [panelData, glyphCanonicalByPanelId, glyphCopyByPanelId, language]);
 
   return (
     <div className="relative h-[100svh] w-full overflow-hidden overscroll-none touch-none bg-[#f7f7f4] text-[#141414]">
