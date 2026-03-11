@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "updated_at": "2026-03-11T07:49:37.385Z",
+  "updated_at": "2026-03-11T07:58:17.106Z",
   "description": "Semantic glyph bindings for tunnel panel spots. One canonical RL sentence per glyph.",
   "items": [
     {
@@ -17,7 +17,7 @@
       "panel_id": "left-led-continuous-main",
       "canonical": "INDIVIDUAL.INDIVIDUALS.DECLINES.HIGH.LT1Y.PROBABLE",
       "enabled": true,
-      "note": "Overload reduces evaluative sharpness."
+      "note": "The physiological feeling of AI fatigue.(bold) (new line)\n(new paragraph)\nMeaning(bold) (new line)\nA short-term cognitive overload where the brain becomes unable to evaluate more information."
     },
     {
       "id": "v1-threaded-work",
@@ -25,7 +25,7 @@
       "panel_id": "halfwall-01",
       "canonical": "SYSTEM.ORGANIZATIONS.TRANSFORMS.HIGH.NOW.CONFIRMED",
       "enabled": true,
-      "note": "Linear workflows shift to parallel supervision."
+      "note": "AI work is no longer linear. (bold) (new line)\n(new paragraph)\nWorkers operate in parallel cognitive threads\n(new paragraph)\nLinear workflows shift to parallel supervision."
     },
     {
       "id": "v1-cognitive-orchestration",
@@ -33,7 +33,7 @@
       "panel_id": "halfwall-02",
       "canonical": "IDEA.EDUCATION.GROWS.MEDIUM.Y1_3.PROBABLE",
       "enabled": true,
-      "note": "New skill: coordinating AI outputs."
+      "note": "New skill: coordinating AI outputs.(bold) (new line)\nWorkers become conductors of machine thinking.\n(new paragraph)\nThey are not producing content directly"
     },
     {
       "id": "v1-output-inflation",
@@ -41,7 +41,7 @@
       "panel_id": "halfwall-03",
       "canonical": "SYSTEM.ORGANIZATIONS.GROWS.EXTREME.NOW.CONFIRMED",
       "enabled": true,
-      "note": "Output volume spikes immediately."
+      "note": "Output volume spikes immediately. (bold) (new line)\n(new paragraph)\nAI dramatically increases the volume of material that must be evaluated."
     },
     {
       "id": "v1-prompt-looping",
@@ -49,7 +49,7 @@
       "panel_id": "halfwall-04",
       "canonical": "SYSTEM.TECHNOLOGY.INFLUENCES.HIGH.NOW.PROBABLE",
       "enabled": true,
-      "note": "Prompt-output loops shape behavior now."
+      "note": "A repetitive cognitive cycle:(bold) (new line)\n(new paragraph)\nprompt → output → correction → re-prompt → refinement\n(new paragraph)\nInstead of solving problems, workers orbit around solutions.(new line)\nPrompt-output loops shape behavior now."
     },
     {
       "id": "v1-decision-density",
@@ -57,7 +57,7 @@
       "panel_id": "halfwall-05",
       "canonical": "INDIVIDUAL.INDIVIDUALS.GROWS.HIGH.NOW.CONFIRMED",
       "enabled": true,
-      "note": "Micro-decisions per hour increase."
+      "note": "Micro-decisions per hour increase. (bold) (new line)\n(new paragraph)\nAI tools create more decision points."
     },
     {
       "id": "v1-cognitive-overproduction",
@@ -65,7 +65,7 @@
       "panel_id": "halfwall-06",
       "canonical": "SYSTEM.TECHNOLOGY.GROWS.EXTREME.LT1Y.PROBABLE",
       "enabled": true,
-      "note": "Input load scales faster than cognition."
+      "note": "Input load scales faster than cognition.(bold) (new line)\n(new paragraph)\nThe brain must process more information than before."
     },
     {
       "id": "v1-continuous-partial-attention",
