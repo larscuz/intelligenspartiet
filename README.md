@@ -55,8 +55,17 @@ Sett disse i Vercel -> Project Settings -> Environment Variables:
 - `GITHUB_OWNER`: f.eks. `larscuz`.
 - `GITHUB_REPO`: f.eks. `intelligenspartiet`.
 - `GITHUB_BRANCH`: f.eks. `main`.
+- `GEMINI_API_KEY`: API-nokkel fra Google AI Studio (brukes av `/api/translate-glyphs`).
+
+Valgfri:
+- `GEMINI_TRANSLATE_MODEL`: default er `gemini-2.0-flash`.
 
 Etter setting av variabler: redeploy prosjektet.
+
+### Lokal utvikling med env
+- Kopier `.env.example` til `.env.local`.
+- Fyll inn egne secrets lokalt.
+- `.env.local` skal ikke committes (ignores i `.gitignore`).
 
 ### Første gangs passordoppsett
 1. Åpne `/admin/`.
