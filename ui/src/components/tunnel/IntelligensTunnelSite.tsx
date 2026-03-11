@@ -1330,6 +1330,7 @@ export function IntelligensTunnelSite() {
   const targetProgressRef = useRef(CAMERA_START_PROGRESS);
   const currentProgressRef = useRef(CAMERA_START_PROGRESS);
   const videoRoomRefs = useRef<Array<HTMLVideoElement | null>>([]);
+  const tunnelOutsideToggleRef = useRef<(() => void) | null>(null);
 
   // Lock body scroll so the page never bounces behind the canvas
   useEffect(() => {
@@ -1378,6 +1379,9 @@ export function IntelligensTunnelSite() {
     () => (text: string) => (language === "nb" ? autoTranslateEnglishToBokmal(text) : text),
     [language],
   );
+  const onTunnelToggleClick = useCallback(() => {
+    tunnelOutsideToggleRef.current?.();
+  }, []);
   const videoWheelAccumulatorRef = useRef(0);
   const videoWheelLastStepAtRef = useRef(0);
   const videoTouchStartXRef = useRef<number | null>(null);
@@ -1763,6 +1767,7 @@ export function IntelligensTunnelSite() {
     if (panelData.length === 0) return;
     const mountNode = containerRef.current;
     if (!mountNode) return;
+    tunnelOutsideToggleRef.current = null;
     setOutsideMenuVisible(false);
 
     let isDisposed = false;
@@ -3019,6 +3024,36 @@ export function IntelligensTunnelSite() {
       }
       tunnelCenter.divideScalar(centerSamples);
 
+      const updateOutsideCameraTargets = () => {
+        const camNow = camera.position.clone();
+        const awayDir = camNow.clone().sub(tunnelCenter).normalize();
+        exitCameraTarget.copy(tunnelCenter).add(awayDir.multiplyScalar(EXIT_CAMERA_DISTANCE));
+        exitCameraTarget.y = tunnelCenter.y + EXIT_CAMERA_DISTANCE * 0.35;
+        exitLookTarget.copy(tunnelCenter);
+      };
+
+      const collapseGlyphCards = () => {
+        glyphRunes.forEach((rune) => {
+          rune.expanded = false;
+        });
+      };
+
+      const setOutsideView = (nextOutside: boolean) => {
+        if (isOutside === nextOutside) return;
+        isOutside = nextOutside;
+        setOutsideMenuVisible(nextOutside);
+        if (nextOutside) {
+          updateOutsideCameraTargets();
+          collapseGlyphCards();
+        }
+      };
+
+      const toggleOutsideView = () => {
+        setOutsideView(!isOutside);
+      };
+
+      tunnelOutsideToggleRef.current = toggleOutsideView;
+
       // Build exit glyph mesh
       const exitGlyphGeom = new THREE.PlaneGeometry(EXIT_GLYPH_SIZE * 2, EXIT_GLYPH_SIZE * 2);
       const exitGlyphTex = createExitGlyphTexture();
@@ -3113,32 +3148,19 @@ export function IntelligensTunnelSite() {
           const hitObj = hits[0].object;
 
           if (hitObj.userData.isReentryDot && isOutside) {
-            isOutside = false;
-            setOutsideMenuVisible(false);
+            setOutsideView(false);
             return;
           }
 
           // --- Exit glyph click ---
           if (hitObj.userData.isExitGlyph) {
-            isOutside = !isOutside;
-            setOutsideMenuVisible(isOutside);
-            if (isOutside) {
-              // Compute exit camera position: above + away from tunnel center
-              const camNow = camera.position.clone();
-              const awayDir = camNow.clone().sub(tunnelCenter).normalize();
-              exitCameraTarget.copy(tunnelCenter).add(awayDir.multiplyScalar(EXIT_CAMERA_DISTANCE));
-              exitCameraTarget.y = tunnelCenter.y + EXIT_CAMERA_DISTANCE * 0.35;
-              exitLookTarget.copy(tunnelCenter);
-            }
-            // Collapse any open cards
-            glyphRunes.forEach((r) => { r.expanded = false; });
+            toggleOutsideView();
             return;
           }
 
           // --- Click anywhere in space to re-enter tunnel when outside ---
           if (isOutside) {
-            isOutside = false;
-            setOutsideMenuVisible(false);
+            setOutsideView(false);
             return;
           }
 
@@ -3157,8 +3179,7 @@ export function IntelligensTunnelSite() {
         } else {
           // Click on empty space: if outside, re-enter; otherwise collapse cards
           if (isOutside) {
-            isOutside = false;
-            setOutsideMenuVisible(false);
+            setOutsideView(false);
           } else {
             glyphRunes.forEach((r) => { r.expanded = false; });
           }
@@ -3204,15 +3225,7 @@ export function IntelligensTunnelSite() {
       // Debug: press 'o' to toggle outside view
       const onKeyDown = (event: KeyboardEvent) => {
         if (event.key === 'o' || event.key === 'O') {
-          isOutside = !isOutside;
-          setOutsideMenuVisible(isOutside);
-          if (isOutside) {
-            const camNow = camera.position.clone();
-            const awayDir = camNow.clone().sub(tunnelCenter).normalize();
-            exitCameraTarget.copy(tunnelCenter).add(awayDir.multiplyScalar(EXIT_CAMERA_DISTANCE));
-            exitCameraTarget.y = tunnelCenter.y + EXIT_CAMERA_DISTANCE * 0.35;
-            exitLookTarget.copy(tunnelCenter);
-          }
+          toggleOutsideView();
         }
       };
       window.addEventListener("keydown", onKeyDown);
@@ -3625,6 +3638,7 @@ export function IntelligensTunnelSite() {
       animate();
 
       cleanup = () => {
+        tunnelOutsideToggleRef.current = null;
         renderer.domElement.removeEventListener("pointerdown", onPointerDown);
         renderer.domElement.removeEventListener("pointermove", onPointerMove);
         renderer.domElement.removeEventListener("pointerleave", onPointerLeave);
@@ -3702,6 +3716,7 @@ export function IntelligensTunnelSite() {
 
     return () => {
       isDisposed = true;
+      tunnelOutsideToggleRef.current = null;
       cleanup();
     };
   }, [panelData, glyphCanonicalByPanelId, resolveLocalizedGlyphCopy]);
@@ -3711,29 +3726,41 @@ export function IntelligensTunnelSite() {
       <div ref={containerRef} className="absolute inset-0" />
       <CursorCometTrail />
 
-      <div className="absolute right-4 top-4 z-30 flex items-center gap-2 rounded-full border border-black/20 bg-white/90 px-2 py-1 shadow-[0_6px_18px_rgba(0,0,0,0.12)] backdrop-blur">
-        <span className="px-2 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-[#5a5a5a]">
-          {uiCopy.languageLabel}
-        </span>
+      <div className="absolute right-4 top-4 z-[60] flex flex-col items-end gap-2">
+        <div className="flex items-center gap-2 rounded-full border border-black/20 bg-white/90 px-2 py-1 shadow-[0_6px_18px_rgba(0,0,0,0.12)] backdrop-blur">
+          <span className="px-2 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-[#5a5a5a]">
+            {uiCopy.languageLabel}
+          </span>
+          <button
+            type="button"
+            onClick={() => setLanguage("nb")}
+            className={`pointer-events-auto rounded-full px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] transition ${
+              language === "nb" ? "bg-[#11161f] text-white" : "bg-transparent text-[#4f4f4f] hover:bg-black/5"
+            }`}
+            aria-pressed={language === "nb"}
+          >
+            NO
+          </button>
+          <button
+            type="button"
+            onClick={() => setLanguage("en")}
+            className={`pointer-events-auto rounded-full px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] transition ${
+              language === "en" ? "bg-[#11161f] text-white" : "bg-transparent text-[#4f4f4f] hover:bg-black/5"
+            }`}
+            aria-pressed={language === "en"}
+          >
+            EN
+          </button>
+        </div>
         <button
           type="button"
-          onClick={() => setLanguage("nb")}
-          className={`pointer-events-auto rounded-full px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] transition ${
-            language === "nb" ? "bg-[#11161f] text-white" : "bg-transparent text-[#4f4f4f] hover:bg-black/5"
-          }`}
-          aria-pressed={language === "nb"}
+          onClick={onTunnelToggleClick}
+          className="pointer-events-auto rounded-full border border-[#f7d58b]/90 bg-[linear-gradient(180deg,#f9db8d_0%,#d79a3a_52%,#bc7d1f_100%)] px-4 py-2 text-[0.56rem] font-semibold uppercase tracking-[0.16em] text-[#241606] shadow-[0_8px_18px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,245,207,0.82)] transition hover:brightness-105 active:translate-y-[1px]"
+          aria-pressed={outsideMenuVisible}
         >
-          NO
-        </button>
-        <button
-          type="button"
-          onClick={() => setLanguage("en")}
-          className={`pointer-events-auto rounded-full px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] transition ${
-            language === "en" ? "bg-[#11161f] text-white" : "bg-transparent text-[#4f4f4f] hover:bg-black/5"
-          }`}
-          aria-pressed={language === "en"}
-        >
-          EN
+          {outsideMenuVisible
+            ? (language === "nb" ? "Gå inn i tunnelen" : "Enter tunnel")
+            : (language === "nb" ? "Gå ut av tunnelen" : "Leave tunnel")}
         </button>
       </div>
 
