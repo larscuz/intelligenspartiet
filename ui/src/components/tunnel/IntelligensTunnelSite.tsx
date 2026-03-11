@@ -255,24 +255,111 @@ const drawWrappedText = (
   maxWidth: number,
   lineHeight: number,
 ) => {
+  const lines = wrapTextLines(ctx, text, maxWidth);
+  lines.forEach((line, index) => {
+    ctx.fillText(line, x, y + index * lineHeight);
+  });
+};
+
+const wrapTextLines = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number) => {
   const words = text.split(" ");
+  const lines: string[] = [];
   let line = "";
-  let cursorY = y;
 
   for (let i = 0; i < words.length; i += 1) {
-    const testLine = `${line}${words[i]} `;
+    const word = words[i];
+    if (!word) continue;
+    const testLine = `${line}${word} `;
     if (ctx.measureText(testLine).width > maxWidth && line.length > 0) {
-      ctx.fillText(line.trim(), x, cursorY);
-      line = `${words[i]} `;
-      cursorY += lineHeight;
+      lines.push(line.trim());
+      line = `${word} `;
     } else {
       line = testLine;
     }
   }
 
   if (line.trim()) {
-    ctx.fillText(line.trim(), x, cursorY);
+    lines.push(line.trim());
   }
+
+  return lines;
+};
+
+type FormattedCardSegment = {
+  text: string;
+  bold: boolean;
+  paragraphBreak: boolean;
+};
+
+const DIRECTIVE_BOLD = /\(\s*bold\s*\)/gi;
+const DIRECTIVE_NEW_LINE = /\(\s*new\s*line\s*\)/gi;
+const DIRECTIVE_NEW_PARAGRAPH = /\(\s*new\s*paragraph\s*\)/gi;
+
+const parseFormattedCardText = (text: string): FormattedCardSegment[] => {
+  const normalized = text
+    .replace(/\r\n?/g, "\n")
+    .replace(DIRECTIVE_NEW_PARAGRAPH, "\n\n")
+    .replace(DIRECTIVE_NEW_LINE, "\n");
+  const rawLines = normalized.split("\n");
+
+  let paragraphBreak = false;
+  const segments: FormattedCardSegment[] = [];
+
+  rawLines.forEach((rawLine) => {
+    const hasContent = rawLine.trim().length > 0;
+    if (!hasContent) {
+      paragraphBreak = true;
+      return;
+    }
+
+    const bold = /\(\s*bold\s*\)/i.test(rawLine);
+    const textLine = rawLine.replace(DIRECTIVE_BOLD, "").replace(/\s{2,}/g, " ").trim();
+
+    if (!textLine) {
+      paragraphBreak = true;
+      return;
+    }
+
+    segments.push({
+      text: textLine,
+      bold,
+      paragraphBreak,
+    });
+
+    paragraphBreak = false;
+  });
+
+  return segments;
+};
+
+const drawFormattedCardText = (
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+  regularFont: string,
+  boldFont: string,
+  paragraphGapLines = 0.6,
+) => {
+  const segments = parseFormattedCardText(text);
+  let cursorY = y;
+
+  segments.forEach((segment, segmentIndex) => {
+    if (segmentIndex > 0 && segment.paragraphBreak) {
+      cursorY += lineHeight * paragraphGapLines;
+    }
+
+    ctx.font = segment.bold ? boldFont : regularFont;
+    const lines = wrapTextLines(ctx, segment.text, maxWidth);
+    lines.forEach((line) => {
+      ctx.fillText(line, x, cursorY);
+      cursorY += lineHeight;
+    });
+  });
+
+  ctx.font = regularFont;
 };
 
 const TWO_PI = Math.PI * 2;
@@ -1647,8 +1734,19 @@ export function IntelligensTunnelSite() {
 
         // Description
         ctx.fillStyle = "rgba(220,230,240,0.9)";
-        ctx.font = "400 32px 'Helvetica Neue', Helvetica, Arial, sans-serif";
-        drawWrappedText(ctx, description, 60, 230, 900, 42);
+        const descriptionFont = "400 32px 'Helvetica Neue', Helvetica, Arial, sans-serif";
+        const descriptionBoldFont = "700 32px 'Helvetica Neue', Helvetica, Arial, sans-serif";
+        ctx.font = descriptionFont;
+        drawFormattedCardText(
+          ctx,
+          description,
+          60,
+          230,
+          900,
+          42,
+          descriptionFont,
+          descriptionBoldFont,
+        );
 
         const texture = new THREE.CanvasTexture(canvas);
         texture.colorSpace = THREE.SRGBColorSpace;
