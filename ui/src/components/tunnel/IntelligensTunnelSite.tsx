@@ -1,4 +1,5 @@
 import {
+  type FormEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -1355,6 +1356,9 @@ export function IntelligensTunnelSite() {
   const [outsideNewsLoading, setOutsideNewsLoading] = useState(false);
   const [outsideNewsError, setOutsideNewsError] = useState("");
   const [videoRoomIndex, setVideoRoomIndex] = useState(0);
+  const [signatureContactName, setSignatureContactName] = useState("");
+  const [signatureContactEmail, setSignatureContactEmail] = useState("");
+  const [signatureContactMessage, setSignatureContactMessage] = useState("");
   const [language, setLanguage] = useState<UiLanguage>(() => {
     if (typeof window === "undefined") return "nb";
     try {
@@ -1382,6 +1386,27 @@ export function IntelligensTunnelSite() {
   const onTunnelToggleClick = useCallback(() => {
     tunnelOutsideToggleRef.current?.();
   }, []);
+  const onSignatureContactSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const name = signatureContactName.trim();
+      const email = signatureContactEmail.trim();
+      const message = signatureContactMessage.trim();
+      if (!name || !email || !message) return;
+
+      const subject = language === "nb" ? "Kontakt fra Signaturer" : "Contact from Signatures";
+      const body = [
+        `${language === "nb" ? "Navn" : "Name"}: ${name}`,
+        `${language === "nb" ? "E-post" : "Email"}: ${email}`,
+        "",
+        `${language === "nb" ? "Melding" : "Message"}:`,
+        message,
+      ].join("\n");
+      const href = `mailto:lars@larscuzner.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = href;
+    },
+    [language, signatureContactEmail, signatureContactMessage, signatureContactName],
+  );
   const videoWheelAccumulatorRef = useRef(0);
   const videoWheelLastStepAtRef = useRef(0);
   const videoTouchStartXRef = useRef<number | null>(null);
@@ -3866,9 +3891,6 @@ export function IntelligensTunnelSite() {
 
       <div className="absolute right-4 top-4 z-[60] flex flex-col items-end gap-2">
         <div className="flex items-center gap-2 rounded-full border border-black/20 bg-white/90 px-2 py-1 shadow-[0_6px_18px_rgba(0,0,0,0.12)] backdrop-blur">
-          <span className="px-2 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-[#5a5a5a]">
-            {uiCopy.languageLabel}
-          </span>
           <button
             type="button"
             onClick={() => setLanguage("nb")}
@@ -3896,9 +3918,7 @@ export function IntelligensTunnelSite() {
           className="pointer-events-auto rounded-full border border-[#f7d58b]/90 bg-[linear-gradient(180deg,#f9db8d_0%,#d79a3a_52%,#bc7d1f_100%)] px-4 py-2 text-[0.56rem] font-semibold uppercase tracking-[0.16em] text-[#241606] shadow-[0_8px_18px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,245,207,0.82)] transition hover:brightness-105 active:translate-y-[1px]"
           aria-pressed={outsideMenuVisible}
         >
-          {outsideMenuVisible
-            ? (language === "nb" ? "Gå inn i tunnelen" : "Enter tunnel")
-            : (language === "nb" ? "Gå ut av tunnelen" : "Leave tunnel")}
+          {outsideMenuVisible ? "get in" : "get out"}
         </button>
       </div>
 
@@ -4006,7 +4026,6 @@ export function IntelligensTunnelSite() {
                     <h2 className="text-xl font-semibold uppercase tracking-[0.2em] text-[#e7f1ff] md:text-2xl">
                       {uiCopy.outsideVideosTitle}
                     </h2>
-                    <p className="mt-2 text-sm text-[#b8cbe6] md:text-base">{uiCopy.outsideVideosBody}</p>
                   </>
                 ) : null}
                 {outsideSection === "signatures" ? (
@@ -4014,7 +4033,6 @@ export function IntelligensTunnelSite() {
                     <h2 className="text-xl font-semibold uppercase tracking-[0.2em] text-[#e7f1ff] md:text-2xl">
                       {uiCopy.outsideSignaturesTitle}
                     </h2>
-                    <p className="mt-2 max-w-3xl text-sm text-[#b8cbe6] md:text-base">{uiCopy.outsideSignaturesBody}</p>
                   </>
                 ) : null}
                 {outsideSection === "news" ? (
@@ -4028,13 +4046,58 @@ export function IntelligensTunnelSite() {
               </div>
 
               {outsideSection === "signatures" ? (
-                <div className="absolute inset-x-4 bottom-14 top-[15.5rem] mx-auto flex w-full max-w-6xl items-start justify-start md:inset-x-8 md:top-64">
-                  <a
-                    href="mailto:lars@larscuzner.com?subject=Engasjement%20i%20Intelligenspartiet"
-                    className="rounded-xl border border-[#8fb5e8]/40 bg-[#0c1629]/78 px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#dbe9ff] transition hover:bg-[#12233f]"
+                <div className="absolute inset-x-4 bottom-14 top-[15.5rem] mx-auto w-full max-w-6xl md:inset-x-8 md:top-64">
+                  <form
+                    onSubmit={onSignatureContactSubmit}
+                    className="max-w-2xl rounded-2xl border border-[#8fb5e8]/38 bg-[#0b1629]/82 p-4 shadow-[0_16px_40px_rgba(0,0,0,0.42)] md:p-6"
                   >
-                    {uiCopy.outsideSignaturesContact}: lars@larscuzner.com
-                  </a>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <label className="block">
+                        <span className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[#98b7e5]">
+                          {language === "nb" ? "Navn" : "Name"}
+                        </span>
+                        <input
+                          type="text"
+                          required
+                          autoComplete="name"
+                          value={signatureContactName}
+                          onChange={(event) => setSignatureContactName(event.target.value)}
+                          className="mt-1 w-full rounded-lg border border-[#86a8d8]/30 bg-[#071022]/85 px-3 py-2 text-sm text-[#e9f1ff] outline-none ring-[#95bbf3]/60 transition focus:ring-2"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[#98b7e5]">
+                          {language === "nb" ? "E-post" : "Email"}
+                        </span>
+                        <input
+                          type="email"
+                          required
+                          autoComplete="email"
+                          value={signatureContactEmail}
+                          onChange={(event) => setSignatureContactEmail(event.target.value)}
+                          className="mt-1 w-full rounded-lg border border-[#86a8d8]/30 bg-[#071022]/85 px-3 py-2 text-sm text-[#e9f1ff] outline-none ring-[#95bbf3]/60 transition focus:ring-2"
+                        />
+                      </label>
+                    </div>
+                    <label className="mt-3 block">
+                      <span className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[#98b7e5]">
+                        {language === "nb" ? "Melding" : "Message"}
+                      </span>
+                      <textarea
+                        required
+                        rows={5}
+                        value={signatureContactMessage}
+                        onChange={(event) => setSignatureContactMessage(event.target.value)}
+                        className="mt-1 w-full resize-y rounded-lg border border-[#86a8d8]/30 bg-[#071022]/85 px-3 py-2 text-sm text-[#e9f1ff] outline-none ring-[#95bbf3]/60 transition focus:ring-2"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      className="mt-4 rounded-full border border-[#8fb5e8]/55 bg-[#122742]/85 px-5 py-2 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[#e4efff] transition hover:bg-[#17365a]"
+                    >
+                      {language === "nb" ? "Send melding" : "Send message"}
+                    </button>
+                  </form>
                 </div>
               ) : null}
 
@@ -4098,9 +4161,6 @@ export function IntelligensTunnelSite() {
                     <div className="pointer-events-none absolute inset-0 rounded-[2rem] shadow-[inset_0_0_90px_rgba(0,0,0,0.66)]" />
                     <p className="absolute left-1/2 top-1 -translate-x-1/2 text-[0.62rem] font-semibold uppercase tracking-[0.15em] text-[#99bae5]">
                       {videoRoomIndex + 1} / {HEX_VIDEO_ROOM_SOURCES.length}
-                    </p>
-                    <p className="absolute left-1/2 top-7 -translate-x-1/2 text-[0.57rem] font-semibold uppercase tracking-[0.14em] text-[#88a9d5]/90">
-                      {language === "nb" ? "Scroll eller sveip sideveis" : "Scroll or swipe sideways"}
                     </p>
                     <div className="absolute left-1/2 top-1/2 h-[1.05rem] w-[1.05rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#d9e8ff]/95 shadow-[0_0_18px_rgba(140,185,255,0.72)]" />
                     <div
