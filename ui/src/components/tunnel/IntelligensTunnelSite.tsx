@@ -97,6 +97,20 @@ type AiNewsItem = {
   published: boolean;
 };
 
+type CursorTrailPoint = {
+  x: number;
+  y: number;
+  t: number;
+};
+
+type CursorTrailRenderState = {
+  tailPath: string;
+  headPath: string;
+  headX: number;
+  headY: number;
+  visible: boolean;
+};
+
 type RuntimePanel = {
   meta: UiPanel;
   progress: number;
@@ -395,6 +409,39 @@ const HEX_VIDEO_FLOOR_CEILING_OFFSET_REM = HEX_VIDEO_WALL_HEIGHT_REM * 0.56;
 const VIDEO_ROOM_STEP_ANGLE = 60;
 const VIDEO_ROOM_WHEEL_THRESHOLD = 40;
 const VIDEO_ROOM_SCROLL_COOLDOWN_MS = 220;
+
+const CURSOR_TRAIL_LIFETIME_MS = 360;
+const CURSOR_HEAD_WINDOW_MS = 105;
+const CURSOR_MIN_POINT_DISTANCE_PX = 0.75;
+const CURSOR_TRAIL_MAX_POINTS = 96;
+
+const EMPTY_CURSOR_TRAIL_STATE: CursorTrailRenderState = {
+  tailPath: "",
+  headPath: "",
+  headX: 0,
+  headY: 0,
+  visible: false,
+};
+
+const buildSmoothPath = (points: CursorTrailPoint[]) => {
+  if (points.length < 2) return "";
+  if (points.length === 2) {
+    return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+  }
+
+  let path = `M ${points[0].x} ${points[0].y}`;
+  for (let index = 1; index < points.length - 1; index += 1) {
+    const current = points[index];
+    const next = points[index + 1];
+    const midX = (current.x + next.x) / 2;
+    const midY = (current.y + next.y) / 2;
+    path += ` Q ${current.x} ${current.y} ${midX} ${midY}`;
+  }
+
+  const beforeLast = points[points.length - 2];
+  const last = points[points.length - 1];
+  return `${path} Q ${beforeLast.x} ${beforeLast.y} ${last.x} ${last.y}`;
+};
 
 const getCurvePoints = (THREE: any) => {
   const base = [
@@ -1031,6 +1078,220 @@ const sampleVideoLighting = (
   const luminance = r * 0.2126 + g * 0.7152 + b * 0.0722;
   return { color: new THREE.Color(r, g, b), luminance };
 };
+
+function CursorCometTrail() {
+  const pointsRef = useRef<CursorTrailPoint[]>([]);
+  const animationFrameRef = useRef<number | null>(null);
+  const [enabled, setEnabled] = useState(false);
+  const [viewport, setViewport] = useState({ width: 1, height: 1 });
+  const [trailState, setTrailState] = useState<CursorTrailRenderState>(EMPTY_CURSOR_TRAIL_STATE);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const finePointerQuery = window.matchMedia("(pointer: fine)");
+    const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
+
+    const evaluateCapability = () => {
+      setEnabled(!reducedMotionQuery.matches && finePointerQuery.matches && !coarsePointerQuery.matches);
+    };
+
+    const onResize = () => {
+      setViewport({
+        width: Math.max(1, window.innerWidth),
+        height: Math.max(1, window.innerHeight),
+      });
+    };
+
+    const onMediaChange = () => {
+      evaluateCapability();
+    };
+
+    const bindMediaQuery = (query: MediaQueryList, callback: () => void) => {
+      if (typeof query.addEventListener === "function") {
+        query.addEventListener("change", callback);
+        return () => query.removeEventListener("change", callback);
+      }
+
+      query.addListener(callback);
+      return () => query.removeListener(callback);
+    };
+
+    evaluateCapability();
+    onResize();
+
+    const unbindReducedMotion = bindMediaQuery(reducedMotionQuery, onMediaChange);
+    const unbindFinePointer = bindMediaQuery(finePointerQuery, onMediaChange);
+    const unbindCoarsePointer = bindMediaQuery(coarsePointerQuery, onMediaChange);
+    window.addEventListener("resize", onResize, { passive: true });
+
+    return () => {
+      unbindReducedMotion();
+      unbindFinePointer();
+      unbindCoarsePointer();
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!enabled || typeof window === "undefined") {
+      pointsRef.current = [];
+      setTrailState(EMPTY_CURSOR_TRAIL_STATE);
+      return undefined;
+    }
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse" && event.pointerType !== "pen") return;
+
+      const nextPoint: CursorTrailPoint = {
+        x: event.clientX,
+        y: event.clientY,
+        t: performance.now(),
+      };
+
+      const points = pointsRef.current;
+      const lastPoint = points[points.length - 1];
+      if (lastPoint) {
+        const dx = nextPoint.x - lastPoint.x;
+        const dy = nextPoint.y - lastPoint.y;
+        const distance = Math.hypot(dx, dy);
+        if (distance < CURSOR_MIN_POINT_DISTANCE_PX) return;
+      }
+
+      points.push(nextPoint);
+      if (points.length > CURSOR_TRAIL_MAX_POINTS) {
+        points.splice(0, points.length - CURSOR_TRAIL_MAX_POINTS);
+      }
+    };
+
+    const tick = () => {
+      const now = performance.now();
+      const cutoff = now - CURSOR_TRAIL_LIFETIME_MS;
+      const points = pointsRef.current;
+
+      let trimCount = 0;
+      while (trimCount < points.length && points[trimCount].t < cutoff) {
+        trimCount += 1;
+      }
+      if (trimCount > 0) {
+        points.splice(0, trimCount);
+      }
+
+      if (points.length < 2) {
+        setTrailState((previous) => (previous.visible ? EMPTY_CURSOR_TRAIL_STATE : previous));
+      } else {
+        const tailPath = buildSmoothPath(points);
+        const headCutoff = now - CURSOR_HEAD_WINDOW_MS;
+
+        let headStartIndex = points.length - 1;
+        while (headStartIndex > 0 && points[headStartIndex - 1].t >= headCutoff) {
+          headStartIndex -= 1;
+        }
+
+        let headPoints = points.slice(headStartIndex);
+        if (headPoints.length < 2) {
+          headPoints = points.slice(-2);
+        }
+
+        const headPath = buildSmoothPath(headPoints);
+        const headPoint = headPoints[headPoints.length - 1] ?? points[points.length - 1];
+
+        setTrailState((previous) => {
+          if (
+            previous.visible &&
+            previous.tailPath === tailPath &&
+            previous.headPath === headPath &&
+            previous.headX === headPoint.x &&
+            previous.headY === headPoint.y
+          ) {
+            return previous;
+          }
+          return {
+            tailPath,
+            headPath,
+            headX: headPoint.x,
+            headY: headPoint.y,
+            visible: true,
+          };
+        });
+      }
+
+      animationFrameRef.current = window.requestAnimationFrame(tick);
+    };
+
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    animationFrameRef.current = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      pointsRef.current = [];
+      setTrailState(EMPTY_CURSOR_TRAIL_STATE);
+    };
+  }, [enabled]);
+
+  if (!enabled) return null;
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-50 h-full w-full"
+      viewBox={`0 0 ${viewport.width} ${viewport.height}`}
+      preserveAspectRatio="none"
+    >
+      <defs>
+        <linearGradient id="cursor-head-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#7ad7ff" stopOpacity="0.2" />
+          <stop offset="100%" stopColor="#dff6ff" stopOpacity="0.95" />
+        </linearGradient>
+        <filter id="cursor-trail-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="1.6" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      {trailState.visible ? (
+        <>
+          <path
+            d={trailState.tailPath}
+            fill="none"
+            stroke="#7ad7ff"
+            strokeOpacity="0.26"
+            strokeWidth="8.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            filter="url(#cursor-trail-glow)"
+          />
+          <path
+            d={trailState.headPath}
+            fill="none"
+            stroke="url(#cursor-head-gradient)"
+            strokeOpacity="0.98"
+            strokeWidth="3.35"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            filter="url(#cursor-trail-glow)"
+          />
+          <circle
+            cx={trailState.headX}
+            cy={trailState.headY}
+            r="2.4"
+            fill="#e8f9ff"
+            fillOpacity="0.9"
+            filter="url(#cursor-trail-glow)"
+          />
+        </>
+      ) : null}
+    </svg>
+  );
+}
 
 export function IntelligensTunnelSite() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -3417,6 +3678,7 @@ export function IntelligensTunnelSite() {
   return (
     <div className="relative h-[100svh] w-full overflow-hidden overscroll-none touch-none bg-[#f7f7f4] text-[#141414]">
       <div ref={containerRef} className="absolute inset-0" />
+      <CursorCometTrail />
 
       <div className="absolute right-4 top-4 z-30 flex items-center gap-2 rounded-full border border-black/20 bg-white/90 px-2 py-1 shadow-[0_6px_18px_rgba(0,0,0,0.12)] backdrop-blur">
         <span className="px-2 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-[#5a5a5a]">
