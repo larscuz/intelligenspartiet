@@ -4388,8 +4388,8 @@ export function IntelligensTunnelSite() {
       ) : null}
 
       {mobileGlyphPopup && !outsideMenuVisible ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-50 px-3 md:hidden">
-          <section className="pointer-events-auto mx-auto w-full max-w-[30rem] rounded-2xl border border-[#7fd9ff]/28 bg-[#061324]/92 px-4 py-3 text-[#e6f4ff] shadow-[0_16px_42px_rgba(0,0,0,0.58)] backdrop-blur">
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center px-4 md:hidden">
+          <section className="pointer-events-auto w-full max-w-[30rem] rounded-2xl border border-[#7fd9ff]/28 bg-[#061324]/94 px-4 py-3 text-[#e6f4ff] shadow-[0_22px_56px_rgba(0,0,0,0.62)] backdrop-blur">
             <div className="flex items-start justify-between gap-3">
               <h2 className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[#9edfff]">
                 {mobileGlyphPopup.title}
@@ -4402,7 +4402,7 @@ export function IntelligensTunnelSite() {
                 {language === "nb" ? "Lukk" : "Close"}
               </button>
             </div>
-            <p className="mt-2 max-h-[40svh] overflow-y-auto whitespace-pre-line text-[0.83rem] leading-relaxed text-[#d9e7f4]">
+            <p className="mt-2 max-h-[52svh] overflow-y-auto whitespace-pre-line text-[0.83rem] leading-relaxed text-[#d9e7f4]">
               {mobileGlyphPopup.body}
             </p>
           </section>
