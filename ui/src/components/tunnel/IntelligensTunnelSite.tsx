@@ -733,6 +733,22 @@ const HEX_VIDEO_WALL_OVERLAP_REM = 0.56;
 const HEX_VIDEO_VIEWER_PUSH_REM = 31.2;
 const HEX_VIDEO_FLOOR_CEILING_SIZE_REM = HEX_VIDEO_ROOM_APOTHEM_REM * 2.62;
 const HEX_VIDEO_FLOOR_CEILING_OFFSET_REM = HEX_VIDEO_WALL_HEIGHT_REM * 0.56;
+const HEX_VIDEO_OUTER_WALL_WIDTH_REM = HEX_VIDEO_WALL_WIDTH_REM + 5.4;
+const HEX_VIDEO_OUTER_WALL_HEIGHT_REM = HEX_VIDEO_WALL_HEIGHT_REM + 4.4;
+const HEX_VIDEO_OUTER_ROOM_APOTHEM_REM = HEX_VIDEO_ROOM_APOTHEM_REM + 0.22;
+const HEX_VIDEO_OUTER_WALL_YAW_OFFSET_DEG = 0;
+const HEX_VIDEO_OUTER_CORNER_RADIUS_REM = HEX_VIDEO_ROOM_APOTHEM_REM + 0.72;
+const HEX_VIDEO_OUTER_CORNER_POST_WIDTH_REM = 0.72;
+const FILM_ROOM_TRANSITION_DURATION = 1.35;
+const FILM_ROOM_WALL_HEIGHT = 18;
+const FILM_ROOM_WALL_WIDTH = FILM_ROOM_WALL_HEIGHT * (16 / 9);
+const FILM_ROOM_APOTHEM = (FILM_ROOM_WALL_WIDTH * Math.sqrt(3)) / 2;
+const FILM_ROOM_FLOOR_RADIUS = FILM_ROOM_APOTHEM * 1.06;
+const FILM_ROOM_CAMERA_DISTANCE = 17;
+const FILM_ROOM_CAMERA_HEIGHT = 2.8;
+const FILM_ROOM_WHEEL_ORBIT_SENSITIVITY = 0.00185;
+const FILM_ROOM_TOUCH_ORBIT_SENSITIVITY = 0.0062;
+const FILM_ROOM_TOUCH_PITCH_SENSITIVITY = 0.0036;
 const VIDEO_ROOM_STEP_ANGLE = 60;
 const VIDEO_ROOM_WHEEL_THRESHOLD = 40;
 const VIDEO_ROOM_SCROLL_COOLDOWN_MS = 220;
@@ -1658,6 +1674,9 @@ export function IntelligensTunnelSite() {
   const initialLandingAppliedRef = useRef(false);
   const videoRoomRefs = useRef<Array<HTMLVideoElement | null>>([]);
   const tunnelOutsideToggleRef = useRef<(() => void) | null>(null);
+  const outsideFilmRoomEnterRef = useRef<(() => void) | null>(null);
+  const outsideFilmRoomExitRef = useRef<(() => void) | null>(null);
+  const outsideFilmMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobileGlyphPopupPanelIdRef = useRef<string | null>(null);
 
   // Lock body scroll so the page never bounces behind the canvas
@@ -1679,6 +1698,7 @@ export function IntelligensTunnelSite() {
   const [panelsLoadError, setPanelsLoadError] = useState(false);
   const [outsideMenuVisible, setOutsideMenuVisible] = useState(false);
   const [outsideSection, setOutsideSection] = useState<OutsideSection>("menu");
+  const [outsideFilmRoomActive, setOutsideFilmRoomActive] = useState(false);
   const [outsideNewsItems, setOutsideNewsItems] = useState<AiNewsItem[]>([]);
   const [outsideNewsLoading, setOutsideNewsLoading] = useState(false);
   const [outsideNewsError, setOutsideNewsError] = useState("");
@@ -1774,6 +1794,12 @@ export function IntelligensTunnelSite() {
   const onTunnelToggleClick = useCallback(() => {
     tunnelOutsideToggleRef.current?.();
   }, []);
+  const onOutsideFilmRoomEnter = useCallback(() => {
+    outsideFilmRoomEnterRef.current?.();
+  }, []);
+  const onOutsideFilmRoomExit = useCallback(() => {
+    outsideFilmRoomExitRef.current?.();
+  }, []);
   const closeMobileGlyphPopup = useCallback(() => {
     mobileGlyphPopupPanelIdRef.current = null;
     setMobileGlyphPopup(null);
@@ -1849,6 +1875,12 @@ export function IntelligensTunnelSite() {
   useEffect(() => {
     if (!outsideMenuVisible) {
       setOutsideSection("menu");
+    }
+  }, [outsideMenuVisible]);
+
+  useEffect(() => {
+    if (!outsideMenuVisible) {
+      setOutsideFilmRoomActive(false);
     }
   }, [outsideMenuVisible]);
 
@@ -2264,7 +2296,10 @@ export function IntelligensTunnelSite() {
     const mountNode = containerRef.current;
     if (!mountNode) return;
     tunnelOutsideToggleRef.current = null;
+    outsideFilmRoomEnterRef.current = null;
+    outsideFilmRoomExitRef.current = null;
     setOutsideMenuVisible(false);
+    setOutsideFilmRoomActive(false);
     closeMobileGlyphPopup();
 
     let isDisposed = false;
@@ -3564,6 +3599,15 @@ export function IntelligensTunnelSite() {
       // ======= EXIT GLYPH =======
       let isOutside = false;
       let outsideT = 0; // 0 = inside tunnel, 1 = fully outside
+      let filmRoomT = 0; // 0 = outside orbit, 1 = fully inside film room
+      let filmRoomTarget = 0;
+      let filmRoomOrbitYaw = 0;
+      let filmRoomOrbitPitch = 0.08;
+      let filmRoomZoomOffset = 0;
+      let filmRoomDragActive = false;
+      let filmRoomLastPointerX = 0;
+      let filmRoomLastPointerY = 0;
+      let filmRoomUiActive = false;
       let outsideOrbitYaw = 0;
       let outsideOrbitPitch = 0;
       let outsideOrbitRoll = 0;
@@ -3582,6 +3626,12 @@ export function IntelligensTunnelSite() {
       const mouseCurrent = { x: 0, y: 0 };
       const exitCameraTarget = new THREE.Vector3(); // computed once on transition start
       const exitLookTarget = new THREE.Vector3();   // center of tunnel
+
+      const setFilmRoomUiActive = (nextActive: boolean) => {
+        if (filmRoomUiActive === nextActive) return;
+        filmRoomUiActive = nextActive;
+        setOutsideFilmRoomActive(nextActive);
+      };
 
       // Compute tunnel center (average of curve sample points)
       const tunnelCenter = new THREE.Vector3();
@@ -3607,10 +3657,17 @@ export function IntelligensTunnelSite() {
         isOutside = nextOutside;
         outsideDragActive = false;
         outsideDragRollMode = false;
+        filmRoomDragActive = false;
         outsidePendingEnterProgress = null;
         outsidePendingEnterMoved = false;
         setOutsideMenuVisible(nextOutside);
         if (nextOutside) {
+          filmRoomT = 0;
+          filmRoomTarget = 0;
+          filmRoomOrbitYaw = 0;
+          filmRoomOrbitPitch = 0.08;
+          filmRoomZoomOffset = 0;
+          setFilmRoomUiActive(false);
           outsideUserAdjustedView = false;
           resetOutsidePointerDrift = true;
           outsideOrbitYaw = OUTSIDE_DEFAULT_ORBIT_YAW;
@@ -3620,6 +3677,8 @@ export function IntelligensTunnelSite() {
           updateOutsideCameraTargets();
           collapseGlyphCards();
           closeMobileGlyphPopup();
+        } else {
+          setFilmRoomUiActive(false);
         }
       };
 
@@ -3708,6 +3767,203 @@ export function IntelligensTunnelSite() {
       reentryMarkerLight.position.copy(reentryAnchor);
       scene.add(reentryMarkerLight);
 
+      const filmRoomCenter = tunnelCenter.clone().add(new THREE.Vector3(-178, 42, 118));
+      const filmRoomGroup = new THREE.Group();
+      filmRoomGroup.position.copy(filmRoomCenter);
+      filmRoomGroup.visible = false;
+      scene.add(filmRoomGroup);
+
+      const filmRoomShellMaterial = new THREE.MeshStandardMaterial({
+        color: 0x2f343b,
+        roughness: 0.88,
+        metalness: 0.06,
+      });
+      const filmRoomFrameMaterial = new THREE.MeshStandardMaterial({
+        color: 0x5a626b,
+        roughness: 0.54,
+        metalness: 0.14,
+      });
+      const filmRoomFloorMaterial = new THREE.MeshStandardMaterial({
+        color: 0x1f2329,
+        roughness: 0.92,
+        metalness: 0.04,
+      });
+      dynamicMaterials.push(filmRoomShellMaterial, filmRoomFrameMaterial, filmRoomFloorMaterial);
+
+      const filmRoomOuterWallGeometry = new THREE.PlaneGeometry(FILM_ROOM_WALL_WIDTH + 2.6, FILM_ROOM_WALL_HEIGHT + 2.4);
+      const filmRoomInnerWallGeometry = new THREE.PlaneGeometry(FILM_ROOM_WALL_WIDTH, FILM_ROOM_WALL_HEIGHT);
+      const filmRoomFloorGeometry = new THREE.CircleGeometry(FILM_ROOM_FLOOR_RADIUS, 6);
+      const filmRoomCeilingGeometry = new THREE.CircleGeometry(FILM_ROOM_FLOOR_RADIUS, 6);
+      const filmRoomCornerGeometry = new THREE.CylinderGeometry(0.2, 0.2, FILM_ROOM_WALL_HEIGHT + 2.8, 10);
+      dynamicGeometries.push(
+        filmRoomOuterWallGeometry,
+        filmRoomInnerWallGeometry,
+        filmRoomFloorGeometry,
+        filmRoomCeilingGeometry,
+        filmRoomCornerGeometry,
+      );
+
+      const filmRoomFloorMesh = new THREE.Mesh(filmRoomFloorGeometry, filmRoomFloorMaterial);
+      filmRoomFloorMesh.rotation.x = -Math.PI * 0.5;
+      filmRoomFloorMesh.position.y = -FILM_ROOM_WALL_HEIGHT * 0.52;
+      filmRoomFloorMesh.receiveShadow = true;
+      filmRoomGroup.add(filmRoomFloorMesh);
+
+      const filmRoomCeilingMesh = new THREE.Mesh(filmRoomCeilingGeometry, filmRoomShellMaterial);
+      filmRoomCeilingMesh.rotation.x = Math.PI * 0.5;
+      filmRoomCeilingMesh.position.y = FILM_ROOM_WALL_HEIGHT * 0.52;
+      filmRoomCeilingMesh.receiveShadow = true;
+      filmRoomGroup.add(filmRoomCeilingMesh);
+
+      const filmRoomTopLight = new THREE.PointLight(0xf3ebde, 0, 96, 2);
+      filmRoomTopLight.position.set(0, FILM_ROOM_WALL_HEIGHT * 0.34, 0);
+      filmRoomGroup.add(filmRoomTopLight);
+
+      const filmRoomFillLight = new THREE.PointLight(0xa9bbd2, 0, 74, 2);
+      filmRoomFillLight.position.set(0, -FILM_ROOM_WALL_HEIGHT * 0.1, FILM_ROOM_APOTHEM * 0.3);
+      filmRoomGroup.add(filmRoomFillLight);
+      const filmRoomFallbackVideo = HEX_VIDEO_ROOM_SOURCES[0]?.video ?? "";
+
+      for (let sideIndex = 0; sideIndex < 6; sideIndex += 1) {
+        const yaw = (sideIndex * Math.PI) / 3;
+        const outerRadius = FILM_ROOM_APOTHEM + 1.0;
+        const innerRadius = FILM_ROOM_APOTHEM - 0.18;
+
+        const outerWall = new THREE.Mesh(filmRoomOuterWallGeometry, filmRoomShellMaterial);
+        outerWall.position.set(-Math.sin(yaw) * outerRadius, 0, -Math.cos(yaw) * outerRadius);
+        outerWall.rotation.y = yaw;
+        outerWall.castShadow = true;
+        outerWall.receiveShadow = true;
+        filmRoomGroup.add(outerWall);
+
+        const source = HEX_VIDEO_ROOM_SOURCES[sideIndex % HEX_VIDEO_ROOM_SOURCES.length];
+        const videoNode = document.createElement("video");
+        videoNode.src = source.video;
+        videoNode.poster = source.poster;
+        videoNode.autoplay = true;
+        videoNode.loop = true;
+        videoNode.muted = true;
+        videoNode.playsInline = true;
+        videoNode.preload = "metadata";
+        videoNode.crossOrigin = "anonymous";
+        videoNode.setAttribute("playsinline", "true");
+        videoNode.setAttribute("webkit-playsinline", "true");
+        runtimeVideos.push(videoNode);
+
+        let fallbackApplied = false;
+        const activateFallbackVideo = () => {
+          if (fallbackApplied || !filmRoomFallbackVideo || videoNode.src === filmRoomFallbackVideo) return;
+          fallbackApplied = true;
+          videoNode.src = filmRoomFallbackVideo;
+          videoNode.load();
+          requestVideoPlay(videoNode);
+        };
+        const onFilmVideoReady = () => {
+          requestVideoPlay(videoNode);
+        };
+        const onFilmVideoError = () => {
+          activateFallbackVideo();
+        };
+        videoNode.addEventListener("loadeddata", onFilmVideoReady);
+        videoNode.addEventListener("canplay", onFilmVideoReady);
+        videoNode.addEventListener("error", onFilmVideoError);
+        videoCleanupFns.push(() => {
+          videoNode.removeEventListener("loadeddata", onFilmVideoReady);
+          videoNode.removeEventListener("canplay", onFilmVideoReady);
+          videoNode.removeEventListener("error", onFilmVideoError);
+        });
+
+        const videoTexture = new THREE.VideoTexture(videoNode);
+        videoTexture.colorSpace = THREE.SRGBColorSpace;
+        videoTexture.minFilter = THREE.LinearFilter;
+        videoTexture.magFilter = THREE.LinearFilter;
+        videoTexture.generateMipmaps = false;
+        dynamicTextures.push(videoTexture);
+        requestVideoPlay(videoNode);
+
+        const innerWallMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          map: videoTexture,
+          side: THREE.DoubleSide,
+          toneMapped: false,
+        });
+        dynamicMaterials.push(innerWallMaterial);
+
+        const innerWall = new THREE.Mesh(filmRoomInnerWallGeometry, innerWallMaterial);
+        innerWall.position.set(-Math.sin(yaw) * innerRadius, 0, -Math.cos(yaw) * innerRadius);
+        innerWall.rotation.y = yaw;
+        innerWall.castShadow = false;
+        innerWall.receiveShadow = true;
+        filmRoomGroup.add(innerWall);
+      }
+
+      for (let cornerIndex = 0; cornerIndex < 6; cornerIndex += 1) {
+        const yaw = (cornerIndex * Math.PI) / 3 + Math.PI / 6;
+        const cornerRadius = FILM_ROOM_APOTHEM + 1.56;
+        const cornerPost = new THREE.Mesh(filmRoomCornerGeometry, filmRoomFrameMaterial);
+        cornerPost.position.set(-Math.sin(yaw) * cornerRadius, 0, -Math.cos(yaw) * cornerRadius);
+        cornerPost.castShadow = true;
+        cornerPost.receiveShadow = true;
+        filmRoomGroup.add(cornerPost);
+      }
+
+      const filmRoomExitGeometry = new THREE.TorusGeometry(2.15, 0.2, 12, 48);
+      dynamicGeometries.push(filmRoomExitGeometry);
+      const filmRoomExitMaterial = new THREE.MeshStandardMaterial({
+        color: 0xe6d9c3,
+        roughness: 0.46,
+        metalness: 0.24,
+      });
+      dynamicMaterials.push(filmRoomExitMaterial);
+      const filmRoomExitMesh = new THREE.Mesh(filmRoomExitGeometry, filmRoomExitMaterial);
+      filmRoomExitMesh.position.copy(
+        filmRoomCenter.clone().add(new THREE.Vector3(0, -FILM_ROOM_WALL_HEIGHT * 0.22, FILM_ROOM_APOTHEM - 4.4)),
+      );
+      filmRoomExitMesh.rotation.x = Math.PI * 0.5;
+      filmRoomExitMesh.userData = { isFilmRoomExit: true };
+      panelObjects.push(filmRoomExitMesh);
+      scene.add(filmRoomExitMesh);
+
+      const filmRoomExitLight = new THREE.PointLight(0xf2d6ad, 0, 26, 2);
+      filmRoomExitLight.position.copy(filmRoomExitMesh.position).add(new THREE.Vector3(0, 1.2, 0));
+      scene.add(filmRoomExitLight);
+
+      const filmRoomHitGeometry = new THREE.CylinderGeometry(
+        FILM_ROOM_FLOOR_RADIUS * 1.08,
+        FILM_ROOM_FLOOR_RADIUS * 1.08,
+        FILM_ROOM_WALL_HEIGHT * 1.2,
+        6,
+      );
+      dynamicGeometries.push(filmRoomHitGeometry);
+      const filmRoomHitMaterial = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide });
+      dynamicMaterials.push(filmRoomHitMaterial);
+      const filmRoomHitMesh = new THREE.Mesh(filmRoomHitGeometry, filmRoomHitMaterial);
+      filmRoomHitMesh.userData = { isFilmRoomPortal: true };
+      panelObjects.push(filmRoomHitMesh);
+      scene.add(filmRoomHitMesh);
+
+      const beginFilmRoomEntry = () => {
+        if (!isOutside) return;
+        outsideDragActive = false;
+        outsideDragRollMode = false;
+        outsidePendingEnterProgress = null;
+        outsidePendingEnterMoved = false;
+        filmRoomDragActive = false;
+        filmRoomTarget = 1;
+        setOutsideSection("menu");
+        setFilmRoomUiActive(true);
+        runtimeVideos.forEach(requestVideoPlay);
+      };
+
+      const beginFilmRoomExit = () => {
+        if (!isOutside) return;
+        filmRoomTarget = 0;
+        filmRoomDragActive = false;
+      };
+
+      outsideFilmRoomEnterRef.current = beginFilmRoomEntry;
+      outsideFilmRoomExitRef.current = beginFilmRoomExit;
+
       const raycaster = new THREE.Raycaster();
       const pointer = new THREE.Vector2();
 
@@ -3725,6 +3981,14 @@ export function IntelligensTunnelSite() {
         if (isOutside) {
           if (hits.length > 0) {
             const hitObj = hits[0].object;
+            if (hitObj.userData.isFilmRoomPortal) {
+              beginFilmRoomEntry();
+              return;
+            }
+            if (hitObj.userData.isFilmRoomExit) {
+              beginFilmRoomExit();
+              return;
+            }
             if (hitObj.userData.isReentryDot) {
               setOutsideView(false);
               return;
@@ -3735,6 +3999,13 @@ export function IntelligensTunnelSite() {
             }
           }
 
+          if (filmRoomT > 0.12) {
+            filmRoomDragActive = event.button === 0;
+            filmRoomLastPointerX = event.clientX;
+            filmRoomLastPointerY = event.clientY;
+            return;
+          }
+
           outsideDragActive = true;
           outsideDragRollMode = event.shiftKey || event.altKey || event.button === 2;
           outsidePendingEnterProgress = null;
@@ -3743,7 +4014,7 @@ export function IntelligensTunnelSite() {
           outsidePendingStartY = event.clientY;
 
           // Left-click on tunnel shell: enter at exact clicked route position.
-          if (!outsideDragRollMode && event.button === 0) {
+          if (!outsideDragRollMode && event.button === 0 && filmRoomT < 0.08) {
             const shellHits = raycaster.intersectObjects(outsideEnterMeshes, false);
             if (shellHits.length > 0) {
               outsidePendingEnterProgress = resolveProgressFromHit(shellHits[0]);
@@ -3799,6 +4070,20 @@ export function IntelligensTunnelSite() {
         mouseTarget.x = (x - 0.5) * 2;
         mouseTarget.y = (y - 0.5) * 2;
 
+        if (isOutside && filmRoomDragActive) {
+          const dx = event.clientX - filmRoomLastPointerX;
+          const dy = event.clientY - filmRoomLastPointerY;
+          filmRoomLastPointerX = event.clientX;
+          filmRoomLastPointerY = event.clientY;
+          filmRoomOrbitYaw += dx * 0.0042;
+          filmRoomOrbitPitch = THREE.MathUtils.clamp(
+            filmRoomOrbitPitch + dy * 0.0032,
+            -0.46,
+            0.42,
+          );
+          return;
+        }
+
         if (isOutside && outsideDragActive) {
           if (outsidePendingEnterProgress !== null && !outsidePendingEnterMoved) {
             const dragDistance = Math.hypot(
@@ -3843,6 +4128,7 @@ export function IntelligensTunnelSite() {
       const onPointerLeave = () => {
         mouseTarget.x = 0;
         mouseTarget.y = 0;
+        filmRoomDragActive = false;
         outsideDragActive = false;
         outsideDragRollMode = false;
         outsidePendingEnterProgress = null;
@@ -3855,6 +4141,7 @@ export function IntelligensTunnelSite() {
           currentProgressRef.current = outsidePendingEnterProgress;
           setOutsideView(false);
         }
+        filmRoomDragActive = false;
         outsideDragActive = false;
         outsideDragRollMode = false;
         outsidePendingEnterProgress = null;
@@ -3879,6 +4166,16 @@ export function IntelligensTunnelSite() {
       const onWheel = (event: WheelEvent) => {
         event.preventDefault();
         if (isOutside) {
+          if (filmRoomT > 0.12) {
+            const orbitDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+            filmRoomOrbitYaw += orbitDelta * FILM_ROOM_WHEEL_ORBIT_SENSITIVITY;
+            filmRoomOrbitPitch = THREE.MathUtils.clamp(
+              filmRoomOrbitPitch + event.deltaY * 0.00065,
+              -0.46,
+              0.42,
+            );
+            return;
+          }
           outsideUserAdjustedView = true;
           outsideOrbitYaw += event.deltaY * 0.0017;
           outsideZoomOffset = THREE.MathUtils.clamp(
@@ -3903,16 +4200,31 @@ export function IntelligensTunnelSite() {
       };
       window.addEventListener("keydown", onKeyDown);
 
+      let touchStartX = 0;
       let touchStartY = 0;
       const onTouchStart = (event: TouchEvent) => {
         runtimeVideos.forEach(requestVideoPlay);
+        touchStartX = event.touches[0]?.clientX ?? 0;
         touchStartY = event.touches[0]?.clientY ?? 0;
       };
       const onTouchMove = (event: TouchEvent) => {
         event.preventDefault();
+        const currentX = event.touches[0]?.clientX ?? touchStartX;
         const currentY = event.touches[0]?.clientY ?? touchStartY;
+        const deltaX = touchStartX - currentX;
         const deltaY = touchStartY - currentY;
         if (isOutside) {
+          if (filmRoomT > 0.12) {
+            filmRoomOrbitYaw += deltaX * FILM_ROOM_TOUCH_ORBIT_SENSITIVITY;
+            filmRoomOrbitPitch = THREE.MathUtils.clamp(
+              filmRoomOrbitPitch + deltaY * FILM_ROOM_TOUCH_PITCH_SENSITIVITY,
+              -0.46,
+              0.42,
+            );
+            touchStartX = currentX;
+            touchStartY = currentY;
+            return;
+          }
           outsideUserAdjustedView = true;
           outsideOrbitYaw += deltaY * 0.0021;
           outsideZoomOffset = THREE.MathUtils.clamp(
@@ -3920,12 +4232,14 @@ export function IntelligensTunnelSite() {
             -165,
             230,
           );
+          touchStartX = currentX;
           touchStartY = currentY;
           return;
         }
         targetProgressRef.current = wrap01(
           targetProgressRef.current + ROUTE_PROGRESS_DIRECTION * deltaY * 0.00011,
         );
+        touchStartX = currentX;
         touchStartY = currentY;
       };
       renderer.domElement.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -3944,6 +4258,7 @@ export function IntelligensTunnelSite() {
       const _tmpVec3A = new THREE.Vector3();
       const _tmpVec3B = new THREE.Vector3();
       const _tmpVec3C = new THREE.Vector3();
+      const _tmpPortalNdc = new THREE.Vector3();
       let previousActiveId = panelData.length > 0 ? panelData[0].id : "";
 
       const animate = () => {
@@ -4003,6 +4318,21 @@ export function IntelligensTunnelSite() {
         const easeOut = outsideT < 0.5
           ? 4 * outsideT * outsideT * outsideT
           : 1 - Math.pow(-2 * outsideT + 2, 3) / 2;
+        const filmTransitionSpeed = 1.0 / FILM_ROOM_TRANSITION_DURATION;
+        if (filmRoomTarget > filmRoomT) {
+          filmRoomT = Math.min(filmRoomTarget, filmRoomT + filmTransitionSpeed * dt);
+        } else if (filmRoomTarget < filmRoomT) {
+          filmRoomT = Math.max(filmRoomTarget, filmRoomT - filmTransitionSpeed * dt);
+        }
+        const filmRoomEase = filmRoomT < 0.5
+          ? 4 * filmRoomT * filmRoomT * filmRoomT
+          : 1 - Math.pow(-2 * filmRoomT + 2, 3) / 2;
+        if (filmRoomTarget === 0 && filmRoomT <= 0.001 && filmRoomUiActive) {
+          setFilmRoomUiActive(false);
+        }
+        if (filmRoomTarget > 0.01 && filmRoomT > 0.08) {
+          runtimeVideos.forEach(requestVideoPlay);
+        }
         if (isOutside && !outsideUserAdjustedView) {
           outsideOrbitYaw = OUTSIDE_DEFAULT_ORBIT_YAW;
           outsideOrbitPitch = OUTSIDE_DEFAULT_ORBIT_PITCH;
@@ -4067,6 +4397,66 @@ export function IntelligensTunnelSite() {
           .clone()
           .add(new THREE.Vector3(outsideMotionX * 0.11, outsideMotionY * 0.095, outsideMotionX * 0.085));
         const outsideRollQuat = new THREE.Quaternion();
+        const filmRoomSymbolVisibility = THREE.MathUtils.smoothstep(easeOut, 0.24, 0.96) * (1 - filmRoomEase);
+        const filmRoomVisible = isOutside && (filmRoomSymbolVisibility > 0.001 || filmRoomEase > 0.001 || filmRoomTarget > 0.001);
+        const filmRoomScale = THREE.MathUtils.lerp(0.22, 1, filmRoomEase);
+        filmRoomGroup.visible = filmRoomVisible;
+        filmRoomGroup.scale.setScalar(filmRoomScale);
+        filmRoomGroup.position.copy(filmRoomCenter).add(
+          new THREE.Vector3(0, Math.sin(elapsed * 0.72) * 0.9 * (1 - filmRoomEase), 0),
+        );
+        filmRoomGroup.rotation.y = elapsed * 0.18 * (1 - filmRoomEase);
+        filmRoomExitMesh.visible = filmRoomEase > 0.08;
+        filmRoomExitLight.intensity = THREE.MathUtils.lerp(0, isMobile ? 1.8 : 2.9, filmRoomEase);
+        const filmRoomVisibilityMul = filmRoomVisible ? 1 : 0;
+        filmRoomTopLight.intensity = THREE.MathUtils.lerp(
+          isMobile ? 0.34 : 0.58,
+          isMobile ? 2.6 : 4.8,
+          filmRoomEase,
+        ) * filmRoomVisibilityMul;
+        filmRoomFillLight.intensity = THREE.MathUtils.lerp(
+          isMobile ? 0.14 : 0.24,
+          isMobile ? 1.2 : 2.1,
+          filmRoomEase,
+        ) * filmRoomVisibilityMul;
+        filmRoomExitMesh.rotation.z = elapsed * 0.18;
+
+        const roomSymbolClickable = isOutside && filmRoomTarget < 0.01 && filmRoomSymbolVisibility > 0.08;
+        filmRoomHitMesh.visible = roomSymbolClickable;
+        filmRoomHitMesh.position.copy(filmRoomGroup.position);
+        filmRoomHitMesh.rotation.copy(filmRoomGroup.rotation);
+        filmRoomHitMesh.scale.setScalar(filmRoomScale);
+
+        const outsideFilmMenuButton = outsideFilmMenuButtonRef.current;
+        if (outsideFilmMenuButton) {
+          const showFilmMenuButton = isOutside && filmRoomTarget < 0.01 && filmRoomSymbolVisibility > 0.06;
+          if (showFilmMenuButton) {
+            _tmpPortalNdc.copy(filmRoomGroup.position).project(camera);
+            const portalScreenX = (_tmpPortalNdc.x * 0.5 + 0.5) * mountNode.clientWidth;
+            const portalScreenY = (-_tmpPortalNdc.y * 0.5 + 0.5) * mountNode.clientHeight;
+            outsideFilmMenuButton.style.left = `${portalScreenX - (isMobile ? 86 : 132)}px`;
+            outsideFilmMenuButton.style.top = `${portalScreenY - (isMobile ? 6 : 12)}px`;
+            outsideFilmMenuButton.style.opacity = `${THREE.MathUtils.clamp(filmRoomSymbolVisibility * 1.25, 0, 1)}`;
+            outsideFilmMenuButton.style.visibility = "visible";
+          } else {
+            outsideFilmMenuButton.style.opacity = "0";
+            outsideFilmMenuButton.style.visibility = "hidden";
+          }
+        }
+
+        const filmRoomDistance = THREE.MathUtils.clamp(
+          FILM_ROOM_CAMERA_DISTANCE + filmRoomZoomOffset,
+          11.5,
+          29,
+        );
+        const filmRoomLook = filmRoomCenter.clone().add(new THREE.Vector3(0, -0.8, 0));
+        const filmRoomCameraPos = filmRoomCenter.clone().add(
+          new THREE.Vector3(
+            Math.sin(filmRoomOrbitYaw) * filmRoomDistance,
+            FILM_ROOM_CAMERA_HEIGHT + filmRoomOrbitPitch * 9.5,
+            Math.cos(filmRoomOrbitYaw) * filmRoomDistance,
+          ),
+        );
 
         if (easeOut > 0.01) {
           setOutsideHardShadow(easeOut > 0.26);
@@ -4157,6 +4547,13 @@ export function IntelligensTunnelSite() {
         } else {
           camera.position.copy(insidePos);
           camera.lookAt(insideLook);
+        }
+
+        if (isOutside && filmRoomEase > 0.001) {
+          const blendedPos = camera.position.clone().lerp(filmRoomCameraPos, filmRoomEase);
+          const blendedLook = outsideLook.clone().lerp(filmRoomLook, filmRoomEase);
+          camera.position.copy(blendedPos);
+          camera.lookAt(blendedLook);
         }
 
         const rigPulse = 0.94 + Math.sin(elapsed * 0.23) * 0.06;
@@ -4353,7 +4750,7 @@ export function IntelligensTunnelSite() {
         exitHitMesh.position.y = exitBobY;
 
         const reentryPulse = 0.72 + Math.sin(elapsed * 2.35) * 0.28;
-        const reentryVisibility = THREE.MathUtils.smoothstep(easeOut, 0.2, 0.95);
+        const reentryVisibility = THREE.MathUtils.smoothstep(easeOut, 0.2, 0.95) * (1 - filmRoomEase);
         reentryMarkerMesh.visible = reentryVisibility > 0.001;
         reentryHaloMesh.visible = reentryVisibility > 0.001;
         reentryMarkerMesh.scale.setScalar(0.88 + reentryPulse * 0.28);
@@ -4388,6 +4785,8 @@ export function IntelligensTunnelSite() {
 
       cleanup = () => {
         tunnelOutsideToggleRef.current = null;
+        outsideFilmRoomEnterRef.current = null;
+        outsideFilmRoomExitRef.current = null;
         closeMobileGlyphPopup();
         renderer.domElement.removeEventListener("pointerdown", onPointerDown);
         renderer.domElement.removeEventListener("pointermove", onPointerMove);
@@ -4470,6 +4869,8 @@ export function IntelligensTunnelSite() {
     return () => {
       isDisposed = true;
       tunnelOutsideToggleRef.current = null;
+      outsideFilmRoomEnterRef.current = null;
+      outsideFilmRoomExitRef.current = null;
       cleanup();
     };
   }, [panelData, glyphCanonicalByPanelId, resolveLocalizedGlyphCopy, closeMobileGlyphPopup]);
@@ -4504,11 +4905,11 @@ export function IntelligensTunnelSite() {
         </div>
         <button
           type="button"
-          onClick={onTunnelToggleClick}
+          onClick={outsideFilmRoomActive ? onOutsideFilmRoomExit : onTunnelToggleClick}
           className="pointer-events-auto rounded-full border border-[#f7d58b]/90 bg-[linear-gradient(180deg,#f9db8d_0%,#d79a3a_52%,#bc7d1f_100%)] px-4 py-2 text-[0.56rem] font-semibold uppercase tracking-[0.16em] text-[#241606] shadow-[0_8px_18px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,245,207,0.82)] transition hover:brightness-105 active:translate-y-[1px]"
           aria-pressed={outsideMenuVisible}
         >
-          {outsideMenuVisible ? "get in" : "get out"}
+          {outsideFilmRoomActive ? "get out" : outsideMenuVisible ? "get in" : "get out"}
         </button>
       </div>
 
@@ -4551,7 +4952,7 @@ export function IntelligensTunnelSite() {
         </div>
       ) : null}
 
-      {outsideMenuVisible ? (
+      {outsideMenuVisible && !outsideFilmRoomActive ? (
         <div className="pointer-events-none absolute inset-0 z-40">
           <style>
             {`
@@ -4636,12 +5037,20 @@ export function IntelligensTunnelSite() {
               </p>
 
               <button
+                ref={outsideFilmMenuButtonRef}
                 type="button"
-                onClick={() => setOutsideSection("videos")}
-                className="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-[10.7rem] -translate-y-[6.8rem] text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:-translate-x-[15.6rem] md:-translate-y-[8.8rem] md:text-base"
-                style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
+                onClick={onOutsideFilmRoomEnter}
+                className="pointer-events-auto absolute text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:text-base"
+                style={{
+                  textShadow: "0 0 16px rgba(160,190,255,0.55)",
+                  transform: "translate(-50%, -50%)",
+                  left: "-9999px",
+                  top: "-9999px",
+                  opacity: 0,
+                  visibility: "hidden",
+                }}
               >
-                <span className="inline-block" style={{ animation: "outsideLinkFloatA 7.5s ease-in-out infinite" }}>
+                <span className="relative inline-block">
                   {uiCopy.outsideVideos}
                 </span>
               </button>
@@ -4949,6 +5358,37 @@ export function IntelligensTunnelSite() {
                           background: "linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.96) 100%)",
                         }}
                       />
+                      {HEX_VIDEO_ROOM_SOURCES.map((videoItem, index) => (
+                        <div
+                          key={`outer-wall-${videoItem.video}-${index}`}
+                          className="pointer-events-none absolute left-1/2 top-1/2 border border-[#c4e1ff]/80 bg-[#0d223f]/76"
+                          style={{
+                            width: `${HEX_VIDEO_OUTER_WALL_WIDTH_REM.toFixed(3)}rem`,
+                            height: `${HEX_VIDEO_OUTER_WALL_HEIGHT_REM.toFixed(3)}rem`,
+                            transform: `translate(-50%, -50%) rotateY(${index * 60 + HEX_VIDEO_OUTER_WALL_YAW_OFFSET_DEG}deg) translateZ(-${HEX_VIDEO_OUTER_ROOM_APOTHEM_REM.toFixed(3)}rem)`,
+                            backfaceVisibility: "hidden",
+                            boxShadow:
+                              "0 0 0 1px rgba(211,235,255,0.75), 0 0 26px rgba(120,193,255,0.56), inset 0 0 44px rgba(110,186,255,0.32), 0 24px 46px rgba(0,0,0,0.62)",
+                            background:
+                              "linear-gradient(132deg, rgba(194,228,255,0.28) 0%, rgba(38,85,143,0.72) 36%, rgba(7,14,28,0.92) 100%)",
+                            opacity: 0.96,
+                          }}
+                        />
+                      ))}
+                      {HEX_VIDEO_ROOM_SOURCES.map((videoItem, index) => (
+                        <div
+                          key={`outer-corner-${videoItem.video}-${index}`}
+                          className="pointer-events-none absolute left-1/2 top-1/2 bg-[#d7ecff]/86"
+                          style={{
+                            width: `${HEX_VIDEO_OUTER_CORNER_POST_WIDTH_REM.toFixed(3)}rem`,
+                            height: `${(HEX_VIDEO_OUTER_WALL_HEIGHT_REM + 1.6).toFixed(3)}rem`,
+                            transform: `translate(-50%, -50%) rotateY(${index * 60 + 30}deg) translateZ(-${HEX_VIDEO_OUTER_CORNER_RADIUS_REM.toFixed(3)}rem)`,
+                            boxShadow:
+                              "0 0 30px rgba(172,220,255,0.98), 0 0 62px rgba(107,187,255,0.68)",
+                            opacity: 0.94,
+                          }}
+                        />
+                      ))}
                       {HEX_VIDEO_ROOM_SOURCES.map((videoItem, index) => (
                         <div
                           key={`${videoItem.video}-${index}`}
