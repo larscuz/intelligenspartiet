@@ -123,6 +123,12 @@ type RuntimePanel = {
   progress: number;
 };
 
+type MobileGlyphPopup = {
+  panelId: string;
+  title: string;
+  body: string;
+};
+
 type LedBounceUserData = {
   bounceLights?: THREE.PointLight[];
   bounceSampleCtx?: CanvasRenderingContext2D;
@@ -1639,6 +1645,7 @@ export function IntelligensTunnelSite() {
   const currentProgressRef = useRef(CAMERA_START_PROGRESS);
   const videoRoomRefs = useRef<Array<HTMLVideoElement | null>>([]);
   const tunnelOutsideToggleRef = useRef<(() => void) | null>(null);
+  const mobileGlyphPopupPanelIdRef = useRef<string | null>(null);
 
   // Lock body scroll so the page never bounces behind the canvas
   useEffect(() => {
@@ -1666,6 +1673,7 @@ export function IntelligensTunnelSite() {
   const [signatureContactName, setSignatureContactName] = useState("");
   const [signatureContactEmail, setSignatureContactEmail] = useState("");
   const [signatureContactMessage, setSignatureContactMessage] = useState("");
+  const [mobileGlyphPopup, setMobileGlyphPopup] = useState<MobileGlyphPopup | null>(null);
   const [language, setLanguage] = useState<UiLanguage>(() => {
     if (typeof window === "undefined") return "nb";
     try {
@@ -1752,6 +1760,10 @@ export function IntelligensTunnelSite() {
   );
   const onTunnelToggleClick = useCallback(() => {
     tunnelOutsideToggleRef.current?.();
+  }, []);
+  const closeMobileGlyphPopup = useCallback(() => {
+    mobileGlyphPopupPanelIdRef.current = null;
+    setMobileGlyphPopup(null);
   }, []);
   const onSignatureContactSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
@@ -2206,6 +2218,7 @@ export function IntelligensTunnelSite() {
     if (!mountNode) return;
     tunnelOutsideToggleRef.current = null;
     setOutsideMenuVisible(false);
+    closeMobileGlyphPopup();
 
     let isDisposed = false;
     let cleanup = () => { };
@@ -2219,6 +2232,15 @@ export function IntelligensTunnelSite() {
       const mobileQuery = window.matchMedia("(max-width: 767px)");
       const isReducedMotion = reducedMotionQuery.matches;
       const isMobile = mobileQuery.matches;
+      const openMobileGlyphPopup = (panel: UiPanel) => {
+        const localizedCopy = resolveLocalizedGlyphCopy(panel);
+        mobileGlyphPopupPanelIdRef.current = panel.id;
+        setMobileGlyphPopup({
+          panelId: panel.id,
+          title: localizedCopy.title,
+          body: localizedCopy.body,
+        });
+      };
 
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x0f1217);
@@ -3501,6 +3523,7 @@ export function IntelligensTunnelSite() {
         if (nextOutside) {
           updateOutsideCameraTargets();
           collapseGlyphCards();
+          closeMobileGlyphPopup();
         }
       };
 
@@ -3632,6 +3655,16 @@ export function IntelligensTunnelSite() {
 
           const hitPanel: UiPanel | undefined = hitObj.userData.panel;
           if (hitPanel) {
+            if (isMobile) {
+              if (mobileGlyphPopupPanelIdRef.current === hitPanel.id) {
+                closeMobileGlyphPopup();
+              } else {
+                openMobileGlyphPopup(hitPanel);
+              }
+              collapseGlyphCards();
+              return;
+            }
+
             const rune = glyphRunes.find((r) => r.panel.id === hitPanel.id);
             if (rune) {
               if (rune.expanded) {
@@ -3643,7 +3676,9 @@ export function IntelligensTunnelSite() {
             }
           }
         } else {
-          glyphRunes.forEach((r) => { r.expanded = false; });
+          if (!isMobile) {
+            glyphRunes.forEach((r) => { r.expanded = false; });
+          }
         }
       };
 
@@ -4137,7 +4172,7 @@ export function IntelligensTunnelSite() {
           glyphMat.emissiveIntensity = 1.0 + Math.sin(elapsed * 2.0 + runeIndex) * 0.4;
 
           // Expand / collapse interpolation
-          const targetT = rune.expanded ? 1 : 0;
+          const targetT = !isMobile && rune.expanded ? 1 : 0;
           const speed = 1.0 / CARD_EXPAND_DURATION;
           if (rune.expandT < targetT) {
             rune.expandT = Math.min(1, rune.expandT + speed * dt);
@@ -4149,7 +4184,7 @@ export function IntelligensTunnelSite() {
           const t = rune.expandT;
           const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-          if (eased > 0.001) {
+          if (!isMobile && eased > 0.001) {
             card.visible = true;
             card.position.copy(mesh.position);
             card.position.y -= GLYPH_SIZE + 0.3;
@@ -4162,7 +4197,7 @@ export function IntelligensTunnelSite() {
           }
 
           // Dim glyph when expanded
-          glyphMat.opacity = 1.0 - eased * 0.4;
+          glyphMat.opacity = isMobile ? 1.0 : 1.0 - eased * 0.4;
         });
 
         // ======= EXIT GLYPH ANIMATION =======
@@ -4211,6 +4246,7 @@ export function IntelligensTunnelSite() {
 
       cleanup = () => {
         tunnelOutsideToggleRef.current = null;
+        closeMobileGlyphPopup();
         renderer.domElement.removeEventListener("pointerdown", onPointerDown);
         renderer.domElement.removeEventListener("pointermove", onPointerMove);
         renderer.domElement.removeEventListener("pointerleave", onPointerLeave);
@@ -4294,7 +4330,7 @@ export function IntelligensTunnelSite() {
       tunnelOutsideToggleRef.current = null;
       cleanup();
     };
-  }, [panelData, glyphCanonicalByPanelId, resolveLocalizedGlyphCopy]);
+  }, [panelData, glyphCanonicalByPanelId, resolveLocalizedGlyphCopy, closeMobileGlyphPopup]);
 
   return (
     <div className="relative h-[100svh] w-full overflow-hidden overscroll-none touch-none bg-[#f7f7f4] text-[#141414]">
@@ -4348,6 +4384,28 @@ export function IntelligensTunnelSite() {
           <p className="mt-1 text-[0.64rem] uppercase tracking-[0.15em] text-[#6a6a6a]">
             {uiCopy.activeInstallation}: {activeInstallationText}
           </p>
+        </div>
+      ) : null}
+
+      {mobileGlyphPopup && !outsideMenuVisible ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-50 px-3 md:hidden">
+          <section className="pointer-events-auto mx-auto w-full max-w-[30rem] rounded-2xl border border-[#7fd9ff]/28 bg-[#061324]/92 px-4 py-3 text-[#e6f4ff] shadow-[0_16px_42px_rgba(0,0,0,0.58)] backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[#9edfff]">
+                {mobileGlyphPopup.title}
+              </h2>
+              <button
+                type="button"
+                onClick={closeMobileGlyphPopup}
+                className="pointer-events-auto rounded-full border border-[#7fd9ff]/35 px-3 py-[0.28rem] text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-[#d7f0ff] transition active:translate-y-[1px]"
+              >
+                {language === "nb" ? "Lukk" : "Close"}
+              </button>
+            </div>
+            <p className="mt-2 max-h-[40svh] overflow-y-auto whitespace-pre-line text-[0.83rem] leading-relaxed text-[#d9e7f4]">
+              {mobileGlyphPopup.body}
+            </p>
+          </section>
         </div>
       ) : null}
 
