@@ -667,6 +667,18 @@ const EXIT_CAMERA_DISTANCE = 400;
 const EXIT_TRANSITION_DURATION = 2.5; // seconds
 const EXIT_GLYPH_COLOR = 0xffaa33; // gold/amber
 const EXIT_GLYPH_SIZE = 3.0;
+const OUTSIDE_DEFAULT_CAMERA_OFFSET = new THREE.Vector3(
+  EXIT_CAMERA_DISTANCE * -0.04,
+  EXIT_CAMERA_DISTANCE * -0.42,
+  EXIT_CAMERA_DISTANCE * 1.02,
+);
+const OUTSIDE_DEFAULT_ORBIT_YAW = -0.14;
+const OUTSIDE_DEFAULT_ORBIT_PITCH = 0.2;
+const OUTSIDE_DEFAULT_ORBIT_ROLL = 0;
+const OUTSIDE_DEFAULT_ZOOM_OFFSET = -22;
+const OUTSIDE_ENTER_CLICK_DRIFT_PX = 7;
+const DEFAULT_LANDING_GLYPH_IDS = ["v1-cognitive-overproduction"];
+const DEFAULT_LANDING_PANEL_IDS = ["halfwall-06"];
 
 const AI_NEWS_PATHS = [
   "/assets/data/ai-jobs-news.local.json",
@@ -1643,6 +1655,7 @@ export function IntelligensTunnelSite() {
   const runtimePanelsRef = useRef<RuntimePanel[]>([]);
   const targetProgressRef = useRef(CAMERA_START_PROGRESS);
   const currentProgressRef = useRef(CAMERA_START_PROGRESS);
+  const initialLandingAppliedRef = useRef(false);
   const videoRoomRefs = useRef<Array<HTMLVideoElement | null>>([]);
   const tunnelOutsideToggleRef = useRef<(() => void) | null>(null);
   const mobileGlyphPopupPanelIdRef = useRef<string | null>(null);
@@ -2011,6 +2024,40 @@ export function IntelligensTunnelSite() {
       isCancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (initialLandingAppliedRef.current) return;
+    if (panelData.length === 0) return;
+
+    let preferredPanelId: string | null = null;
+    for (const glyphId of DEFAULT_LANDING_GLYPH_IDS) {
+      const match = glyphLanguageItems.find((item) => item.id === glyphId && item.panel_id);
+      if (match?.panel_id) {
+        preferredPanelId = match.panel_id;
+        break;
+      }
+    }
+
+    if (!preferredPanelId) {
+      preferredPanelId =
+        DEFAULT_LANDING_PANEL_IDS.find((id) => panelData.some((panel) => panel.id === id)) ??
+        null;
+    }
+
+    const preferredPanel =
+      (preferredPanelId ? panelData.find((panel) => panel.id === preferredPanelId) : undefined) ??
+      panelData[0];
+
+    const preferredProgress =
+      typeof preferredPanel?.installation?.placement_t === "number"
+        ? wrap01(preferredPanel.installation.placement_t)
+        : CAMERA_START_PROGRESS;
+
+    targetProgressRef.current = preferredProgress;
+    currentProgressRef.current = preferredProgress;
+    if (preferredPanel?.id) setActivePanelId(preferredPanel.id);
+    initialLandingAppliedRef.current = true;
+  }, [glyphLanguageItems, panelData]);
 
   const orderedActiveGlyphItems = useMemo(
     () =>
@@ -2613,6 +2660,20 @@ export function IntelligensTunnelSite() {
       scene.add(leftCrownMesh);
       scene.add(rightCrownMesh);
       scene.add(trackRailMesh);
+
+      const outsideEnterMeshes: THREE.Object3D[] = [
+        floorMesh,
+        ceilingMesh,
+        leftSkirtMesh,
+        rightSkirtMesh,
+        leftCrownMesh,
+        rightCrownMesh,
+        trackRailMesh,
+      ];
+      if (leftWallMesh) outsideEnterMeshes.push(leftWallMesh);
+      if (rightWallMesh) outsideEnterMeshes.push(rightWallMesh);
+      if (leftLedBackdropMesh) outsideEnterMeshes.push(leftLedBackdropMesh);
+      if (rightLedBackdropMesh) outsideEnterMeshes.push(rightLedBackdropMesh);
 
       const upRef = new THREE.Vector3(0, 1, 0);
 
@@ -3279,6 +3340,28 @@ export function IntelligensTunnelSite() {
         return { point, tangent, right, up };
       };
 
+      const resolveProgressFromHit = (hit: THREE.Intersection<THREE.Object3D>) => {
+        const uvY = hit.uv?.y;
+        if (typeof uvY === "number" && Number.isFinite(uvY)) {
+          return wrap01(uvY);
+        }
+
+        // Fallback for hits without UVs: nearest point on curve.
+        const sampleCount = isMobile ? 180 : 320;
+        let bestT = 0;
+        let bestDistSq = Number.POSITIVE_INFINITY;
+        for (let i = 0; i <= sampleCount; i += 1) {
+          const t = i / sampleCount;
+          const point = curve.getPointAt(t);
+          const distSq = point.distanceToSquared(hit.point);
+          if (distSq < bestDistSq) {
+            bestDistSq = distSq;
+            bestT = t;
+          }
+        }
+        return wrap01(bestT);
+      };
+
       const routeDistanceFromStart = (placementT: number) => {
         const t = wrap01(placementT);
         return ROUTE_PROGRESS_DIRECTION >= 0
@@ -3489,6 +3572,14 @@ export function IntelligensTunnelSite() {
       let outsideDragRollMode = false;
       let outsideLastPointerX = 0;
       let outsideLastPointerY = 0;
+      let outsidePendingEnterProgress: number | null = null;
+      let outsidePendingEnterMoved = false;
+      let outsidePendingStartX = 0;
+      let outsidePendingStartY = 0;
+      let outsideUserAdjustedView = false;
+      let resetOutsidePointerDrift = false;
+      const mouseTarget = { x: 0, y: 0 };
+      const mouseCurrent = { x: 0, y: 0 };
       const exitCameraTarget = new THREE.Vector3(); // computed once on transition start
       const exitLookTarget = new THREE.Vector3();   // center of tunnel
 
@@ -3501,10 +3592,7 @@ export function IntelligensTunnelSite() {
       tunnelCenter.divideScalar(centerSamples);
 
       const updateOutsideCameraTargets = () => {
-        const camNow = camera.position.clone();
-        const awayDir = camNow.clone().sub(tunnelCenter).normalize();
-        exitCameraTarget.copy(tunnelCenter).add(awayDir.multiplyScalar(EXIT_CAMERA_DISTANCE));
-        exitCameraTarget.y = tunnelCenter.y + EXIT_CAMERA_DISTANCE * 0.35;
+        exitCameraTarget.copy(tunnelCenter).add(OUTSIDE_DEFAULT_CAMERA_OFFSET);
         exitLookTarget.copy(tunnelCenter);
       };
 
@@ -3519,8 +3607,16 @@ export function IntelligensTunnelSite() {
         isOutside = nextOutside;
         outsideDragActive = false;
         outsideDragRollMode = false;
+        outsidePendingEnterProgress = null;
+        outsidePendingEnterMoved = false;
         setOutsideMenuVisible(nextOutside);
         if (nextOutside) {
+          outsideUserAdjustedView = false;
+          resetOutsidePointerDrift = true;
+          outsideOrbitYaw = OUTSIDE_DEFAULT_ORBIT_YAW;
+          outsideOrbitPitch = OUTSIDE_DEFAULT_ORBIT_PITCH;
+          outsideOrbitRoll = OUTSIDE_DEFAULT_ORBIT_ROLL;
+          outsideZoomOffset = OUTSIDE_DEFAULT_ZOOM_OFFSET;
           updateOutsideCameraTargets();
           collapseGlyphCards();
           closeMobileGlyphPopup();
@@ -3641,6 +3737,18 @@ export function IntelligensTunnelSite() {
 
           outsideDragActive = true;
           outsideDragRollMode = event.shiftKey || event.altKey || event.button === 2;
+          outsidePendingEnterProgress = null;
+          outsidePendingEnterMoved = false;
+          outsidePendingStartX = event.clientX;
+          outsidePendingStartY = event.clientY;
+
+          // Left-click on tunnel shell: enter at exact clicked route position.
+          if (!outsideDragRollMode && event.button === 0) {
+            const shellHits = raycaster.intersectObjects(outsideEnterMeshes, false);
+            if (shellHits.length > 0) {
+              outsidePendingEnterProgress = resolveProgressFromHit(shellHits[0]);
+            }
+          }
           return;
         }
 
@@ -3684,9 +3792,6 @@ export function IntelligensTunnelSite() {
 
       renderer.domElement.addEventListener("pointerdown", onPointerDown);
 
-      const mouseTarget = { x: 0, y: 0 };
-      const mouseCurrent = { x: 0, y: 0 };
-
       const onPointerMove = (event: PointerEvent) => {
         const rect = renderer.domElement.getBoundingClientRect();
         const x = (event.clientX - rect.left) / rect.width;
@@ -3695,10 +3800,25 @@ export function IntelligensTunnelSite() {
         mouseTarget.y = (y - 0.5) * 2;
 
         if (isOutside && outsideDragActive) {
+          if (outsidePendingEnterProgress !== null && !outsidePendingEnterMoved) {
+            const dragDistance = Math.hypot(
+              event.clientX - outsidePendingStartX,
+              event.clientY - outsidePendingStartY,
+            );
+            if (dragDistance <= OUTSIDE_ENTER_CLICK_DRIFT_PX) {
+              outsideLastPointerX = event.clientX;
+              outsideLastPointerY = event.clientY;
+              return;
+            }
+            outsidePendingEnterMoved = true;
+            outsidePendingEnterProgress = null;
+          }
+
           const dx = event.clientX - outsideLastPointerX;
           const dy = event.clientY - outsideLastPointerY;
           outsideLastPointerX = event.clientX;
           outsideLastPointerY = event.clientY;
+          outsideUserAdjustedView = true;
 
           if (outsideDragRollMode) {
             outsideOrbitRoll = THREE.MathUtils.clamp(
@@ -3725,11 +3845,20 @@ export function IntelligensTunnelSite() {
         mouseTarget.y = 0;
         outsideDragActive = false;
         outsideDragRollMode = false;
+        outsidePendingEnterProgress = null;
+        outsidePendingEnterMoved = false;
       };
 
       const onPointerUp = () => {
+        if (isOutside && outsidePendingEnterProgress !== null && !outsidePendingEnterMoved) {
+          targetProgressRef.current = outsidePendingEnterProgress;
+          currentProgressRef.current = outsidePendingEnterProgress;
+          setOutsideView(false);
+        }
         outsideDragActive = false;
         outsideDragRollMode = false;
+        outsidePendingEnterProgress = null;
+        outsidePendingEnterMoved = false;
       };
 
       const onContextMenu = (event: MouseEvent) => {
@@ -3750,6 +3879,7 @@ export function IntelligensTunnelSite() {
       const onWheel = (event: WheelEvent) => {
         event.preventDefault();
         if (isOutside) {
+          outsideUserAdjustedView = true;
           outsideOrbitYaw += event.deltaY * 0.0017;
           outsideZoomOffset = THREE.MathUtils.clamp(
             outsideZoomOffset + event.deltaY * 0.22,
@@ -3783,6 +3913,7 @@ export function IntelligensTunnelSite() {
         const currentY = event.touches[0]?.clientY ?? touchStartY;
         const deltaY = touchStartY - currentY;
         if (isOutside) {
+          outsideUserAdjustedView = true;
           outsideOrbitYaw += deltaY * 0.0021;
           outsideZoomOffset = THREE.MathUtils.clamp(
             outsideZoomOffset + deltaY * 0.13,
@@ -3808,7 +3939,6 @@ export function IntelligensTunnelSite() {
       };
       window.addEventListener("resize", onResize);
 
-      const lookDummy = new THREE.Object3D();
       const clock = new THREE.Clock();
       // Reusable temp vectors to avoid per-frame allocations
       const _tmpVec3A = new THREE.Vector3();
@@ -3831,6 +3961,13 @@ export function IntelligensTunnelSite() {
 
         mouseCurrent.x += (mouseTarget.x - mouseCurrent.x) * 0.07;
         mouseCurrent.y += (mouseTarget.y - mouseCurrent.y) * 0.07;
+        if (resetOutsidePointerDrift) {
+          mouseTarget.x = 0;
+          mouseTarget.y = 0;
+          mouseCurrent.x = 0;
+          mouseCurrent.y = 0;
+          resetOutsidePointerDrift = false;
+        }
 
         const progress = currentProgressRef.current;
         const lookProgress = wrap01(progress + (isMobile ? 0.008 : 0.010));
@@ -3866,9 +4003,16 @@ export function IntelligensTunnelSite() {
         const easeOut = outsideT < 0.5
           ? 4 * outsideT * outsideT * outsideT
           : 1 - Math.pow(-2 * outsideT + 2, 3) / 2;
+        if (isOutside && !outsideUserAdjustedView) {
+          outsideOrbitYaw = OUTSIDE_DEFAULT_ORBIT_YAW;
+          outsideOrbitPitch = OUTSIDE_DEFAULT_ORBIT_PITCH;
+          outsideOrbitRoll = OUTSIDE_DEFAULT_ORBIT_ROLL;
+          outsideZoomOffset = OUTSIDE_DEFAULT_ZOOM_OFFSET;
+        }
         const outsideMotionWeight = THREE.MathUtils.smoothstep(easeOut, 0.18, 1);
-        const outsideMotionX = mouseCurrent.x * (isMobile ? 0 : 15.4) * outsideMotionWeight;
-        const outsideMotionY = mouseCurrent.y * (isMobile ? 0 : 9.2) * outsideMotionWeight;
+        const outsideInteractionWeight = outsideUserAdjustedView ? outsideMotionWeight : 0;
+        const outsideMotionX = mouseCurrent.x * (isMobile ? 0 : 15.4) * outsideInteractionWeight;
+        const outsideMotionY = mouseCurrent.y * (isMobile ? 0 : 9.2) * outsideInteractionWeight;
 
         // ---- Dynamically adjust fog, lighting, background for exterior view ----
         exteriorKeyTarget.position
@@ -4012,9 +4156,7 @@ export function IntelligensTunnelSite() {
           }
         } else {
           camera.position.copy(insidePos);
-          lookDummy.position.copy(camera.position);
-          lookDummy.lookAt(insideLook);
-          camera.quaternion.slerp(lookDummy.quaternion, 1 - Math.exp(-8.1 * dt));
+          camera.lookAt(insideLook);
         }
 
         const rigPulse = 0.94 + Math.sin(elapsed * 0.23) * 0.06;
@@ -4449,6 +4591,38 @@ export function IntelligensTunnelSite() {
                 0%, 100% { transform: translate3d(0px, 0px, 0px); }
                 50% { transform: translate3d(0px, -6px, 0px); }
               }
+              @keyframes glyffHoloPulse {
+                0%, 100% {
+                  border-color: rgba(134, 181, 235, 0.34);
+                  box-shadow:
+                    0 0 16px rgba(88, 170, 255, 0.24),
+                    0 0 34px rgba(79, 224, 255, 0.2),
+                    inset 0 0 18px rgba(0, 0, 0, 0.36),
+                    inset 0 1px 0 rgba(208, 232, 255, 0.24);
+                }
+                50% {
+                  border-color: rgba(162, 235, 255, 0.62);
+                  box-shadow:
+                    0 0 26px rgba(88, 170, 255, 0.44),
+                    0 0 52px rgba(79, 224, 255, 0.34),
+                    inset 0 0 20px rgba(0, 0, 0, 0.34),
+                    inset 0 1px 0 rgba(208, 232, 255, 0.34);
+                }
+              }
+              @keyframes glyffHoloTwinkle {
+                0%, 100% { filter: saturate(1.12) contrast(1.02) brightness(0.98); }
+                40% { filter: saturate(1.42) contrast(1.16) brightness(1.1); }
+                72% { filter: saturate(1.22) contrast(1.08) brightness(1.03); }
+              }
+              @keyframes glyffHoloSweep {
+                0% { transform: translate3d(-42%, -18%, 0) rotate(0deg); opacity: 0.1; }
+                45% { opacity: 0.4; }
+                100% { transform: translate3d(42%, 18%, 0) rotate(180deg); opacity: 0.12; }
+              }
+              @keyframes glyffHoloScan {
+                0% { background-position: 0 0, 0 0; }
+                100% { background-position: 0 66px, 160px 0; }
+              }
             `}
           </style>
 
@@ -4483,16 +4657,6 @@ export function IntelligensTunnelSite() {
                 </span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setOutsideSection("glyphwall")}
-                className="pointer-events-auto absolute left-1/2 top-1/2 translate-x-[1.5rem] translate-y-[5.4rem] text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:translate-x-[4.8rem] md:translate-y-[8.2rem] md:text-base"
-                style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
-              >
-                <span className="inline-block" style={{ animation: "outsideLinkFloatD 8.1s ease-in-out infinite" }}>
-                  {uiCopy.outsideGlyphWall}
-                </span>
-              </button>
             </>
           ) : null}
 
@@ -4669,16 +4833,14 @@ export function IntelligensTunnelSite() {
                               className="relative h-[7rem] w-[7rem] overflow-hidden rounded-full border border-[#86b5eb]/34"
                               style={{
                                 background:
-                                  "radial-gradient(circle_at_45%_42%,rgba(132,174,233,0.2),rgba(12,22,40,0.92)_72%)",
-                                boxShadow:
-                                  "0 0 20px rgba(98,163,236,0.24), inset 0 0 18px rgba(0,0,0,0.36), inset 0 1px 0 rgba(208,232,255,0.24)",
+                                  "radial-gradient(circle_at_42%_38%,rgba(122,213,255,0.26),rgba(13,27,52,0.94)_66%), radial-gradient(circle_at_75%_82%,rgba(43,163,255,0.16),rgba(0,0,0,0)_58%)",
                                 animation:
                                   item.index % 3 === 0
-                                    ? "glyffFloatA 7.8s ease-in-out infinite"
+                                    ? "glyffFloatA 7.8s ease-in-out infinite, glyffHoloPulse 6.6s ease-in-out infinite, glyffHoloTwinkle 4.9s ease-in-out infinite"
                                     : item.index % 3 === 1
-                                      ? "glyffFloatB 9.2s ease-in-out infinite"
-                                      : "glyffFloatC 8.4s ease-in-out infinite",
-                                animationDelay: `${(item.index % 11) * 0.16}s`,
+                                      ? "glyffFloatB 9.2s ease-in-out infinite, glyffHoloPulse 7.4s ease-in-out infinite, glyffHoloTwinkle 5.3s ease-in-out infinite"
+                                      : "glyffFloatC 8.4s ease-in-out infinite, glyffHoloPulse 6.9s ease-in-out infinite, glyffHoloTwinkle 5.1s ease-in-out infinite",
+                                animationDelay: `${(item.index % 11) * 0.16}s, ${(item.index % 7) * 0.21}s, ${(item.index % 5) * 0.27}s`,
                               }}
                             >
                               {item.previewDataUrl ? (
@@ -4686,10 +4848,50 @@ export function IntelligensTunnelSite() {
                                   <img
                                     src={item.previewDataUrl}
                                     alt={`Glyff ${item.index + 1}`}
-                                    className="absolute inset-0 h-full w-full object-cover opacity-88 mix-blend-screen"
+                                    className="absolute inset-0 h-full w-full object-cover mix-blend-screen"
+                                    style={{
+                                      opacity: 0.88,
+                                      filter: "saturate(1.48) hue-rotate(8deg) contrast(1.12)",
+                                    }}
                                     loading="lazy"
                                   />
-                                  <div className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_19%_18%,rgba(198,228,255,0.22),rgba(198,228,255,0)_42%),radial-gradient(circle_at_82%_79%,rgba(0,0,0,0.26),rgba(0,0,0,0)_56%)]" />
+                                  <div
+                                    className="pointer-events-none absolute inset-0 rounded-full"
+                                    style={{
+                                      background:
+                                        "radial-gradient(circle_at_20%_18%,rgba(204,240,255,0.26),rgba(204,240,255,0)_42%), radial-gradient(circle_at_82%_79%,rgba(0,0,0,0.28),rgba(0,0,0,0)_56%)",
+                                    }}
+                                  />
+                                  <div
+                                    className="pointer-events-none absolute rounded-full"
+                                    style={{
+                                      inset: "-34%",
+                                      background:
+                                        "conic-gradient(from 0deg, rgba(128,250,255,0) 0deg, rgba(128,250,255,0.36) 72deg, rgba(123,170,255,0.06) 148deg, rgba(128,250,255,0) 260deg)",
+                                      mixBlendMode: "screen",
+                                      animation: "glyffHoloSweep 7.1s linear infinite",
+                                      animationDelay: `${(item.index % 9) * 0.31}s`,
+                                    }}
+                                  />
+                                  <div
+                                    className="pointer-events-none absolute inset-0 rounded-full"
+                                    style={{
+                                      background:
+                                        "repeating-linear-gradient(180deg, rgba(151,228,255,0.16) 0px, rgba(151,228,255,0.16) 1px, rgba(10,18,34,0) 1px, rgba(10,18,34,0) 4px), linear-gradient(135deg, rgba(77,236,255,0.18) 0%, rgba(77,236,255,0) 54%)",
+                                      mixBlendMode: "screen",
+                                      opacity: 0.38,
+                                      animation: "glyffHoloScan 2.7s linear infinite",
+                                    }}
+                                  />
+                                  <div
+                                    className="pointer-events-none absolute rounded-full"
+                                    style={{
+                                      inset: "1px",
+                                      border: "1px solid rgba(164,238,255,0.52)",
+                                      boxShadow:
+                                        "0 0 18px rgba(131,237,255,0.28), inset 0 0 12px rgba(110,221,255,0.22)",
+                                    }}
+                                  />
                                 </div>
                               ) : (
                                 <div className="h-full w-full rounded-full bg-[#11213c]" />
