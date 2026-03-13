@@ -685,11 +685,17 @@ const AI_NEWS_PATHS = [
   "/assets/data/ai-jobs-news.json",
 ];
 
+const GULLHAIEN_ROOM_BADGE_IMAGE_URL = "/gullhaien/nominert.png";
+const GULLHAIEN_ROOM_BADGE_ASPECT = 1000 / 593;
+const GULLHAIEN_ROOM_BADGE_WIDTH = 8.4;
+const MAIN_FILM_VIDEO_URL = "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/Intelligenspartiet2027.mp4";
+const MAIN_FILM_POSTER_URL =
+  "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/Skjermbilde%202026-03-01%20kl.%2015.09.35.png";
+
 const HEX_VIDEO_ROOM_SOURCES = [
   {
-    video: "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/videos/1770978482749-c088b297-1ChristTheater.mp4",
-    poster:
-      "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/posters/1770978437489-d0299c39-WelhavenTheater.png",
+    video: MAIN_FILM_VIDEO_URL,
+    poster: MAIN_FILM_POSTER_URL,
   },
   {
     video: "https://larscuzner.com/static/_upload/2ChristTheater.mp4",
@@ -719,8 +725,7 @@ const HEX_VIDEO_ROOM_SOURCES = [
   },
 ];
 
-const DEFAULT_VIDEO_ROOM_URL =
-  "https://pub-b53c56f5af3e471cb8b3610afdc49a36.r2.dev/scrollytelling/videos/1771442235013-9c01df3d-FremtidensIntelligenssedler.mp4";
+const DEFAULT_VIDEO_ROOM_URL = MAIN_FILM_VIDEO_URL;
 const DEFAULT_VIDEO_ROOM_INDEX = Math.max(
   0,
   HEX_VIDEO_ROOM_SOURCES.findIndex((item) => item.video === DEFAULT_VIDEO_ROOM_URL),
@@ -1677,6 +1682,7 @@ export function IntelligensTunnelSite() {
   const outsideFilmRoomEnterRef = useRef<(() => void) | null>(null);
   const outsideFilmRoomExitRef = useRef<(() => void) | null>(null);
   const outsideFilmMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const filmRoomPopupVideoRef = useRef<HTMLVideoElement | null>(null);
   const mobileGlyphPopupPanelIdRef = useRef<string | null>(null);
 
   // Lock body scroll so the page never bounces behind the canvas
@@ -1706,6 +1712,7 @@ export function IntelligensTunnelSite() {
   const [signatureContactName, setSignatureContactName] = useState("");
   const [signatureContactEmail, setSignatureContactEmail] = useState("");
   const [signatureContactMessage, setSignatureContactMessage] = useState("");
+  const [filmRoomVideoPopupOpen, setFilmRoomVideoPopupOpen] = useState(false);
   const [mobileGlyphPopup, setMobileGlyphPopup] = useState<MobileGlyphPopup | null>(null);
   const [language, setLanguage] = useState<UiLanguage>(() => {
     if (typeof window === "undefined") return "nb";
@@ -1800,6 +1807,9 @@ export function IntelligensTunnelSite() {
   const onOutsideFilmRoomExit = useCallback(() => {
     outsideFilmRoomExitRef.current?.();
   }, []);
+  const closeFilmRoomVideoPopup = useCallback(() => {
+    setFilmRoomVideoPopupOpen(false);
+  }, []);
   const closeMobileGlyphPopup = useCallback(() => {
     mobileGlyphPopupPanelIdRef.current = null;
     setMobileGlyphPopup(null);
@@ -1883,6 +1893,37 @@ export function IntelligensTunnelSite() {
       setOutsideFilmRoomActive(false);
     }
   }, [outsideMenuVisible]);
+
+  useEffect(() => {
+    if (!outsideFilmRoomActive) {
+      setFilmRoomVideoPopupOpen(false);
+    }
+  }, [outsideFilmRoomActive]);
+
+  useEffect(() => {
+    if (!filmRoomVideoPopupOpen) return;
+    const video = filmRoomPopupVideoRef.current;
+    if (!video) return;
+    const attempt = video.play();
+    if (attempt && typeof attempt.catch === "function") {
+      attempt.catch(() => {
+        // Popup is still usable even if autoplay with audio is blocked.
+      });
+    }
+  }, [filmRoomVideoPopupOpen]);
+
+  useEffect(() => {
+    if (!filmRoomVideoPopupOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setFilmRoomVideoPopupOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [filmRoomVideoPopupOpen]);
 
   useEffect(() => {
     if (outsideSection !== "videos") return;
@@ -3822,6 +3863,25 @@ export function IntelligensTunnelSite() {
       const filmRoomFillLight = new THREE.PointLight(0xa9bbd2, 0, 74, 2);
       filmRoomFillLight.position.set(0, -FILM_ROOM_WALL_HEIGHT * 0.1, FILM_ROOM_APOTHEM * 0.3);
       filmRoomGroup.add(filmRoomFillLight);
+      const filmRoomBadgeTexture = new THREE.TextureLoader().load(GULLHAIEN_ROOM_BADGE_IMAGE_URL);
+      filmRoomBadgeTexture.colorSpace = THREE.SRGBColorSpace;
+      filmRoomBadgeTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      dynamicTextures.push(filmRoomBadgeTexture);
+      const filmRoomBadgeGeometry = new THREE.PlaneGeometry(
+        GULLHAIEN_ROOM_BADGE_WIDTH,
+        GULLHAIEN_ROOM_BADGE_WIDTH / GULLHAIEN_ROOM_BADGE_ASPECT,
+      );
+      dynamicGeometries.push(filmRoomBadgeGeometry);
+      const filmRoomBadgeMaterial = new THREE.MeshBasicMaterial({
+        map: filmRoomBadgeTexture,
+        transparent: true,
+        alphaTest: 0.06,
+        depthWrite: false,
+        toneMapped: false,
+      });
+      dynamicMaterials.push(filmRoomBadgeMaterial);
+      const filmRoomBadgeMesh = new THREE.Mesh(filmRoomBadgeGeometry, filmRoomBadgeMaterial);
+      const filmRoomBadgeBaseY = FILM_ROOM_WALL_HEIGHT * 0.34;
       const filmRoomFallbackVideo = HEX_VIDEO_ROOM_SOURCES[0]?.video ?? "";
 
       for (let sideIndex = 0; sideIndex < 6; sideIndex += 1) {
@@ -3894,6 +3954,13 @@ export function IntelligensTunnelSite() {
         innerWall.rotation.y = yaw;
         innerWall.castShadow = false;
         innerWall.receiveShadow = true;
+        if (sideIndex === 0) {
+          innerWall.userData = { isMainFilmWall: true };
+          panelObjects.push(innerWall);
+          filmRoomBadgeMesh.position.set(0, filmRoomBadgeBaseY, -innerRadius + 0.72);
+          filmRoomBadgeMesh.rotation.y = yaw;
+          filmRoomGroup.add(filmRoomBadgeMesh);
+        }
         filmRoomGroup.add(innerWall);
       }
 
@@ -3987,6 +4054,11 @@ export function IntelligensTunnelSite() {
             }
             if (hitObj.userData.isFilmRoomExit) {
               beginFilmRoomExit();
+              return;
+            }
+            if (hitObj.userData.isMainFilmWall && filmRoomT > 0.12) {
+              filmRoomDragActive = false;
+              setFilmRoomVideoPopupOpen(true);
               return;
             }
             if (hitObj.userData.isReentryDot) {
@@ -4406,6 +4478,7 @@ export function IntelligensTunnelSite() {
           new THREE.Vector3(0, Math.sin(elapsed * 0.72) * 0.9 * (1 - filmRoomEase), 0),
         );
         filmRoomGroup.rotation.y = elapsed * 0.18 * (1 - filmRoomEase);
+        filmRoomBadgeMesh.position.y = filmRoomBadgeBaseY + Math.sin(elapsed * 1.18) * 0.22;
         filmRoomExitMesh.visible = filmRoomEase > 0.08;
         filmRoomExitLight.intensity = THREE.MathUtils.lerp(0, isMobile ? 1.8 : 2.9, filmRoomEase);
         const filmRoomVisibilityMul = filmRoomVisible ? 1 : 0;
@@ -4949,6 +5022,42 @@ export function IntelligensTunnelSite() {
               {mobileGlyphPopup.body}
             </p>
           </section>
+        </div>
+      ) : null}
+
+      {filmRoomVideoPopupOpen ? (
+        <div
+          className="absolute inset-0 z-[70] bg-[rgba(2,6,14,0.84)] backdrop-blur-[10px]"
+          onClick={closeFilmRoomVideoPopup}
+        >
+          <div className="flex h-full w-full items-center justify-center px-4 py-20 md:px-8">
+            <section
+              className="relative w-full max-w-[72rem] overflow-hidden rounded-[1.35rem] border border-[#d4e4ff]/24 bg-black shadow-[0_32px_110px_rgba(0,0,0,0.62)]"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={closeFilmRoomVideoPopup}
+                className="absolute right-3 top-3 z-10 rounded-full border border-white/16 bg-black/45 px-3 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-black/65"
+              >
+                {language === "nb" ? "Lukk" : "Close"}
+              </button>
+              <video
+                ref={filmRoomPopupVideoRef}
+                controls
+                playsInline
+                preload="metadata"
+                poster={MAIN_FILM_POSTER_URL}
+                autoPlay
+                className="block aspect-video w-full bg-black"
+              >
+                <source src={MAIN_FILM_VIDEO_URL} type="video/mp4" />
+                {language === "nb"
+                  ? "Nettleseren din kan ikke spille av denne videoen."
+                  : "Your browser cannot play this video."}
+              </video>
+            </section>
+          </div>
         </div>
       ) : null}
 
