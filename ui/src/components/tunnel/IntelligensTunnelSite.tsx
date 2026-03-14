@@ -92,7 +92,7 @@ type GlyphCopy = {
   noteNb: string;
 };
 
-type OutsideSection = "menu" | "videos" | "signatures" | "news" | "glyphwall";
+type OutsideSection = "menu" | "videos" | "signatures" | "news" | "glyphwall" | "signal";
 
 type AiNewsItem = {
   title: string;
@@ -189,6 +189,7 @@ type UiCopy = {
   outsideSignatures: string;
   outsideAiNews: string;
   outsideGlyphWall: string;
+  outsideSignal: string;
   outsideBack: string;
   outsideVideosTitle: string;
   outsideSignaturesTitle: string;
@@ -199,6 +200,7 @@ type UiCopy = {
   outsideNewsLoading: string;
   outsideNewsEmpty: string;
   outsideNewsError: string;
+  outsideSignalTitle: string;
 };
 
 const LANGUAGE_STORAGE_KEY = "intelligenspartiet:language";
@@ -213,6 +215,7 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     outsideSignatures: "Signaturer",
     outsideAiNews: "KI-nyheter",
     outsideGlyphWall: "Glyff",
+    outsideSignal: "Signal",
     outsideBack: "Tilbake",
     outsideVideosTitle: "Film",
     outsideSignaturesTitle: "Signaturer",
@@ -223,6 +226,7 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     outsideNewsLoading: "Laster KI-nyheter ...",
     outsideNewsEmpty: "Ingen publiserte nyheter tilgjengelig ennå.",
     outsideNewsError: "Kunne ikke laste KI-nyheter.",
+    outsideSignalTitle: "Signalrom",
   },
   en: {
     siteName: "INTELLIGENSPARTIET",
@@ -233,6 +237,7 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     outsideSignatures: "Signatures",
     outsideAiNews: "AI news",
     outsideGlyphWall: "Glyff",
+    outsideSignal: "Signal",
     outsideBack: "Back",
     outsideVideosTitle: "Film",
     outsideSignaturesTitle: "Signatures",
@@ -243,6 +248,7 @@ const UI_COPY: Record<UiLanguage, UiCopy> = {
     outsideNewsLoading: "Loading AI news ...",
     outsideNewsEmpty: "No published news items available yet.",
     outsideNewsError: "Could not load AI news.",
+    outsideSignalTitle: "Signal Room",
   },
 };
 
@@ -1704,6 +1710,7 @@ export function IntelligensTunnelSite() {
   const [panelsLoadError, setPanelsLoadError] = useState(false);
   const [outsideMenuVisible, setOutsideMenuVisible] = useState(false);
   const [outsideSection, setOutsideSection] = useState<OutsideSection>("menu");
+  const outsideSectionRef = useRef<OutsideSection>("menu");
   const [outsideFilmRoomActive, setOutsideFilmRoomActive] = useState(false);
   const [outsideNewsItems, setOutsideNewsItems] = useState<AiNewsItem[]>([]);
   const [outsideNewsLoading, setOutsideNewsLoading] = useState(false);
@@ -1732,6 +1739,10 @@ export function IntelligensTunnelSite() {
       // Ignore storage write errors.
     }
   }, [language]);
+
+  useEffect(() => {
+    outsideSectionRef.current = outsideSection;
+  }, [outsideSection]);
 
   const uiCopy = UI_COPY[language];
   const localizeDynamicText = useMemo(
@@ -3682,6 +3693,47 @@ export function IntelligensTunnelSite() {
       }
       tunnelCenter.divideScalar(centerSamples);
 
+      const signalSwarmCount = isReducedMotion ? (isMobile ? 480 : 800) : isMobile ? 1200 : 2200;
+      const signalAnchor = tunnelCenter.clone().add(new THREE.Vector3(-6, 10, 4));
+      const signalGroup = new THREE.Group();
+      signalGroup.position.copy(signalAnchor);
+      signalGroup.visible = false;
+      scene.add(signalGroup);
+
+      const signalGeometry = new THREE.TetrahedronGeometry(isMobile ? 1.6 : 1.2);
+      dynamicGeometries.push(signalGeometry);
+      const signalMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.94,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        depthTest: false,
+        toneMapped: false,
+      });
+      dynamicMaterials.push(signalMaterial);
+
+      const signalMesh = new THREE.InstancedMesh(signalGeometry, signalMaterial, signalSwarmCount);
+      signalMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      signalMesh.frustumCulled = false;
+      signalMesh.renderOrder = 20;
+      signalGroup.add(signalMesh);
+
+      const signalDummy = new THREE.Object3D();
+      const signalTarget = new THREE.Vector3();
+      const signalColor = new THREE.Color();
+      const signalPositions = Array.from({ length: signalSwarmCount }, () =>
+        new THREE.Vector3(
+          (Math.random() - 0.5) * 80,
+          (Math.random() - 0.5) * 80,
+          (Math.random() - 0.5) * 80,
+        ),
+      );
+      for (let index = 0; index < signalSwarmCount; index += 1) {
+        signalMesh.setColorAt(index, signalColor.setHex(0x2a79ff));
+      }
+      if (signalMesh.instanceColor) signalMesh.instanceColor.needsUpdate = true;
+
       const updateOutsideCameraTargets = () => {
         exitCameraTarget.copy(tunnelCenter).add(OUTSIDE_DEFAULT_CAMERA_OFFSET);
         exitLookTarget.copy(tunnelCenter);
@@ -4249,9 +4301,8 @@ export function IntelligensTunnelSite() {
             return;
           }
           outsideUserAdjustedView = true;
-          outsideOrbitYaw += event.deltaY * 0.0017;
           outsideZoomOffset = THREE.MathUtils.clamp(
-            outsideZoomOffset + event.deltaY * 0.22,
+            outsideZoomOffset + event.deltaY * 0.32,
             -165,
             230,
           );
@@ -4298,9 +4349,8 @@ export function IntelligensTunnelSite() {
             return;
           }
           outsideUserAdjustedView = true;
-          outsideOrbitYaw += deltaY * 0.0021;
           outsideZoomOffset = THREE.MathUtils.clamp(
-            outsideZoomOffset + deltaY * 0.13,
+            outsideZoomOffset + deltaY * 0.22,
             -165,
             230,
           );
@@ -4833,6 +4883,70 @@ export function IntelligensTunnelSite() {
         reentryHaloMesh.scale.setScalar(0.95 + reentryPulse * 0.18);
         reentryHaloMaterial.opacity = reentryVisibility * (0.2 + reentryPulse * 0.32);
 
+        const signalVisible = isOutside;
+        signalGroup.visible = signalVisible;
+        if (signalVisible) {
+          const signalTowardCamera = camera.position.clone().sub(tunnelCenter);
+          const signalCamDist = signalTowardCamera.length();
+          signalTowardCamera.normalize();
+          signalGroup.position.copy(tunnelCenter).add(signalTowardCamera.multiplyScalar(signalCamDist * 0.55)).add(new THREE.Vector3(0, 32, 0));
+          signalGroup.lookAt(camera.position);
+          signalGroup.rotation.z = elapsed * 0.04;
+
+          const signalCoreCount = Math.max(1, Math.floor(signalSwarmCount * 0.05));
+          for (let index = 0; index < signalSwarmCount; index += 1) {
+            const ratio = index / signalSwarmCount;
+            const isCore = index < signalCoreCount;
+            let spin = 0;
+            let scale = 1;
+
+            if (!isCore) {
+              const radius = 24 + ratio * (isMobile ? 80 : 140);
+              const angle = index * 137.5 + elapsed * 0.16;
+              const wave = Math.sin(radius * 0.04 - elapsed) * 15;
+
+              signalTarget.x = Math.cos(angle) * radius;
+              signalTarget.y = wave * (1 - ratio) + Math.sin(index * 0.7) * 2.8;
+              signalTarget.z = Math.sin(angle) * radius;
+
+              signalColor.setRGB(0.12, 0.4, 1);
+              signalColor.multiplyScalar(0.82 + (1 - ratio) * 0.26);
+              spin = elapsed * 0.14 + index * 0.002;
+              scale = 1.04 + (1 - ratio) * 0.16;
+            } else {
+              const phi = Math.acos(1 - (2 * (index + 0.5)) / signalCoreCount);
+              const theta = Math.PI * (1 + Math.sqrt(5)) * index;
+              const pulse = 20 + Math.sin(elapsed * 4 + index * 0.1) * 6;
+              const rotY = elapsed * 0.8;
+              const x = pulse * Math.cos(theta) * Math.sin(phi);
+              const y = pulse * Math.sin(theta) * Math.sin(phi);
+              const z = pulse * Math.cos(phi);
+              const energy = 0.5 + 0.5 * Math.sin(elapsed * 6 + index);
+
+              signalTarget.x = x * Math.cos(rotY) - z * Math.sin(rotY);
+              signalTarget.y = y;
+              signalTarget.z = x * Math.sin(rotY) + z * Math.cos(rotY);
+
+              signalColor.setRGB(1, 0.78 + energy * 0.22, 0.14);
+              signalColor.multiplyScalar(1.3 + energy * 0.28);
+              spin = elapsed * 0.92 + index * 0.018;
+              scale = 1.3 + energy * 0.42;
+            }
+
+            signalPositions[index].lerp(signalTarget, isReducedMotion ? 0.025 : isMobile ? 0.052 : 0.075);
+            signalDummy.position.copy(signalPositions[index]);
+            signalDummy.rotation.set(spin * 0.4, spin, spin * 0.24);
+            signalDummy.scale.setScalar(scale);
+            signalDummy.updateMatrix();
+
+            signalMesh.setMatrixAt(index, signalDummy.matrix);
+            signalMesh.setColorAt(index, signalColor);
+          }
+
+          signalMesh.instanceMatrix.needsUpdate = true;
+          if (signalMesh.instanceColor) signalMesh.instanceColor.needsUpdate = true;
+        }
+
         let nearest = runtimePanelsRef.current[0]?.meta.id ?? (panelData.length > 0 ? panelData[0].id : "");
         let nearestDist = Number.POSITIVE_INFINITY;
 
@@ -5145,41 +5259,47 @@ export function IntelligensTunnelSite() {
                 {uiCopy.siteName}
               </p>
 
-              <button
-                ref={outsideFilmMenuButtonRef}
-                type="button"
-                onClick={onOutsideFilmRoomEnter}
-                className="pointer-events-auto absolute text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:text-base"
-                style={{
-                  textShadow: "0 0 16px rgba(160,190,255,0.55)",
-                  transform: "translate(-50%, -50%)",
-                  left: "-9999px",
-                  top: "-9999px",
-                  opacity: 0,
-                  visibility: "hidden",
-                }}
-              >
-                <span className="relative inline-block">
-                  {uiCopy.outsideVideos}
-                </span>
-              </button>
+              {outsideSection === "menu" ? (
+                <button
+                  ref={outsideFilmMenuButtonRef}
+                  type="button"
+                  onClick={onOutsideFilmRoomEnter}
+                  className="pointer-events-auto absolute text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:text-base"
+                  style={{
+                    textShadow: "0 0 16px rgba(160,190,255,0.55)",
+                    transform: "translate(-50%, -50%)",
+                    left: "-9999px",
+                    top: "-9999px",
+                    opacity: 0,
+                    visibility: "hidden",
+                  }}
+                >
+                  <span className="relative inline-block">
+                    {uiCopy.outsideVideos}
+                  </span>
+                </button>
+              ) : null}
 
-              <button
-                type="button"
-                onClick={() => setOutsideSection("signatures")}
-                className="pointer-events-auto absolute left-1/2 top-1/2 translate-x-[6.8rem] -translate-y-[1.4rem] text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:translate-x-[14.2rem] md:-translate-y-[2.2rem] md:text-base"
-                style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
-              >
-                <span className="inline-block" style={{ animation: "outsideLinkFloatB 8.8s ease-in-out infinite" }}>
-                  {uiCopy.outsideSignatures}
-                </span>
-              </button>
+              {outsideSection === "menu" ? (
+                <button
+                  type="button"
+                  onClick={() => setOutsideSection("signatures")}
+                  className="pointer-events-auto absolute left-1/2 top-1/2 translate-x-[6.8rem] -translate-y-[1.4rem] text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:translate-x-[14.2rem] md:-translate-y-[2.2rem] md:text-base"
+                  style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
+                >
+                  <span className="inline-block" style={{ animation: "outsideLinkFloatB 8.8s ease-in-out infinite" }}>
+                    {uiCopy.outsideSignatures}
+                  </span>
+                </button>
+              ) : null}
 
             </>
           ) : null}
 
           {outsideSection !== "menu" ? (
-            <div className="pointer-events-auto absolute inset-0 bg-[radial-gradient(circle_at_50%_48%,rgba(22,36,58,0.75),rgba(4,8,18,0.96)_70%)]">
+            <div
+              className="pointer-events-auto absolute inset-0 bg-[radial-gradient(circle_at_50%_48%,rgba(22,36,58,0.75),rgba(4,8,18,0.96)_70%)]"
+            >
               <div className="absolute left-4 right-4 top-20 z-20 mx-auto w-full max-w-6xl md:left-8 md:right-8 md:top-24">
                 <button
                   type="button"
