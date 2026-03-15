@@ -3566,9 +3566,15 @@ export function IntelligensTunnelSite() {
       const cardGeometry = new THREE.PlaneGeometry(CARD_WIDTH, CARD_HEIGHT);
 
       // ======= EXTERIOR GLYPH MARKERS (visible from outside) =======
-      const extMarkerGeometry = new THREE.SphereGeometry(isMobile ? 4.5 : 6.0, 20, 20);
+      const extMarkerGeometry = new THREE.SphereGeometry(isMobile ? 1.25 : 1.6, 26, 26);
       dynamicGeometries.push(extMarkerGeometry);
-      const extMarkers: { sphere: THREE.Mesh; label: THREE.Sprite; material: THREE.MeshBasicMaterial; light: THREE.PointLight }[] = [];
+      const extHaloGeometry = new THREE.RingGeometry(isMobile ? 1.75 : 2.2, isMobile ? 2.35 : 2.95, 52);
+      dynamicGeometries.push(extHaloGeometry);
+      const extMarkers: {
+        sphere: THREE.Mesh; halo: THREE.Mesh; label: THREE.Sprite;
+        material: THREE.MeshStandardMaterial; haloMaterial: THREE.MeshBasicMaterial;
+        light: THREE.PointLight;
+      }[] = [];
 
       const createLabelSprite = (text: string) => {
         const canvas = document.createElement("canvas");
@@ -3581,7 +3587,7 @@ export function IntelligensTunnelSite() {
         ctx.textBaseline = "middle";
         ctx.shadowColor = "rgba(0,0,0,0.8)";
         ctx.shadowBlur = 6;
-        ctx.fillStyle = "#ffe8c0";
+        ctx.fillStyle = "#c0eaff";
         ctx.fillText(text.toUpperCase(), 256, 32, 480);
         const tex = new THREE.CanvasTexture(canvas);
         tex.minFilter = THREE.LinearFilter;
@@ -3589,7 +3595,7 @@ export function IntelligensTunnelSite() {
         const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
         dynamicMaterials.push(mat);
         const sprite = new THREE.Sprite(mat);
-        sprite.scale.set(28, 3.5, 1);
+        sprite.scale.set(8, 1, 1);
         return sprite;
       };
 
@@ -3673,31 +3679,47 @@ export function IntelligensTunnelSite() {
           expandT: 0,
         });
 
-        // Exterior marker: gold sphere + label jutting from ceiling
-        const extMarkerMat = new THREE.MeshBasicMaterial({
-          color: 0xffcf74,
-          transparent: true,
-          opacity: 0.95,
+        // Exterior marker: half-sphere + halo + label jutting from ceiling (same as reentry marker)
+        const extCeilingPos = point.clone().add(up.clone().multiplyScalar(ROOM_HEIGHT * 0.52 + 0.32));
+
+        const extMarkerMat = new THREE.MeshStandardMaterial({
+          color: GLYPH_GLOW_COLOR,
+          emissive: new THREE.Color(GLYPH_GLOW_COLOR),
+          emissiveIntensity: 0,
+          roughness: 0.26,
+          metalness: 0.34,
         });
         dynamicMaterials.push(extMarkerMat);
         const extSphere = new THREE.Mesh(extMarkerGeometry, extMarkerMat);
-        const extCeilingPos = point.clone().add(up.clone().multiplyScalar(ROOM_HEIGHT * 0.52 + 7.0));
         extSphere.position.copy(extCeilingPos);
         extSphere.visible = false;
         scene.add(extSphere);
 
+        const extHaloMat = new THREE.MeshBasicMaterial({
+          color: GLYPH_GLOW_COLOR,
+          transparent: true,
+          opacity: 0,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        });
+        dynamicMaterials.push(extHaloMat);
+        const extHalo = new THREE.Mesh(extHaloGeometry, extHaloMat);
+        extHalo.position.copy(extCeilingPos);
+        extHalo.visible = false;
+        scene.add(extHalo);
+
         const localizedCopyExt = resolveLocalizedGlyphCopy(panel);
         const extLabel = createLabelSprite(localizedCopyExt.title);
-        extLabel.position.copy(extCeilingPos).add(up.clone().multiplyScalar(isMobile ? 7.0 : 9.0));
+        extLabel.position.copy(extCeilingPos).add(up.clone().multiplyScalar(isMobile ? 2.0 : 2.8));
         extLabel.visible = false;
         scene.add(extLabel);
 
-        const extLight = new THREE.PointLight(0xffc45c, 0, isMobile ? 28 : 38, 2);
+        const extLight = new THREE.PointLight(GLYPH_GLOW_COLOR, 0, isMobile ? 34 : 44, 2);
         extLight.position.copy(extCeilingPos);
         extLight.visible = false;
         scene.add(extLight);
 
-        extMarkers.push({ sphere: extSphere, label: extLabel, material: extMarkerMat, light: extLight });
+        extMarkers.push({ sphere: extSphere, halo: extHalo, label: extLabel, material: extMarkerMat, haloMaterial: extHaloMat, light: extLight });
 
         runtimePanelsRef.current.push({ meta: panel, progress });
       });
@@ -4979,14 +5001,18 @@ export function IntelligensTunnelSite() {
         for (let mi = 0; mi < extMarkers.length; mi++) {
           const em = extMarkers[mi];
           em.sphere.visible = extMarkerShow;
+          em.halo.visible = extMarkerShow;
           em.label.visible = extMarkerShow;
           em.light.visible = extMarkerShow;
           if (extMarkerShow) {
-            const emPulse = 0.7 + Math.sin(elapsed * 2.1 + mi * 1.7) * 0.3;
-            em.sphere.scale.setScalar(1.0 + emPulse * 0.25);
-            em.material.opacity = extMarkerVis * (0.7 + emPulse * 0.3);
-            em.light.intensity = extMarkerVis * (isMobile ? 3.5 : 5.5) * emPulse;
-            em.label.material.opacity = extMarkerVis * 0.95;
+            const emPulse = 0.72 + Math.sin(elapsed * 2.35 + mi * 1.7) * 0.28;
+            em.sphere.scale.setScalar(0.88 + emPulse * 0.28);
+            em.material.emissiveIntensity = extMarkerVis * (0.48 + emPulse * 0.45);
+            em.light.intensity = extMarkerVis * (isMobile ? 4.6 : 7.4) * emPulse;
+            em.halo.lookAt(camera.position);
+            em.halo.scale.setScalar(0.95 + emPulse * 0.18);
+            em.haloMaterial.opacity = extMarkerVis * (0.2 + emPulse * 0.32);
+            em.label.material.opacity = extMarkerVis * 0.9;
           }
         }
 
