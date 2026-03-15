@@ -4301,11 +4301,22 @@ export function IntelligensTunnelSite() {
             return;
           }
           outsideUserAdjustedView = true;
-          outsideZoomOffset = THREE.MathUtils.clamp(
-            outsideZoomOffset + event.deltaY * 0.32,
-            -165,
-            230,
-          );
+          if (event.ctrlKey || event.metaKey) {
+            // Ctrl+scroll or pinch-to-zoom → zoom
+            outsideZoomOffset = THREE.MathUtils.clamp(
+              outsideZoomOffset + event.deltaY * 0.32,
+              -165,
+              230,
+            );
+          } else {
+            // Regular scroll → orbit
+            outsideOrbitYaw += event.deltaX * 0.0014;
+            outsideOrbitPitch = THREE.MathUtils.clamp(
+              outsideOrbitPitch + event.deltaY * 0.0014,
+              -0.7,
+              0.7,
+            );
+          }
           return;
         }
         runtimeVideos.forEach(requestVideoPlay);
@@ -4325,13 +4336,36 @@ export function IntelligensTunnelSite() {
 
       let touchStartX = 0;
       let touchStartY = 0;
+      let touchPinchDist = 0;
       const onTouchStart = (event: TouchEvent) => {
         runtimeVideos.forEach(requestVideoPlay);
         touchStartX = event.touches[0]?.clientX ?? 0;
         touchStartY = event.touches[0]?.clientY ?? 0;
+        if (event.touches.length === 2) {
+          const dx = event.touches[0].clientX - event.touches[1].clientX;
+          const dy = event.touches[0].clientY - event.touches[1].clientY;
+          touchPinchDist = Math.sqrt(dx * dx + dy * dy);
+        }
       };
       const onTouchMove = (event: TouchEvent) => {
         event.preventDefault();
+        if (isOutside && event.touches.length === 2) {
+          // Two-finger pinch → zoom
+          const dx = event.touches[0].clientX - event.touches[1].clientX;
+          const dy = event.touches[0].clientY - event.touches[1].clientY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (touchPinchDist > 0) {
+            const pinchDelta = touchPinchDist - dist;
+            outsideUserAdjustedView = true;
+            outsideZoomOffset = THREE.MathUtils.clamp(
+              outsideZoomOffset + pinchDelta * 0.4,
+              -165,
+              230,
+            );
+          }
+          touchPinchDist = dist;
+          return;
+        }
         const currentX = event.touches[0]?.clientX ?? touchStartX;
         const currentY = event.touches[0]?.clientY ?? touchStartY;
         const deltaX = touchStartX - currentX;
@@ -4348,11 +4382,13 @@ export function IntelligensTunnelSite() {
             touchStartY = currentY;
             return;
           }
+          // Single finger drag → orbit
           outsideUserAdjustedView = true;
-          outsideZoomOffset = THREE.MathUtils.clamp(
-            outsideZoomOffset + deltaY * 0.22,
-            -165,
-            230,
+          outsideOrbitYaw += deltaX * 0.003;
+          outsideOrbitPitch = THREE.MathUtils.clamp(
+            outsideOrbitPitch + deltaY * 0.003,
+            -0.7,
+            0.7,
           );
           touchStartX = currentX;
           touchStartY = currentY;
