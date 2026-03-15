@@ -3565,6 +3565,34 @@ export function IntelligensTunnelSite() {
       const glyphGeometry = new THREE.PlaneGeometry(GLYPH_SIZE * 2, GLYPH_SIZE * 2);
       const cardGeometry = new THREE.PlaneGeometry(CARD_WIDTH, CARD_HEIGHT);
 
+      // ======= EXTERIOR GLYPH MARKERS (visible from outside) =======
+      const extMarkerGeometry = new THREE.SphereGeometry(isMobile ? 4.5 : 6.0, 20, 20);
+      dynamicGeometries.push(extMarkerGeometry);
+      const extMarkers: { sphere: THREE.Mesh; label: THREE.Sprite; material: THREE.MeshBasicMaterial; light: THREE.PointLight }[] = [];
+
+      const createLabelSprite = (text: string) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 512;
+        canvas.height = 64;
+        const ctx = canvas.getContext("2d")!;
+        ctx.clearRect(0, 0, 512, 64);
+        ctx.font = "bold 32px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.shadowColor = "rgba(0,0,0,0.8)";
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = "#ffe8c0";
+        ctx.fillText(text.toUpperCase(), 256, 32, 480);
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.minFilter = THREE.LinearFilter;
+        dynamicTextures.push(tex);
+        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
+        dynamicMaterials.push(mat);
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(28, 3.5, 1);
+        return sprite;
+      };
+
       panelItems.forEach((panel, index) => {
         const inst = panel.installation;
         const progress = wrap01(inst?.placement_t ?? (0.05 + index / panelItems.length));
@@ -3644,6 +3672,32 @@ export function IntelligensTunnelSite() {
           expanded: false,
           expandT: 0,
         });
+
+        // Exterior marker: gold sphere + label jutting from ceiling
+        const extMarkerMat = new THREE.MeshBasicMaterial({
+          color: 0xffcf74,
+          transparent: true,
+          opacity: 0.95,
+        });
+        dynamicMaterials.push(extMarkerMat);
+        const extSphere = new THREE.Mesh(extMarkerGeometry, extMarkerMat);
+        const extCeilingPos = point.clone().add(up.clone().multiplyScalar(ROOM_HEIGHT * 0.52 + 7.0));
+        extSphere.position.copy(extCeilingPos);
+        extSphere.visible = false;
+        scene.add(extSphere);
+
+        const localizedCopyExt = resolveLocalizedGlyphCopy(panel);
+        const extLabel = createLabelSprite(localizedCopyExt.title);
+        extLabel.position.copy(extCeilingPos).add(up.clone().multiplyScalar(isMobile ? 7.0 : 9.0));
+        extLabel.visible = false;
+        scene.add(extLabel);
+
+        const extLight = new THREE.PointLight(0xffc45c, 0, isMobile ? 28 : 38, 2);
+        extLight.position.copy(extCeilingPos);
+        extLight.visible = false;
+        scene.add(extLight);
+
+        extMarkers.push({ sphere: extSphere, label: extLabel, material: extMarkerMat, light: extLight });
 
         runtimePanelsRef.current.push({ meta: panel, progress });
       });
@@ -4918,6 +4972,23 @@ export function IntelligensTunnelSite() {
         reentryHaloMesh.lookAt(camera.position);
         reentryHaloMesh.scale.setScalar(0.95 + reentryPulse * 0.18);
         reentryHaloMaterial.opacity = reentryVisibility * (0.2 + reentryPulse * 0.32);
+
+        // ======= EXTERIOR GLYPH MARKERS =======
+        const extMarkerVis = THREE.MathUtils.smoothstep(easeOut, 0.2, 0.95) * (1 - filmRoomEase);
+        const extMarkerShow = extMarkerVis > 0.001;
+        for (let mi = 0; mi < extMarkers.length; mi++) {
+          const em = extMarkers[mi];
+          em.sphere.visible = extMarkerShow;
+          em.label.visible = extMarkerShow;
+          em.light.visible = extMarkerShow;
+          if (extMarkerShow) {
+            const emPulse = 0.7 + Math.sin(elapsed * 2.1 + mi * 1.7) * 0.3;
+            em.sphere.scale.setScalar(1.0 + emPulse * 0.25);
+            em.material.opacity = extMarkerVis * (0.7 + emPulse * 0.3);
+            em.light.intensity = extMarkerVis * (isMobile ? 3.5 : 5.5) * emPulse;
+            em.label.material.opacity = extMarkerVis * 0.95;
+          }
+        }
 
         const signalVisible = isOutside;
         signalGroup.visible = signalVisible;
