@@ -674,20 +674,23 @@ const EXIT_TRANSITION_DURATION = 2.5; // seconds
 const EXIT_GLYPH_COLOR = 0xffaa33; // gold/amber
 const EXIT_GLYPH_SIZE = 3.0;
 const OUTSIDE_DEFAULT_CAMERA_OFFSET = new THREE.Vector3(
-  EXIT_CAMERA_DISTANCE * -0.04,
-  EXIT_CAMERA_DISTANCE * -0.42,
+  EXIT_CAMERA_DISTANCE * -0.18,
+  EXIT_CAMERA_DISTANCE * 0.48,
   EXIT_CAMERA_DISTANCE * 1.02,
 );
-const OUTSIDE_DEFAULT_ORBIT_YAW = -0.14;
-const OUTSIDE_DEFAULT_ORBIT_PITCH = 0.2;
+const OUTSIDE_DEFAULT_ORBIT_YAW = -0.12;
+const OUTSIDE_DEFAULT_ORBIT_PITCH = 0.04;
 const OUTSIDE_DEFAULT_ORBIT_ROLL = 0;
-const OUTSIDE_DEFAULT_ZOOM_OFFSET = -22;
+const OUTSIDE_DEFAULT_ZOOM_OFFSET = 110;
 const OUTSIDE_MIN_CAMERA_DISTANCE = 28;
 const OUTSIDE_MAX_CAMERA_DISTANCE = 860;
 const OUTSIDE_MIN_ZOOM_OFFSET = -460;
 const OUTSIDE_MAX_ZOOM_OFFSET = 230;
 const OUTSIDE_WHEEL_ZOOM_SENSITIVITY = 0.72;
+const OUTSIDE_WHEEL_ORBIT_SENSITIVITY = 0.0024;
 const OUTSIDE_PINCH_ZOOM_SENSITIVITY = 0.82;
+const OUTSIDE_PAN_SENSITIVITY = 0.0015;
+const OUTSIDE_MAX_PAN_OFFSET = 120;
 const OUTSIDE_ENTER_CLICK_DRIFT_PX = 7;
 const DEFAULT_LANDING_GLYPH_IDS = ["v1-cognitive-overproduction"];
 const DEFAULT_LANDING_PANEL_IDS = ["halfwall-06"];
@@ -1694,6 +1697,7 @@ export function IntelligensTunnelSite() {
   const outsideFilmRoomEnterRef = useRef<(() => void) | null>(null);
   const outsideFilmRoomExitRef = useRef<(() => void) | null>(null);
   const outsideFilmMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const outsideSignatureMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const filmRoomPopupVideoRef = useRef<HTMLVideoElement | null>(null);
   const mobileGlyphPopupPanelIdRef = useRef<string | null>(null);
 
@@ -2356,6 +2360,7 @@ export function IntelligensTunnelSite() {
     tunnelOutsideToggleRef.current = null;
     outsideFilmRoomEnterRef.current = null;
     outsideFilmRoomExitRef.current = null;
+    outsideSignatureMenuButtonRef.current = null;
     setOutsideMenuVisible(false);
     setOutsideFilmRoomActive(false);
     closeMobileGlyphPopup();
@@ -3580,28 +3585,42 @@ export function IntelligensTunnelSite() {
         sphere: THREE.Mesh; halo: THREE.Mesh; label: THREE.Sprite;
         material: THREE.MeshStandardMaterial; haloMaterial: THREE.MeshBasicMaterial;
         light: THREE.PointLight;
+        basePosition: THREE.Vector3;
+        up: THREE.Vector3;
+        labelLift: number;
+        labelScale: THREE.Vector3;
       }[] = [];
 
       const createLabelSprite = (text: string) => {
         const canvas = document.createElement("canvas");
         canvas.width = 512;
-        canvas.height = 64;
+        canvas.height = 72;
         const ctx = canvas.getContext("2d")!;
-        ctx.clearRect(0, 0, 512, 64);
-        ctx.font = "bold 32px sans-serif";
+        ctx.clearRect(0, 0, 512, 72);
+        ctx.font = "bold 36px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.shadowColor = "rgba(0,0,0,0.8)";
-        ctx.shadowBlur = 6;
-        ctx.fillStyle = "#c0eaff";
-        ctx.fillText(text.toUpperCase(), 256, 32, 480);
+        ctx.shadowColor = "rgba(164, 226, 255, 0.72)";
+        ctx.shadowBlur = 22;
+        ctx.fillStyle = "rgba(214, 242, 255, 0.9)";
+        ctx.fillText(text.toUpperCase(), 256, 36, 488);
+        ctx.shadowColor = "rgba(0,0,0,0.55)";
+        ctx.shadowBlur = 4;
+        ctx.fillStyle = "#f2f8ff";
+        ctx.fillText(text.toUpperCase(), 256, 36, 488);
         const tex = new THREE.CanvasTexture(canvas);
         tex.minFilter = THREE.LinearFilter;
         dynamicTextures.push(tex);
-        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
+        const mat = new THREE.SpriteMaterial({
+          map: tex,
+          color: 0xf3fbff,
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+        });
         dynamicMaterials.push(mat);
         const sprite = new THREE.Sprite(mat);
-        sprite.scale.set(8, 1, 1);
+        sprite.scale.set(9.1, 1.18, 1);
         return sprite;
       };
 
@@ -3716,7 +3735,9 @@ export function IntelligensTunnelSite() {
 
         const localizedCopyExt = resolveLocalizedGlyphCopy(panel);
         const extLabel = createLabelSprite(localizedCopyExt.title);
-        extLabel.position.copy(extCeilingPos).add(up.clone().multiplyScalar(isMobile ? 2.0 : 2.8));
+        const extLabelLift = isMobile ? 3.05 : 4.1;
+        const extLabelScale = extLabel.scale.clone();
+        extLabel.position.copy(extCeilingPos).add(up.clone().multiplyScalar(extLabelLift));
         extLabel.visible = false;
         scene.add(extLabel);
 
@@ -3725,7 +3746,18 @@ export function IntelligensTunnelSite() {
         extLight.visible = false;
         scene.add(extLight);
 
-        extMarkers.push({ sphere: extSphere, halo: extHalo, label: extLabel, material: extMarkerMat, haloMaterial: extHaloMat, light: extLight });
+        extMarkers.push({
+          sphere: extSphere,
+          halo: extHalo,
+          label: extLabel,
+          material: extMarkerMat,
+          haloMaterial: extHaloMat,
+          light: extLight,
+          basePosition: extCeilingPos.clone(),
+          up: up.clone(),
+          labelLift: extLabelLift,
+          labelScale: extLabelScale,
+        });
 
         runtimePanelsRef.current.push({ meta: panel, progress });
       });
@@ -3746,8 +3778,10 @@ export function IntelligensTunnelSite() {
       let outsideOrbitPitch = 0;
       let outsideOrbitRoll = 0;
       let outsideZoomOffset = 0;
+      const outsidePanOffset = new THREE.Vector3();
       let outsideDragActive = false;
       let outsideDragRollMode = false;
+      let outsidePanActive = false;
       let outsideLastPointerX = 0;
       let outsideLastPointerY = 0;
       let outsidePendingEnterProgress: number | null = null;
@@ -3776,7 +3810,7 @@ export function IntelligensTunnelSite() {
       tunnelCenter.divideScalar(centerSamples);
 
       const signalSwarmCount = isReducedMotion ? (isMobile ? 480 : 800) : isMobile ? 1200 : 2200;
-      const signalAnchor = tunnelCenter.clone().add(new THREE.Vector3(-6, 10, 4));
+      const signalAnchor = tunnelCenter.clone();
       const signalGroup = new THREE.Group();
       signalGroup.position.copy(signalAnchor);
       signalGroup.visible = false;
@@ -3790,7 +3824,7 @@ export function IntelligensTunnelSite() {
         opacity: 0.94,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        depthTest: false,
+        depthTest: true,
         toneMapped: false,
       });
       dynamicMaterials.push(signalMaterial);
@@ -3798,7 +3832,6 @@ export function IntelligensTunnelSite() {
       const signalMesh = new THREE.InstancedMesh(signalGeometry, signalMaterial, signalSwarmCount);
       signalMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       signalMesh.frustumCulled = false;
-      signalMesh.renderOrder = 20;
       signalGroup.add(signalMesh);
 
       const signalDummy = new THREE.Object3D();
@@ -3832,6 +3865,7 @@ export function IntelligensTunnelSite() {
         isOutside = nextOutside;
         outsideDragActive = false;
         outsideDragRollMode = false;
+        outsidePanActive = false;
         filmRoomDragActive = false;
         outsidePendingEnterProgress = null;
         outsidePendingEnterMoved = false;
@@ -3849,6 +3883,7 @@ export function IntelligensTunnelSite() {
           outsideOrbitPitch = OUTSIDE_DEFAULT_ORBIT_PITCH;
           outsideOrbitRoll = OUTSIDE_DEFAULT_ORBIT_ROLL;
           outsideZoomOffset = OUTSIDE_DEFAULT_ZOOM_OFFSET;
+          outsidePanOffset.set(0, 0, 0);
           updateOutsideCameraTargets();
           collapseGlyphCards();
           closeMobileGlyphPopup();
@@ -3860,6 +3895,10 @@ export function IntelligensTunnelSite() {
       const toggleOutsideView = () => {
         setOutsideView(!isOutside);
       };
+
+      // Land outside on page load (same state as "GET OUT")
+      setOutsideView(true);
+      outsideT = 1; // skip fly-out animation — appear instantly outside
 
       tunnelOutsideToggleRef.current = toggleOutsideView;
 
@@ -3947,6 +3986,11 @@ export function IntelligensTunnelSite() {
       filmRoomGroup.position.copy(filmRoomCenter);
       filmRoomGroup.visible = false;
       scene.add(filmRoomGroup);
+      const signatureRoomCenter = tunnelCenter.clone().add(new THREE.Vector3(192, 34, 112));
+      const signatureRoomGroup = new THREE.Group();
+      signatureRoomGroup.position.copy(signatureRoomCenter);
+      signatureRoomGroup.visible = false;
+      scene.add(signatureRoomGroup);
 
       const filmRoomShellMaterial = new THREE.MeshStandardMaterial({
         color: 0x2f343b,
@@ -3963,7 +4007,15 @@ export function IntelligensTunnelSite() {
         roughness: 0.92,
         metalness: 0.04,
       });
-      dynamicMaterials.push(filmRoomShellMaterial, filmRoomFrameMaterial, filmRoomFloorMaterial);
+      const signatureRoomInnerWallMaterial = new THREE.MeshStandardMaterial({
+        color: 0x10151b,
+        emissive: new THREE.Color(0x13212d),
+        emissiveIntensity: 0.24,
+        roughness: 0.76,
+        metalness: 0.1,
+        side: THREE.DoubleSide,
+      });
+      dynamicMaterials.push(filmRoomShellMaterial, filmRoomFrameMaterial, filmRoomFloorMaterial, signatureRoomInnerWallMaterial);
 
       const filmRoomOuterWallGeometry = new THREE.PlaneGeometry(FILM_ROOM_WALL_WIDTH + 2.6, FILM_ROOM_WALL_HEIGHT + 2.4);
       const filmRoomInnerWallGeometry = new THREE.PlaneGeometry(FILM_ROOM_WALL_WIDTH, FILM_ROOM_WALL_HEIGHT);
@@ -3997,6 +4049,12 @@ export function IntelligensTunnelSite() {
       const filmRoomFillLight = new THREE.PointLight(0xa9bbd2, 0, 74, 2);
       filmRoomFillLight.position.set(0, -FILM_ROOM_WALL_HEIGHT * 0.1, FILM_ROOM_APOTHEM * 0.3);
       filmRoomGroup.add(filmRoomFillLight);
+      const signatureRoomTopLight = new THREE.PointLight(0xdff5ff, 0, 82, 2);
+      signatureRoomTopLight.position.set(0, FILM_ROOM_WALL_HEIGHT * 0.28, 0);
+      signatureRoomGroup.add(signatureRoomTopLight);
+      const signatureRoomFillLight = new THREE.PointLight(0x88caff, 0, 64, 2);
+      signatureRoomFillLight.position.set(0, -FILM_ROOM_WALL_HEIGHT * 0.08, FILM_ROOM_APOTHEM * 0.24);
+      signatureRoomGroup.add(signatureRoomFillLight);
       const filmRoomBadgeTexture = new THREE.TextureLoader().load(GULLHAIEN_ROOM_BADGE_IMAGE_URL);
       filmRoomBadgeTexture.colorSpace = THREE.SRGBColorSpace;
       filmRoomBadgeTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -4029,6 +4087,13 @@ export function IntelligensTunnelSite() {
         outerWall.castShadow = true;
         outerWall.receiveShadow = true;
         filmRoomGroup.add(outerWall);
+
+        const signatureOuterWall = new THREE.Mesh(filmRoomOuterWallGeometry, filmRoomShellMaterial);
+        signatureOuterWall.position.set(-Math.sin(yaw) * outerRadius, 0, -Math.cos(yaw) * outerRadius);
+        signatureOuterWall.rotation.y = yaw;
+        signatureOuterWall.castShadow = true;
+        signatureOuterWall.receiveShadow = true;
+        signatureRoomGroup.add(signatureOuterWall);
 
         const source = HEX_VIDEO_ROOM_SOURCES[sideIndex % HEX_VIDEO_ROOM_SOURCES.length];
         const videoNode = document.createElement("video");
@@ -4096,6 +4161,13 @@ export function IntelligensTunnelSite() {
           filmRoomGroup.add(filmRoomBadgeMesh);
         }
         filmRoomGroup.add(innerWall);
+
+        const signatureInnerWall = new THREE.Mesh(filmRoomInnerWallGeometry, signatureRoomInnerWallMaterial);
+        signatureInnerWall.position.set(-Math.sin(yaw) * innerRadius, 0, -Math.cos(yaw) * innerRadius);
+        signatureInnerWall.rotation.y = yaw;
+        signatureInnerWall.castShadow = false;
+        signatureInnerWall.receiveShadow = true;
+        signatureRoomGroup.add(signatureInnerWall);
       }
 
       for (let cornerIndex = 0; cornerIndex < 6; cornerIndex += 1) {
@@ -4106,7 +4178,25 @@ export function IntelligensTunnelSite() {
         cornerPost.castShadow = true;
         cornerPost.receiveShadow = true;
         filmRoomGroup.add(cornerPost);
+
+        const signatureCornerPost = new THREE.Mesh(filmRoomCornerGeometry, filmRoomFrameMaterial);
+        signatureCornerPost.position.set(-Math.sin(yaw) * cornerRadius, 0, -Math.cos(yaw) * cornerRadius);
+        signatureCornerPost.castShadow = true;
+        signatureCornerPost.receiveShadow = true;
+        signatureRoomGroup.add(signatureCornerPost);
       }
+
+      const signatureRoomFloorMesh = new THREE.Mesh(filmRoomFloorGeometry, filmRoomFloorMaterial);
+      signatureRoomFloorMesh.rotation.x = -Math.PI * 0.5;
+      signatureRoomFloorMesh.position.y = -FILM_ROOM_WALL_HEIGHT * 0.52;
+      signatureRoomFloorMesh.receiveShadow = true;
+      signatureRoomGroup.add(signatureRoomFloorMesh);
+
+      const signatureRoomCeilingMesh = new THREE.Mesh(filmRoomCeilingGeometry, filmRoomShellMaterial);
+      signatureRoomCeilingMesh.rotation.x = Math.PI * 0.5;
+      signatureRoomCeilingMesh.position.y = FILM_ROOM_WALL_HEIGHT * 0.52;
+      signatureRoomCeilingMesh.receiveShadow = true;
+      signatureRoomGroup.add(signatureRoomCeilingMesh);
 
       const filmRoomExitGeometry = new THREE.TorusGeometry(2.15, 0.2, 12, 48);
       dynamicGeometries.push(filmRoomExitGeometry);
@@ -4167,6 +4257,19 @@ export function IntelligensTunnelSite() {
 
       const raycaster = new THREE.Raycaster();
       const pointer = new THREE.Vector2();
+      const panRight = new THREE.Vector3();
+      const panUp = new THREE.Vector3();
+
+      const explicitPan = (dx: number, dy: number) => {
+        camera.updateMatrixWorld();
+        panRight.setFromMatrixColumn(camera.matrixWorld, 0);
+        panUp.setFromMatrixColumn(camera.matrixWorld, 1);
+        const dist = camera.position.distanceTo(exitLookTarget.clone().add(outsidePanOffset));
+        const scale = dist * OUTSIDE_PAN_SENSITIVITY;
+        outsidePanOffset.addScaledVector(panRight, -dx * scale);
+        outsidePanOffset.addScaledVector(panUp, dy * scale);
+        outsidePanOffset.clampLength(0, OUTSIDE_MAX_PAN_OFFSET);
+      };
 
       const onPointerDown = (event: PointerEvent) => {
         runtimeVideos.forEach(requestVideoPlay);
@@ -4213,14 +4316,15 @@ export function IntelligensTunnelSite() {
           }
 
           outsideDragActive = true;
-          outsideDragRollMode = event.shiftKey || event.altKey || event.button === 2;
+          outsidePanActive = event.shiftKey || event.button === 1 || event.button === 2;
+          outsideDragRollMode = !outsidePanActive && event.altKey;
           outsidePendingEnterProgress = null;
           outsidePendingEnterMoved = false;
           outsidePendingStartX = event.clientX;
           outsidePendingStartY = event.clientY;
 
           // Left-click on tunnel shell: enter at exact clicked route position.
-          if (!outsideDragRollMode && event.button === 0 && filmRoomT < 0.08) {
+          if (!outsideDragRollMode && !outsidePanActive && event.button === 0 && filmRoomT < 0.08) {
             const shellHits = raycaster.intersectObjects(outsideEnterMeshes, false);
             if (shellHits.length > 0) {
               outsidePendingEnterProgress = resolveProgressFromHit(shellHits[0]);
@@ -4317,6 +4421,8 @@ export function IntelligensTunnelSite() {
               -Math.PI * 0.48,
               Math.PI * 0.48,
             );
+          } else if (outsidePanActive) {
+            explicitPan(dx, dy);
           } else {
             outsideOrbitYaw += dx * 0.0046;
             outsideOrbitPitch = THREE.MathUtils.clamp(
@@ -4337,6 +4443,7 @@ export function IntelligensTunnelSite() {
         filmRoomDragActive = false;
         outsideDragActive = false;
         outsideDragRollMode = false;
+        outsidePanActive = false;
         outsidePendingEnterProgress = null;
         outsidePendingEnterMoved = false;
       };
@@ -4350,6 +4457,7 @@ export function IntelligensTunnelSite() {
         filmRoomDragActive = false;
         outsideDragActive = false;
         outsideDragRollMode = false;
+        outsidePanActive = false;
         outsidePendingEnterProgress = null;
         outsidePendingEnterMoved = false;
       };
@@ -4383,22 +4491,13 @@ export function IntelligensTunnelSite() {
             return;
           }
           outsideUserAdjustedView = true;
-          if (event.shiftKey) {
-            // Shift+scroll → orbit for trackpad users who want wheel-based orbit control.
-            outsideOrbitYaw += event.deltaX * 0.0018;
-            outsideOrbitPitch = THREE.MathUtils.clamp(
-              outsideOrbitPitch + event.deltaY * 0.0018,
-              -0.7,
-              0.7,
-            );
-          } else {
-            // Regular scroll/pinch gesture → zoom
-            outsideZoomOffset = THREE.MathUtils.clamp(
-              outsideZoomOffset + event.deltaY * OUTSIDE_WHEEL_ZOOM_SENSITIVITY,
-              OUTSIDE_MIN_ZOOM_OFFSET,
-              OUTSIDE_MAX_ZOOM_OFFSET,
-            );
-          }
+          outsideOrbitYaw += event.deltaX * OUTSIDE_WHEEL_ORBIT_SENSITIVITY;
+          // Outside wheel is a centered dolly: predictable zoom, no cursor anchoring.
+          outsideZoomOffset = THREE.MathUtils.clamp(
+            outsideZoomOffset + event.deltaY * OUTSIDE_WHEEL_ZOOM_SENSITIVITY,
+            OUTSIDE_MIN_ZOOM_OFFSET,
+            OUTSIDE_MAX_ZOOM_OFFSET,
+          );
           return;
         }
         runtimeVideos.forEach(requestVideoPlay);
@@ -4419,6 +4518,8 @@ export function IntelligensTunnelSite() {
       let touchStartX = 0;
       let touchStartY = 0;
       let touchPinchDist = 0;
+      let touchMidX = 0;
+      let touchMidY = 0;
       const onTouchStart = (event: TouchEvent) => {
         runtimeVideos.forEach(requestVideoPlay);
         touchStartX = event.touches[0]?.clientX ?? 0;
@@ -4427,16 +4528,22 @@ export function IntelligensTunnelSite() {
           const dx = event.touches[0].clientX - event.touches[1].clientX;
           const dy = event.touches[0].clientY - event.touches[1].clientY;
           touchPinchDist = Math.sqrt(dx * dx + dy * dy);
+          touchMidX = (event.touches[0].clientX + event.touches[1].clientX) * 0.5;
+          touchMidY = (event.touches[0].clientY + event.touches[1].clientY) * 0.5;
         }
       };
       const onTouchMove = (event: TouchEvent) => {
         event.preventDefault();
         if (isOutside && event.touches.length === 2) {
-          // Two-finger pinch → zoom
-          const dx = event.touches[0].clientX - event.touches[1].clientX;
-          const dy = event.touches[0].clientY - event.touches[1].clientY;
+          const touchA = event.touches[0];
+          const touchB = event.touches[1];
+          const dx = touchA.clientX - touchB.clientX;
+          const dy = touchA.clientY - touchB.clientY;
           const dist = Math.sqrt(dx * dx + dy * dy);
+          const midX = (touchA.clientX + touchB.clientX) * 0.5;
+          const midY = (touchA.clientY + touchB.clientY) * 0.5;
           if (touchPinchDist > 0) {
+            // Pinch component → dolly zoom
             const pinchDelta = touchPinchDist - dist;
             outsideUserAdjustedView = true;
             outsideZoomOffset = THREE.MathUtils.clamp(
@@ -4444,8 +4551,16 @@ export function IntelligensTunnelSite() {
               OUTSIDE_MIN_ZOOM_OFFSET,
               OUTSIDE_MAX_ZOOM_OFFSET,
             );
+            // Midpoint movement component → pan
+            const midDx = midX - touchMidX;
+            const midDy = midY - touchMidY;
+            if (Math.abs(midDx) > 2 || Math.abs(midDy) > 2) {
+              explicitPan(-midDx, -midDy);
+            }
           }
           touchPinchDist = dist;
+          touchMidX = midX;
+          touchMidY = midY;
           return;
         }
         const currentX = event.touches[0]?.clientX ?? touchStartX;
@@ -4498,6 +4613,7 @@ export function IntelligensTunnelSite() {
       const _tmpVec3A = new THREE.Vector3();
       const _tmpVec3B = new THREE.Vector3();
       const _tmpVec3C = new THREE.Vector3();
+      const _tmpPortalWorld = new THREE.Vector3();
       const _tmpPortalNdc = new THREE.Vector3();
       let previousActiveId = panelData.length > 0 ? panelData[0].id : "";
 
@@ -4578,6 +4694,7 @@ export function IntelligensTunnelSite() {
           outsideOrbitPitch = OUTSIDE_DEFAULT_ORBIT_PITCH;
           outsideOrbitRoll = OUTSIDE_DEFAULT_ORBIT_ROLL;
           outsideZoomOffset = OUTSIDE_DEFAULT_ZOOM_OFFSET;
+          outsidePanOffset.set(0, 0, 0);
         }
         const outsideMotionWeight = THREE.MathUtils.smoothstep(easeOut, 0.18, 1);
         const outsideInteractionWeight = outsideUserAdjustedView ? outsideMotionWeight : 0;
@@ -4632,20 +4749,30 @@ export function IntelligensTunnelSite() {
         const outsideCameraPos = tunnelCenter
           .clone()
           .add(outsideBaseOffset)
+          .add(outsidePanOffset)
           .add(new THREE.Vector3(outsideMotionX, outsideMotionY * 0.84, outsideMotionX * 0.58));
         const outsideLook = exitLookTarget
           .clone()
+          .add(outsidePanOffset)
           .add(new THREE.Vector3(outsideMotionX * 0.11, outsideMotionY * 0.095, outsideMotionX * 0.085));
         const outsideRollQuat = new THREE.Quaternion();
         const filmRoomSymbolVisibility = THREE.MathUtils.smoothstep(easeOut, 0.24, 0.96) * (1 - filmRoomEase);
         const filmRoomVisible = isOutside && (filmRoomSymbolVisibility > 0.001 || filmRoomEase > 0.001 || filmRoomTarget > 0.001);
         const filmRoomScale = THREE.MathUtils.lerp(0.22, 1, filmRoomEase);
+        const signatureRoomVisibility = THREE.MathUtils.smoothstep(easeOut, 0.24, 0.96) * (1 - filmRoomEase);
+        const signatureRoomScale = isMobile ? 0.74 : 0.84;
         filmRoomGroup.visible = filmRoomVisible;
         filmRoomGroup.scale.setScalar(filmRoomScale);
         filmRoomGroup.position.copy(filmRoomCenter).add(
           new THREE.Vector3(0, Math.sin(elapsed * 0.72) * 0.9 * (1 - filmRoomEase), 0),
         );
         filmRoomGroup.rotation.y = elapsed * 0.18 * (1 - filmRoomEase);
+        signatureRoomGroup.scale.setScalar(signatureRoomScale);
+        signatureRoomGroup.position.copy(signatureRoomCenter).add(
+          new THREE.Vector3(0, Math.sin(elapsed * 0.66 + 1.1) * 0.68 * (1 - filmRoomEase), 0),
+        );
+        signatureRoomGroup.rotation.y = -0.38 + elapsed * -0.09 * (1 - filmRoomEase);
+        signatureRoomGroup.visible = false;
         filmRoomBadgeMesh.position.y = filmRoomBadgeBaseY + Math.sin(elapsed * 1.18) * 0.22;
         filmRoomExitMesh.visible = filmRoomEase > 0.08;
         filmRoomExitLight.intensity = THREE.MathUtils.lerp(0, isMobile ? 1.8 : 2.9, filmRoomEase);
@@ -4660,6 +4787,8 @@ export function IntelligensTunnelSite() {
           isMobile ? 1.2 : 2.1,
           filmRoomEase,
         ) * filmRoomVisibilityMul;
+        signatureRoomTopLight.intensity = 0;
+        signatureRoomFillLight.intensity = 0;
         filmRoomExitMesh.rotation.z = elapsed * 0.18;
 
         const roomSymbolClickable = isOutside && filmRoomTarget < 0.01 && filmRoomSymbolVisibility > 0.08;
@@ -4672,16 +4801,34 @@ export function IntelligensTunnelSite() {
         if (outsideFilmMenuButton) {
           const showFilmMenuButton = isOutside && filmRoomTarget < 0.01 && filmRoomSymbolVisibility > 0.06;
           if (showFilmMenuButton) {
-            _tmpPortalNdc.copy(filmRoomGroup.position).project(camera);
+            _tmpPortalWorld.copy(filmRoomGroup.position).y += FILM_ROOM_WALL_HEIGHT * 0.24;
+            _tmpPortalNdc.copy(_tmpPortalWorld).project(camera);
             const portalScreenX = (_tmpPortalNdc.x * 0.5 + 0.5) * mountNode.clientWidth;
             const portalScreenY = (-_tmpPortalNdc.y * 0.5 + 0.5) * mountNode.clientHeight;
-            outsideFilmMenuButton.style.left = `${portalScreenX - (isMobile ? 86 : 132)}px`;
-            outsideFilmMenuButton.style.top = `${portalScreenY - (isMobile ? 6 : 12)}px`;
+            outsideFilmMenuButton.style.left = `${portalScreenX}px`;
+            outsideFilmMenuButton.style.top = `${portalScreenY - (isMobile ? 8 : 14)}px`;
             outsideFilmMenuButton.style.opacity = `${THREE.MathUtils.clamp(filmRoomSymbolVisibility * 1.25, 0, 1)}`;
             outsideFilmMenuButton.style.visibility = "visible";
           } else {
             outsideFilmMenuButton.style.opacity = "0";
             outsideFilmMenuButton.style.visibility = "hidden";
+          }
+        }
+        const outsideSignatureMenuButton = outsideSignatureMenuButtonRef.current;
+        if (outsideSignatureMenuButton) {
+          const showSignatureMenuButton = isOutside && filmRoomTarget < 0.01 && signatureRoomVisibility > 0.06;
+          if (showSignatureMenuButton) {
+            _tmpPortalWorld.copy(signatureRoomGroup.position).y += FILM_ROOM_WALL_HEIGHT * signatureRoomScale * 0.24;
+            _tmpPortalNdc.copy(_tmpPortalWorld).project(camera);
+            const portalScreenX = (_tmpPortalNdc.x * 0.5 + 0.5) * mountNode.clientWidth;
+            const portalScreenY = (-_tmpPortalNdc.y * 0.5 + 0.5) * mountNode.clientHeight;
+            outsideSignatureMenuButton.style.left = `${portalScreenX}px`;
+            outsideSignatureMenuButton.style.top = `${portalScreenY - (isMobile ? 6 : 10)}px`;
+            outsideSignatureMenuButton.style.opacity = `${THREE.MathUtils.clamp(signatureRoomVisibility * 1.25, 0, 1)}`;
+            outsideSignatureMenuButton.style.visibility = "visible";
+          } else {
+            outsideSignatureMenuButton.style.opacity = "0";
+            outsideSignatureMenuButton.style.visibility = "hidden";
           }
         }
 
@@ -4707,35 +4854,35 @@ export function IntelligensTunnelSite() {
             scene.fog.far = THREE.MathUtils.lerp(230, 10000, easeOut);
           }
           const insideBg = new THREE.Color(0x0f1217);
-          const outsideBg = new THREE.Color(0x02040a);
+          const outsideBg = new THREE.Color(0x010208);
           (scene.background as THREE.Color).copy(insideBg).lerp(outsideBg, easeOut);
 
-          // Further contrast: darker base, stronger sun, weaker fill.
-          ambient.intensity = THREE.MathUtils.lerp(0.05, 0.002, easeOut);
-          hemi.intensity = THREE.MathUtils.lerp(0.08, 0.007, easeOut);
-          exteriorKey.intensity = THREE.MathUtils.lerp(0, isMobile ? 4.6 : 8.6, easeOut);
-          exteriorFill.intensity = THREE.MathUtils.lerp(0, isMobile ? 0.02 : 0.03, easeOut);
+          // Keep the tunnel shell darker so the exterior markers and swarm carry the contrast.
+          ambient.intensity = THREE.MathUtils.lerp(0.05, 0.001, easeOut);
+          hemi.intensity = THREE.MathUtils.lerp(0.08, 0.004, easeOut);
+          exteriorKey.intensity = THREE.MathUtils.lerp(0, isMobile ? 3.8 : 6.8, easeOut);
+          exteriorFill.intensity = THREE.MathUtils.lerp(0, isMobile ? 0.006 : 0.012, easeOut);
           renderer.toneMappingExposure = THREE.MathUtils.lerp(
             isMobile ? 0.76 : 0.72,
-            isMobile ? 0.75 : 0.76,
+            isMobile ? 0.69 : 0.68,
             easeOut,
           );
 
+          wallMat.color.set(0x303742);
           // Keep emissive low to avoid flattening shadow contrast.
           [floorMat, wallMat].forEach((mat) => {
-            mat.emissive.set(0x334455);
+            mat.emissive.set(0x000000);
             mat.emissiveIntensity = 0;
           });
-          floorMat.envMapIntensity = THREE.MathUtils.lerp(0.74, 0.04, easeOut);
-          wallMat.envMapIntensity = THREE.MathUtils.lerp(0.08, 0.01, easeOut);
-          // Ceiling: transition from pure emissive soft-box (inside) to
-          // PBR-lit white (outside) so sun shadows are visible on it
-          ceilingMat.color.set(0x000000).lerp(new THREE.Color(0xffffff), easeOut);
+          floorMat.envMapIntensity = THREE.MathUtils.lerp(0.74, 0.025, easeOut);
+          wallMat.envMapIntensity = THREE.MathUtils.lerp(0.08, 0.004, easeOut);
+          // Ceiling: keep it dark enough for contrast, but slightly lighter than the previous shell.
+          ceilingMat.color.set(0x000000).lerp(new THREE.Color(0x272d36), easeOut);
           ceilingMat.toneMapped = easeOut > 0.5;      // let tone mapper handle it when outside
           ceilingMat.fog = easeOut > 0.5;              // re-enable fog outside (pushed to 9999 anyway)
-          ceilingMat.emissive.set(0xffffff);
-          ceilingMat.emissiveIntensity = THREE.MathUtils.lerp(1.0, 0.02, easeOut);
-          ceilingMat.envMapIntensity = THREE.MathUtils.lerp(0.0, 0.03, easeOut);
+          ceilingMat.emissive.set(0x181d24);
+          ceilingMat.emissiveIntensity = THREE.MathUtils.lerp(1.0, 0.06, easeOut);
+          ceilingMat.envMapIntensity = THREE.MathUtils.lerp(0.0, 0.016, easeOut);
         } else {
           setOutsideHardShadow(false);
           ambient.intensity = 0.05;
@@ -4746,6 +4893,7 @@ export function IntelligensTunnelSite() {
           (scene.background as THREE.Color).set(0x0f1217);
 
           // Floor/walls: no emissive when inside
+          wallMat.color.set(0xf2f2ef);
           [floorMat, wallMat].forEach((mat) => {
             mat.emissive.set(0x000000);
             mat.emissiveIntensity = 0;
@@ -5012,23 +5160,25 @@ export function IntelligensTunnelSite() {
           em.light.visible = extMarkerShow;
           if (extMarkerShow) {
             const emPulse = 0.72 + Math.sin(elapsed * 2.35 + mi * 1.7) * 0.28;
+            const labelLift = em.labelLift + emPulse * (isMobile ? 0.22 : 0.28);
+            const labelScale = 0.985 + emPulse * 0.085;
+            const labelMaterial = em.label.material as THREE.SpriteMaterial;
             em.sphere.scale.setScalar(0.88 + emPulse * 0.28);
             em.material.emissiveIntensity = extMarkerVis * (0.48 + emPulse * 0.45);
             em.light.intensity = extMarkerVis * (isMobile ? 4.6 : 7.4) * emPulse;
             em.halo.lookAt(camera.position);
             em.halo.scale.setScalar(0.95 + emPulse * 0.18);
             em.haloMaterial.opacity = extMarkerVis * (0.2 + emPulse * 0.32);
-            em.label.material.opacity = extMarkerVis * 0.9;
+            em.label.position.copy(em.basePosition).addScaledVector(em.up, labelLift);
+            em.label.scale.copy(em.labelScale).multiplyScalar(labelScale);
+            labelMaterial.opacity = extMarkerVis * (0.96 + emPulse * 0.08);
           }
         }
 
         const signalVisible = isOutside;
         signalGroup.visible = signalVisible;
         if (signalVisible) {
-          const signalTowardCamera = camera.position.clone().sub(tunnelCenter);
-          const signalCamDist = signalTowardCamera.length();
-          signalTowardCamera.normalize();
-          signalGroup.position.copy(tunnelCenter).add(signalTowardCamera.multiplyScalar(signalCamDist * 0.55)).add(new THREE.Vector3(0, 32, 0));
+          signalGroup.position.copy(tunnelCenter).add(new THREE.Vector3(0, 10, 0));
           signalGroup.lookAt(camera.position);
           signalGroup.rotation.z = elapsed * 0.04;
 
@@ -5040,9 +5190,9 @@ export function IntelligensTunnelSite() {
             let scale = 1;
 
             if (!isCore) {
-              const radius = 24 + ratio * (isMobile ? 80 : 140);
+              const radius = 34 + ratio * (isMobile ? 118 : 188);
               const angle = index * 137.5 + elapsed * 0.16;
-              const wave = Math.sin(radius * 0.04 - elapsed) * 15;
+              const wave = Math.sin(radius * 0.04 - elapsed) * 20;
 
               signalTarget.x = Math.cos(angle) * radius;
               signalTarget.y = wave * (1 - ratio) + Math.sin(index * 0.7) * 2.8;
@@ -5055,7 +5205,7 @@ export function IntelligensTunnelSite() {
             } else {
               const phi = Math.acos(1 - (2 * (index + 0.5)) / signalCoreCount);
               const theta = Math.PI * (1 + Math.sqrt(5)) * index;
-              const pulse = 20 + Math.sin(elapsed * 4 + index * 0.1) * 6;
+              const pulse = 28 + Math.sin(elapsed * 4 + index * 0.1) * 9;
               const rotY = elapsed * 0.8;
               const x = pulse * Math.cos(theta) * Math.sin(phi);
               const y = pulse * Math.sin(theta) * Math.sin(phi);
@@ -5113,6 +5263,7 @@ export function IntelligensTunnelSite() {
         tunnelOutsideToggleRef.current = null;
         outsideFilmRoomEnterRef.current = null;
         outsideFilmRoomExitRef.current = null;
+        outsideSignatureMenuButtonRef.current = null;
         closeMobileGlyphPopup();
         renderer.domElement.removeEventListener("pointerdown", onPointerDown);
         renderer.domElement.removeEventListener("pointermove", onPointerMove);
@@ -5197,6 +5348,7 @@ export function IntelligensTunnelSite() {
       tunnelOutsideToggleRef.current = null;
       outsideFilmRoomEnterRef.current = null;
       outsideFilmRoomExitRef.current = null;
+      outsideSignatureMenuButtonRef.current = null;
       cleanup();
     };
   }, [panelData, glyphCanonicalByPanelId, resolveLocalizedGlyphCopy, closeMobileGlyphPopup]);
@@ -5421,10 +5573,18 @@ export function IntelligensTunnelSite() {
 
               {outsideSection === "menu" ? (
                 <button
+                  ref={outsideSignatureMenuButtonRef}
                   type="button"
                   onClick={() => setOutsideSection("signatures")}
-                  className="pointer-events-auto absolute left-1/2 top-1/2 translate-x-[6.8rem] -translate-y-[1.4rem] text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:translate-x-[14.2rem] md:-translate-y-[2.2rem] md:text-base"
-                  style={{ textShadow: "0 0 16px rgba(160,190,255,0.55)" }}
+                  className="pointer-events-auto absolute text-left text-sm font-semibold uppercase tracking-[0.18em] text-[#dbe7ff] transition hover:text-white md:text-base"
+                  style={{
+                    textShadow: "0 0 16px rgba(160,190,255,0.55)",
+                    transform: "translate(-50%, -50%)",
+                    left: "-9999px",
+                    top: "-9999px",
+                    opacity: 0,
+                    visibility: "hidden",
+                  }}
                 >
                   <span className="inline-block" style={{ animation: "outsideLinkFloatB 8.8s ease-in-out infinite" }}>
                     {uiCopy.outsideSignatures}
