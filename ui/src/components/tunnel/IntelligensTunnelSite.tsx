@@ -682,6 +682,12 @@ const OUTSIDE_DEFAULT_ORBIT_YAW = -0.14;
 const OUTSIDE_DEFAULT_ORBIT_PITCH = 0.2;
 const OUTSIDE_DEFAULT_ORBIT_ROLL = 0;
 const OUTSIDE_DEFAULT_ZOOM_OFFSET = -22;
+const OUTSIDE_MIN_CAMERA_DISTANCE = 72;
+const OUTSIDE_MAX_CAMERA_DISTANCE = 860;
+const OUTSIDE_MIN_ZOOM_OFFSET = -360;
+const OUTSIDE_MAX_ZOOM_OFFSET = 230;
+const OUTSIDE_WHEEL_ZOOM_SENSITIVITY = 0.44;
+const OUTSIDE_PINCH_ZOOM_SENSITIVITY = 0.56;
 const OUTSIDE_ENTER_CLICK_DRIFT_PX = 7;
 const DEFAULT_LANDING_GLYPH_IDS = ["v1-cognitive-overproduction"];
 const DEFAULT_LANDING_PANEL_IDS = ["halfwall-06"];
@@ -4380,9 +4386,9 @@ export function IntelligensTunnelSite() {
           if (event.ctrlKey || event.metaKey) {
             // Ctrl+scroll or pinch-to-zoom → zoom
             outsideZoomOffset = THREE.MathUtils.clamp(
-              outsideZoomOffset + event.deltaY * 0.32,
-              -165,
-              230,
+              outsideZoomOffset + event.deltaY * OUTSIDE_WHEEL_ZOOM_SENSITIVITY,
+              OUTSIDE_MIN_ZOOM_OFFSET,
+              OUTSIDE_MAX_ZOOM_OFFSET,
             );
           } else {
             // Regular scroll → orbit
@@ -4434,9 +4440,9 @@ export function IntelligensTunnelSite() {
             const pinchDelta = touchPinchDist - dist;
             outsideUserAdjustedView = true;
             outsideZoomOffset = THREE.MathUtils.clamp(
-              outsideZoomOffset + pinchDelta * 0.4,
-              -165,
-              230,
+              outsideZoomOffset + pinchDelta * OUTSIDE_PINCH_ZOOM_SENSITIVITY,
+              OUTSIDE_MIN_ZOOM_OFFSET,
+              OUTSIDE_MAX_ZOOM_OFFSET,
             );
           }
           touchPinchDist = dist;
@@ -4619,8 +4625,8 @@ export function IntelligensTunnelSite() {
           );
         const outsideDistance = THREE.MathUtils.clamp(
           outsideBaseOffset.length() + outsideZoomOffset,
-          260,
-          860,
+          OUTSIDE_MIN_CAMERA_DISTANCE,
+          OUTSIDE_MAX_CAMERA_DISTANCE,
         );
         outsideBaseOffset.setLength(outsideDistance);
         const outsideCameraPos = tunnelCenter
