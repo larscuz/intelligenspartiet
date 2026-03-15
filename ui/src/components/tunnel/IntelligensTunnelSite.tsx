@@ -682,12 +682,12 @@ const OUTSIDE_DEFAULT_ORBIT_YAW = -0.14;
 const OUTSIDE_DEFAULT_ORBIT_PITCH = 0.2;
 const OUTSIDE_DEFAULT_ORBIT_ROLL = 0;
 const OUTSIDE_DEFAULT_ZOOM_OFFSET = -22;
-const OUTSIDE_MIN_CAMERA_DISTANCE = 72;
+const OUTSIDE_MIN_CAMERA_DISTANCE = 28;
 const OUTSIDE_MAX_CAMERA_DISTANCE = 860;
-const OUTSIDE_MIN_ZOOM_OFFSET = -360;
+const OUTSIDE_MIN_ZOOM_OFFSET = -460;
 const OUTSIDE_MAX_ZOOM_OFFSET = 230;
-const OUTSIDE_WHEEL_ZOOM_SENSITIVITY = 0.44;
-const OUTSIDE_PINCH_ZOOM_SENSITIVITY = 0.56;
+const OUTSIDE_WHEEL_ZOOM_SENSITIVITY = 0.72;
+const OUTSIDE_PINCH_ZOOM_SENSITIVITY = 0.82;
 const OUTSIDE_ENTER_CLICK_DRIFT_PX = 7;
 const DEFAULT_LANDING_GLYPH_IDS = ["v1-cognitive-overproduction"];
 const DEFAULT_LANDING_PANEL_IDS = ["halfwall-06"];
@@ -4383,20 +4383,20 @@ export function IntelligensTunnelSite() {
             return;
           }
           outsideUserAdjustedView = true;
-          if (event.ctrlKey || event.metaKey) {
-            // Ctrl+scroll or pinch-to-zoom → zoom
+          if (event.shiftKey) {
+            // Shift+scroll → orbit for trackpad users who want wheel-based orbit control.
+            outsideOrbitYaw += event.deltaX * 0.0018;
+            outsideOrbitPitch = THREE.MathUtils.clamp(
+              outsideOrbitPitch + event.deltaY * 0.0018,
+              -0.7,
+              0.7,
+            );
+          } else {
+            // Regular scroll/pinch gesture → zoom
             outsideZoomOffset = THREE.MathUtils.clamp(
               outsideZoomOffset + event.deltaY * OUTSIDE_WHEEL_ZOOM_SENSITIVITY,
               OUTSIDE_MIN_ZOOM_OFFSET,
               OUTSIDE_MAX_ZOOM_OFFSET,
-            );
-          } else {
-            // Regular scroll → orbit
-            outsideOrbitYaw += event.deltaX * 0.0014;
-            outsideOrbitPitch = THREE.MathUtils.clamp(
-              outsideOrbitPitch + event.deltaY * 0.0014,
-              -0.7,
-              0.7,
             );
           }
           return;
