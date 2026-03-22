@@ -1,4 +1,5 @@
 import {
+  Fragment,
   type FormEvent,
   useCallback,
   useEffect,
@@ -872,6 +873,11 @@ type FormattedCardSegment = {
   paragraphBreak: boolean;
 };
 
+type FormattedCardParagraphLine = {
+  text: string;
+  bold: boolean;
+};
+
 const DIRECTIVE_BOLD = /\(\s*bold\s*\)/gi;
 const DIRECTIVE_NEW_LINE = /\(\s*new\s*line\s*\)/gi;
 const DIRECTIVE_NEW_PARAGRAPH = /\(\s*new\s*paragraph\s*\)/gi;
@@ -911,6 +917,29 @@ const parseFormattedCardText = (text: string): FormattedCardSegment[] => {
   });
 
   return segments;
+};
+
+const groupFormattedCardParagraphs = (text: string): FormattedCardParagraphLine[][] => {
+  const paragraphs: FormattedCardParagraphLine[][] = [];
+  let currentParagraph: FormattedCardParagraphLine[] = [];
+
+  parseFormattedCardText(text).forEach((segment) => {
+    if (segment.paragraphBreak && currentParagraph.length > 0) {
+      paragraphs.push(currentParagraph);
+      currentParagraph = [];
+    }
+
+    currentParagraph.push({
+      text: segment.text,
+      bold: segment.bold,
+    });
+  });
+
+  if (currentParagraph.length > 0) {
+    paragraphs.push(currentParagraph);
+  }
+
+  return paragraphs;
 };
 
 const drawFormattedCardText = (
@@ -1835,6 +1864,10 @@ export function IntelligensTunnelSite() {
     mobileGlyphPopupPanelIdRef.current = null;
     setMobileGlyphPopup(null);
   }, []);
+  const mobileGlyphPopupParagraphs = useMemo(
+    () => groupFormattedCardParagraphs(mobileGlyphPopup?.body ?? ""),
+    [mobileGlyphPopup],
+  );
   const onSignatureContactSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -5423,9 +5456,25 @@ export function IntelligensTunnelSite() {
                 {language === "nb" ? "Lukk" : "Close"}
               </button>
             </div>
-            <p className="mt-2 max-h-[52svh] overflow-y-auto whitespace-pre-line text-[0.83rem] leading-relaxed text-[#d9e7f4]">
-              {mobileGlyphPopup.body}
-            </p>
+            <div className="mt-2 max-h-[52svh] overflow-y-auto text-[0.83rem] leading-relaxed text-[#d9e7f4]">
+              {mobileGlyphPopupParagraphs.map((paragraph, paragraphIndex) => (
+                <p
+                  key={`mobile-popup-paragraph-${paragraphIndex}`}
+                  className={paragraphIndex > 0 ? "mt-4" : undefined}
+                >
+                  {paragraph.map((line, lineIndex) => (
+                    <Fragment key={`mobile-popup-line-${paragraphIndex}-${lineIndex}`}>
+                      {line.bold ? (
+                        <strong className="font-semibold text-[#eef8ff]">{line.text}</strong>
+                      ) : (
+                        line.text
+                      )}
+                      {lineIndex < paragraph.length - 1 ? <br /> : null}
+                    </Fragment>
+                  ))}
+                </p>
+              ))}
+            </div>
           </section>
         </div>
       ) : null}
